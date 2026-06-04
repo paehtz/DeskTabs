@@ -1,96 +1,98 @@
 # DeskTabs
 
-**Klickbare Desktop-Leiste für die virtuellen Desktops von Windows 11.** Sitzt unten links in der Taskleiste, ein Button pro virtuellem Desktop, beschriftet mit dem Windows-Namen des Desktops. Klick = dorthin wechseln, der aktive Desktop ist hervorgehoben.
+🇬🇧 **English** · [🇩🇪 Deutsch](README.de.md)
 
-Entwickelt von [Henning Pähtz](https://paehtz.de) als schlankes Werkzeug fürs Zeit-Tracking pro Projekt: ein Desktop = ein Kunde, immer einen Klick entfernt.
+**A clickable desktop bar for the virtual desktops of Windows 11.** It sits in the lower left of the taskbar, one button per virtual desktop, labelled with the desktop's Windows name. Click to switch there; the active desktop is highlighted.
+
+Built by [Henning Pähtz](https://paehtz.de) as a lean tool for per-project time tracking: one desktop = one client, always a single click away.
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-334455.svg)
 ![Windows 11](https://img.shields.io/badge/Windows-11-0078D4.svg)
 
-![DeskTabs, helles Theme](docs/screenshot-light.png)
+![DeskTabs, light theme](docs/screenshot-light.png)
 
-![DeskTabs, dunkles Theme](docs/screenshot-dark.png)
-
----
-
-## Hintergrund
-
-Ich strukturiere meine Projekte und mein Zeit-Tracking über virtuelle Desktops: pro Projekt ein Desktop mit genau den Fenstern und der Oberfläche, die ich dafür brauche. Das Umschalten erfüllt dabei zwei Zwecke gleichzeitig. Erstens wechselt es den kompletten Arbeitskontext, alle Fenster des Projekts sind sofort da. Zweitens erfasst [ManicTime](https://www.manictime.com), womit ich meine Arbeitszeit tracke, den jeweils aktiven Desktop. In der Tagesansicht kann ich später präzise nachvollziehen, wann und wie lange ich an welchem Projekt gearbeitet habe.
-
-Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich gerade bin. Früher ist es mir öfter passiert, dass ich eine Aufgabe versehentlich auf dem falschen Desktop erledigt habe, was die spätere Auswertung verfälscht und Nacharbeit bedeutet. DeskTabs löst das: eine dauerhaft sichtbare Leiste zeigt den aktiven Desktop, und ein direkter Klick wechselt dorthin, statt sich mit dem Windows-Shortcut durchzuschalten. So lande ich immer im richtigen Kontext, und die Zeit wird dem richtigen Projekt zugeordnet.
+![DeskTabs, dark theme](docs/screenshot-dark.png)
 
 ---
 
-## Was es kann
+## Background
 
-- **Live-Namen aus Windows:** die Button-Beschriftung kommt direkt aus den in Windows benannten Desktops (Task-Ansicht). Nichts wird doppelt gepflegt.
-- **Dynamisch:** Desktop hinzufügen/entfernen in Windows → die Leiste passt sich innerhalb ~1,2 s automatisch an (oder Tray → „Leiste neu aufbauen").
-- **Nativer Wechsel:** Klick bildet `Win+Strg+Pfeil` nach. Fenster bleiben stabil auf ihren Desktops (anders als `GoToDesktopNumber`, das auf 24H2/25H2 das Fokusfenster mitnimmt).
-- **Auf allen Desktops sichtbar:** das Fenster ist an alle Desktops gepinnt.
-- **Hell/Dunkel automatisch:** folgt dem Windows-Theme (Taskleisten-Helligkeit), umschaltbar oder fest einstellbar.
-- **Index-Präfix:** „3 · Projektname" (abschaltbar).
-- **Farbcodierung:** dünner Farbbalken pro Desktop (Tab-Indikator-Stil, abschaltbar, pro Desktop überschreibbar).
-- **Hover-Effekt:** Button unter der Maus hellt auf.
-- **Klick auf aktiven Desktop:** öffnet die Task-Ansicht (Win+Tab).
-- **Vollbild-Auto-Hide:** blendet sich aus, wenn eine Vollbild-App im Vordergrund ist.
-- **Mausrad** über der Leiste blättert durch die Desktops.
-- **Trennstriche** zwischen den Buttons (dezent).
-- **Verschiebbar** am Griff `≡` links; Position wird in `settings.ini` gemerkt.
+I organise my projects and my time tracking around virtual desktops: one desktop per project, with exactly the windows and the layout I need for it. Switching desktops serves two purposes at once. First, it swaps the entire working context: every window of the project is instantly there. Second, [ManicTime](https://www.manictime.com), which I use to track my working hours, records the active desktop. In the daily view I can later see precisely when and how long I worked on which project.
+
+For this to stay clean, I need to see at any moment which desktop I am on. In the past I often ran a task on the wrong desktop by accident, which skews the later evaluation and means rework. DeskTabs solves that: a permanently visible bar shows the active desktop, and a direct click switches to it instead of cycling through the Windows shortcut. So I always land in the right context, and the time is attributed to the right project.
 
 ---
 
-## Voraussetzungen
+## Features
 
-- **Windows 11:** entwickelt und getestet auf **25H2 (Build 26200)**. Funktioniert ab 24H2 (26100).
-- **AutoHotkey v2** (getestet mit 2.0.26), Standardpfad `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
-- **VirtualDesktopAccessor.dll** (liegt im Repo bei), von [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), Release `2024-12-16-windows11`.
+- **Live names from Windows:** the button labels come straight from the desktops you named in Windows (Task View). Nothing is maintained twice.
+- **Dynamic:** add or remove a desktop in Windows → the bar adapts automatically within ~1.2 s (or via Tray → "Rebuild bar").
+- **Native switching:** a click emulates `Win+Ctrl+Arrow`. Windows stay put on their desktops (unlike `GoToDesktopNumber`, which drags the focused window along on 24H2/25H2).
+- **Visible on all desktops:** the window is pinned to every desktop.
+- **Light/Dark automatic:** follows the Windows theme (taskbar brightness), switchable or fixed.
+- **Index prefix:** "3 · ProjectName" (can be disabled).
+- **Colour coding:** a thin colour bar per desktop (tab-indicator style, can be disabled, overridable per desktop).
+- **Hover effect:** the button under the mouse lightens up.
+- **Click on the active desktop:** opens Task View (Win+Tab).
+- **Fullscreen auto-hide:** hides itself when a fullscreen app is in the foreground.
+- **Mouse wheel** over the bar pages through the desktops.
+- **Separators** between the buttons (subtle).
+- **Movable** by the handle `≡` on the left; the position is remembered in `settings.ini`.
 
 ---
 
-## Installation & Start
+## Requirements
 
-1. Repo klonen oder als ZIP herunterladen und in einen Ordner Deiner Wahl entpacken.
-2. AutoHotkey v2 installieren (falls noch nicht vorhanden).
-3. Doppelklick auf `DeskTabs.ahk` (öffnet mit AHK v2), oder per Kommandozeile:
+- **Windows 11:** developed and tested on **25H2 (build 26200)**. Works from 24H2 (26100).
+- **AutoHotkey v2** (tested with 2.0.26), default path `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
+- **VirtualDesktopAccessor.dll** (bundled in this repo), from [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), release `2024-12-16-windows11`.
+
+---
+
+## Installation & start
+
+1. Clone the repo or download it as a ZIP and extract it to a folder of your choice.
+2. Install AutoHotkey v2 (if not already present).
+3. Double-click `DeskTabs.ahk` (opens with AHK v2), or run it from the command line:
 
 ```
-"C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" "<Pfad-zum-Ordner>\DeskTabs.ahk"
+"C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe" "<path-to-folder>\DeskTabs.ahk"
 ```
 
-**Autostart:** Eine Verknüpfung in den Autostart-Ordner legen
+**Autostart:** place a shortcut in the startup folder
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`)
-→ Ziel: `AutoHotkey64.exe`, als Argument der Pfad zu `DeskTabs.ahk`.
+→ target: `AutoHotkey64.exe`, with the path to `DeskTabs.ahk` as the argument.
 
-**Beenden / Steuern:** Tray-Icon (Bildschirm-Symbol) → Rechtsklick:
-- Leiste neu aufbauen
-- Position zurücksetzen
-- Beenden
+**Quit / control:** tray icon (screen symbol) → right-click:
+- Rebuild bar
+- Reset position
+- Exit
 
 ---
 
-## Konfiguration
+## Configuration
 
-Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
+All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 
-| Option | Default | Bedeutung |
+| Option | Default | Meaning |
 |---|---|---|
-| `DockMode` | `on` | `on` = auf der Taskleiste (optisch integriert, kann beim Fensterwechsel minimal flackern). `above` = knapp über der Taskleiste (flackerfrei, überlagert aber die unterste Fensterkante). |
-| `ThemeMode` | `auto` | `auto` = folgt dem Windows-Theme (Taskleisten-Helligkeit via Registry `SystemUsesLightTheme`). `light` / `dark` = fest. Wechsel zur Laufzeit wird automatisch erkannt (~1,2 s) und die Leiste neu gebaut. |
-| `OffsetX` | 10 | Abstand vom linken Bildschirmrand (px). |
-| `SwitchMethod` | `native` | `native` = Win+Strg+Pfeil nachbilden (Fenster bleiben stabil). `dll` = `GoToDesktopNumber` (schneller, nimmt aber Fenster mit). |
-| `ShowIndex` | 1 | Nummern-Präfix („3 · …"). |
-| `ColorCoding` | 1 | Farbbalken pro Desktop. |
-| `AccentBarH` | 3 | Höhe des Farbbalkens (px). |
-| `AutoHideFullscreen` | 1 | Bei Vollbild-App ausblenden. |
-| `ClickActiveTaskView` | 1 | Klick auf aktiven Desktop öffnet Win+Tab. |
-| `WheelSwitch` | 1 | Mausrad blättert Desktops. |
-| `Palette` | 8 Farben | Farbpalette für die Farbcodierung (nach Index). |
-| `FontSizePt` | 10 | Schriftgröße. |
-| `MaxNameLen` | 22 | Namen länger als das werden gekürzt. |
-| Farben | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` werden beim Start aus `THEME_LIGHT` / `THEME_DARK` (je nach `ThemeMode`) in die CONF übernommen. Anpassen → die beiden `THEME_*`-Maps oben im Skript. |
+| `DockMode` | `on` | `on` = on the taskbar (visually integrated, may flicker slightly when switching windows). `above` = just above the taskbar (flicker-free, but overlaps the bottom edge of windows). |
+| `ThemeMode` | `auto` | `auto` = follow the Windows theme (taskbar brightness via registry `SystemUsesLightTheme`). `light` / `dark` = fixed. A change at runtime is detected automatically (~1.2 s) and the bar is rebuilt. |
+| `OffsetX` | 10 | Distance from the left screen edge (px). |
+| `SwitchMethod` | `native` | `native` = emulate Win+Ctrl+Arrow (windows stay stable). `dll` = `GoToDesktopNumber` (faster, but drags windows along). |
+| `ShowIndex` | 1 | Number prefix ("3 · …"). |
+| `ColorCoding` | 1 | Colour bar per desktop. |
+| `AccentBarH` | 3 | Height of the colour bar (px). |
+| `AutoHideFullscreen` | 1 | Hide when a fullscreen app is in front. |
+| `ClickActiveTaskView` | 1 | Clicking the active desktop opens Win+Tab. |
+| `WheelSwitch` | 1 | Mouse wheel pages through desktops. |
+| `Palette` | 8 colours | Colour palette for the colour coding (by index). |
+| `FontSizePt` | 10 | Font size. |
+| `MaxNameLen` | 22 | Names longer than this are truncated. |
+| Colours | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` are copied at startup from `THEME_LIGHT` / `THEME_DARK` (depending on `ThemeMode`) into `CONF`. To customise, edit the two `THEME_*` maps near the top of the script. |
 
-### settings.ini (wird automatisch angelegt)
+### settings.ini (created automatically)
 
 ```ini
 [Position]
@@ -98,60 +100,60 @@ X=10
 Y=1392
 
 [Colors]
-; Farbcodierung pro Desktop-Name überschreiben (RRGGBB):
+; Override the colour coding per desktop name (RRGGBB):
 Design=E5471D
 Buchhaltung=1565C0
 ```
 
 ---
 
-## Wie es funktioniert (Architektur)
+## How it works (architecture)
 
-- **Lesen der Desktops** über `VirtualDesktopAccessor.dll` (in-process, schnell): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
-- **Wechseln** über simulierte Tastenkürzel (`SwitchMethod=native`), nicht über die DLL, das verhindert das Mitwandern von Fenstern.
-- **Live-Update der Hervorhebung** via `RegisterPostMessageHook` (Desktop-Wechsel-Benachrichtigung) + 1,2-s-Fallback-Timer (`Refresh`), der auch Desktop-Anzahl/Namen aktualisiert und die Leiste bei Bedarf neu baut.
-- **Immer im Vordergrund** (`DockMode=on`): Kombination aus
-  - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → bei jedem Fensterwechsel sofort `AssertTop()`,
-  - kurzer **Burst** (10× alle 25 ms) zum Abdecken von Maximier-Animationen,
-  - 250-ms-Backstop-Timer.
-- **Fenster** ist `-Caption +AlwaysOnTop +ToolWindow +E0x08000000` (WS_EX_NOACTIVATE → Klicks klauen nicht den Fokus vom Arbeitsfenster) und an alle Desktops gepinnt.
-- **Theme** wird über die Registry erkannt (`SystemUsesLightTheme` unter `…\Themes\Personalize`, derselbe Wert, der die Taskleisten-Helligkeit steuert). `ApplyTheme()` kopiert den passenden Satz (`THEME_LIGHT`/`THEME_DARK`) in die CONF-Farbschlüssel; der `Refresh`-Timer erkennt einen Theme-Wechsel und baut die Leiste neu.
-
----
-
-## Erkenntnisse / Stolpersteine (für künftige Wartung)
-
-- **25H2-Kompatibilität:** Die Ciantic-DLL ist mit „24H2" gelabelt, läuft aber auf 25H2 (26200) einwandfrei. Bei einem Windows-Feature-Update, das die Virtual-Desktop-COM-VTable ändert, kann die DLL brechen → dann neue Version von Ciantics Repo holen.
-- **`GoToDesktopNumber` nimmt Fenster mit:** Auf 24H2/25H2 nutzt die DLL intern `switch_desktop_and_move_foreground_view`. Deshalb `SwitchMethod=native` (Tastenkürzel-Nachbau).
-- **`&` im Desktop-Namen:** AHK-Text-Controls interpretieren `&` als Tastenkürzel-Markierung. Lösung: Style `SS_NOPREFIX` (`+0x80`) auf die Buttons, das zeigt `&` wörtlich (z.B. „T&K").
-- **z-Order der Farbbalken/Trennstriche:** Überlappende Controls werden vom Button verdeckt. Deshalb liegen Trennstriche in den Lücken und Farbbalken **unter** dem Button (überlappungsfrei).
-- **AHK-Semikolon-Falle:** Ein `;` ohne Leerzeichen davor ist KEIN Kommentar, sondern wirft „Illegal character in expression". Inline-Kommentare immer mit Leerzeichen vor `;`.
-- **DockMode-Abwägung:** `on` (auf der Taskleiste) sieht integrierter aus, kämpft aber mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). `above` (knapp darüber) ist flackerfrei, überlagert aber die unterste Fensterkante.
-- **Multi-Monitor:** Die Leiste sitzt immer auf der **Primär-Taskleiste** (`Shell_TrayWnd`) und folgt automatisch, wenn sich der Primärmonitor in Windows ändert. Sekundäre Taskleisten (`Shell_SecondaryTrayWnd`) werden nicht bespielt.
-- **DLL-Funktionsumfang:** `VirtualDesktopAccessor.dll` bietet KEINE Funktion zum Umsortieren von Desktops (geprüfte Exports u.a. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook`, aber kein `MoveDesktop`). Fürs Umsortieren müsste [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop) her.
+- **Reading the desktops** via `VirtualDesktopAccessor.dll` (in-process, fast): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
+- **Switching** via simulated keyboard shortcuts (`SwitchMethod=native`), not via the DLL, which prevents windows from being dragged along.
+- **Live highlight update** through `RegisterPostMessageHook` (desktop-change notification) plus a 1.2 s fallback timer (`Refresh`), which also refreshes the desktop count and names and rebuilds the bar when needed.
+- **Always on top** (`DockMode=on`): a combination of
+  - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → an immediate `AssertTop()` on every window switch,
+  - a short **burst** (10× every 25 ms) to cover maximise animations,
+  - a 250 ms backstop timer.
+- **The window** is `-Caption +AlwaysOnTop +ToolWindow +E0x08000000` (WS_EX_NOACTIVATE → clicks do not steal focus from the working window) and pinned to all desktops.
+- **Theme** is detected via the registry (`SystemUsesLightTheme` under `…\Themes\Personalize`, the same value that controls taskbar brightness). `ApplyTheme()` copies the matching set (`THEME_LIGHT`/`THEME_DARK`) into the `CONF` colour keys; the `Refresh` timer detects a theme change and rebuilds the bar.
 
 ---
 
-## Ideen für die Zukunft
+## Lessons learned / pitfalls (for future maintenance)
 
-- **Rest-Flackern in `DockMode=on` final lösen:** dauerhaft auf der Taskleiste ohne Zucken beim Fensterwechsel. Ansätze: zusätzliche WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), dichterer Burst, oder die Leiste als Kind der Taskleiste (`SetParent`). Aktueller Standard-Workaround: `DockMode=above` (flackerfrei).
-- **Drag-to-Reorder** der Buttons mit echter Windows-Umsortierung über [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
+- **25H2 compatibility:** the Ciantic DLL is labelled "24H2" but runs fine on 25H2 (26200). A Windows feature update that changes the virtual-desktop COM vtable could break the DLL → then grab a fresh build from Ciantic's repo.
+- **`GoToDesktopNumber` drags windows along:** on 24H2/25H2 the DLL internally uses `switch_desktop_and_move_foreground_view`. Hence `SwitchMethod=native` (shortcut emulation).
+- **`&` in a desktop name:** AHK text controls interpret `&` as an accelerator marker. Fix: the `SS_NOPREFIX` style (`+0x80`) on the buttons, which shows `&` literally (e.g. "T&K").
+- **z-order of colour bars / separators:** overlapping controls get hidden by the button. So separators sit in the gaps and colour bars sit **below** the button (no overlap).
+- **AHK semicolon trap:** a `;` without a preceding space is NOT a comment but throws "Illegal character in expression". Always put a space before inline `;`.
+- **DockMode trade-off:** `on` (on the taskbar) looks more integrated but fights the taskbar over z-order (a brief flicker on window switch despite the WinEvent hook + burst). `above` (just above it) is flicker-free but overlaps the bottom edge of windows.
+- **Multi-monitor:** the bar always sits on the **primary taskbar** (`Shell_TrayWnd`) and follows automatically when the primary monitor changes in Windows. Secondary taskbars (`Shell_SecondaryTrayWnd`) are not served.
+- **DLL feature scope:** `VirtualDesktopAccessor.dll` offers NO function to reorder desktops (exports checked, incl. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook`, but no `MoveDesktop`). Reordering would require [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
 ---
 
-## Über dieses Projekt
+## Ideas for the future
 
-DeskTabs ist KI-unterstützt mit [Claude Code](https://claude.com/claude-code) entstanden. Mein Hintergrund liegt in Strategie, Design und Konzeption, nicht in klassischer Softwareentwicklung: Programmiererfahrung hatte ich vor allem aus Templatesprachen, HTML und CSS. Mit KI-gestütztem Arbeiten setze ich eigene Ideen heute direkt in funktionierende Werkzeuge um. DeskTabs ist eines davon und zugleich ein praktisches Beispiel für genau das, was ich als KI-Beratung an Unternehmen weitergebe.
+- **Finally solve the residual flicker in `DockMode=on`:** stay permanently on the taskbar without the twitch on window switch. Approaches: additional WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), a denser burst, or making the bar a child of the taskbar (`SetParent`). Current default workaround: `DockMode=above` (flicker-free).
+- **Drag-to-reorder** the buttons with real Windows reordering via [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
-## Lizenz
+---
+
+## About this project
+
+DeskTabs was built AI-assisted with [Claude Code](https://claude.com/claude-code). My background is in strategy, design and concept work, not classic software development: my programming experience came mainly from template languages, HTML and CSS. With AI-assisted work I now turn my own ideas directly into working tools. DeskTabs is one of them, and at the same time a hands-on example of exactly what I pass on to companies as AI consulting.
+
+## License
 
 [MIT](LICENSE) © Henning Pähtz
 
 ---
 
-## Autor
+## Author
 
-**Henning Pähtz:** Diplom-Medienwissenschaftler aus Lutherstadt Eisleben. Webdesign, Markenstrategie, KI-Beratung und Prozessautomatisierung.
+**Henning Pähtz:** media scientist (Dipl.-Medienwiss.) based in Lutherstadt Eisleben, Germany. Web design, brand strategy, AI consulting and process automation.
 
 🌐 [paehtz.de](https://paehtz.de) · ✉️ henning@paehtz.de
 
@@ -159,5 +161,5 @@ DeskTabs ist KI-unterstützt mit [Claude Code](https://claude.com/claude-code) e
 
 ## Credits
 
-- [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor): DLL für den Zugriff auf die Windows-Virtual-Desktop-API.
+- [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor): the DLL that provides access to the Windows virtual-desktop API.
 - [AutoHotkey v2](https://www.autohotkey.com/)
