@@ -30,6 +30,8 @@ global CONF := Map(
     "DockMode",       "on",    ; "on"    = auf der Taskleiste (optisch integriert, kann minimal flackern)
                                ; "above" = direkt ueber der Taskleiste (flackerfrei)
     "OffsetX",        10,      ; Abstand vom linken Bildschirmrand (px @100%)
+    "SnapToTaskbar",  1,       ; 1 = beim Ziehen vertikal auf die Taskleiste einrasten (X bleibt frei)
+    "SnapDistance",   40,      ; zusaetzl. Fang-Abstand (px @100%) ueber der Taskleiste; auf der Taskleiste haelt es ohnehin (Ueberlappung)
     "ThemeMode",      "auto",  ; "auto" = Windows-Theme folgen (Taskleisten-Helligkeit), "light", "dark"
     ; Farben (werden beim Start je nach Theme aus THEME_LIGHT/THEME_DARK ueberschrieben).
     ; Die Werte hier sind der HELLE Standard und dienen als Fallback.
@@ -311,6 +313,12 @@ BuildBar() {
     posX := IniGet("Position", "X", defX)
     posY := IniGet("Position", "Y", defY)
     posX := ClampX(posX), posY := ClampY(posY, GUIH)
+    ; Startposition vertikal auf die Taskleiste einrasten (wie beim Ziehen)
+    if (CONF["SnapToTaskbar"]) {
+        snapY := (CONF["DockMode"] = "above") ? (tbY - GUIH) : (tbY + (tbH - GUIH) // 2)
+        if (((posY < tbY + tbH) && (posY + GUIH > tbY)) || (Abs(posY - snapY) <= px(CONF["SnapDistance"])))
+            posY := snapY
+    }
 
     GRIP.OnEvent("Click", (*) => 0)   ; Klick auf Griff: nichts (Ziehen via LBUTTONDOWN)
     MyGui.Show(Format("x{1} y{2} w{3} h{4} NoActivate", posX, posY, GUIW, GUIH))
@@ -408,13 +416,40 @@ IsOverBar(mx, my) {
     return (mx >= x && mx <= x + w && my >= y && my <= y + h)
 }
 
+; Eigene Drag-Routine: X folgt der Maus (frei), Y rastet auf die Taskleisten-Mitte
+; ein, solange die Leiste die Taskleiste ueberlappt (oder nah dran ist). Ganz
+; weggezogen wird Y frei. Deterministisch statt natives Drag + WM_MOVING.
 OnLButtonDown(wParam, lParam, msg, hwnd) {
-    global GRIP, MyGui
+    global GRIP, MyGui, GUIW, GUIH
     if (hwnd != GRIP.Hwnd)
         return
-    ; Natives Fenster-Ziehen anstossen
-    PostMessage(0x00A1, 2, 0, , "ahk_id " MyGui.Hwnd)   ; WM_NCLBUTTONDOWN, HTCAPTION
-    SetTimer(SavePosDeferred, -400)
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&sx, &sy)
+    wx := 0, wy := 0, ww := 0, wh := 0
+    MyGui.GetPos(&wx, &wy, &ww, &wh)
+    offX := sx - wx, offY := sy - wy
+    while GetKeyState("LButton", "P") {
+        MouseGetPos(&mx, &my)
+        nx := mx - offX, ny := my - offY
+        hTray := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
+        if (hTray && CONF["SnapToTaskbar"]) {
+            rc := Buffer(16, 0)
+            DllCall("GetWindowRect", "Ptr", hTray, "Ptr", rc)
+            tbY := NumGet(rc, 4, "Int"), tbBottom := NumGet(rc, 12, "Int")
+            targetY := (CONF["DockMode"] = "above") ? (tbY - GUIH) : (tbY + ((tbBottom - tbY) - GUIH) // 2)
+            overlaps := (ny < tbBottom) && (ny + GUIH > tbY)
+            near := Abs(ny - targetY) <= px(CONF["SnapDistance"])
+            if (overlaps || near)
+                ny := targetY
+        }
+        if (nx < 0)
+            nx := 0
+        if (nx + GUIW > A_ScreenWidth)
+            nx := A_ScreenWidth - GUIW
+        MyGui.Move(nx, ny)
+        Sleep(10)
+    }
+    SavePosDeferred()
     return 0
 }
 
