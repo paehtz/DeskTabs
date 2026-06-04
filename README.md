@@ -106,6 +106,8 @@ Wolf Automobile=1565C0
 - **z-Order der Farbbalken/Trennstriche:** Overlappende Controls werden vom Button verdeckt. Deshalb liegen Trennstriche in den Lücken und Farbbalken **unter** dem Button (überlappungsfrei).
 - **AHK-Semikolon-Falle:** Ein `;` ohne Leerzeichen davor ist KEIN Kommentar, sondern wirft „Illegal character in expression". Inline-Kommentare immer mit Leerzeichen vor `;`.
 - **DockMode-Abwägung:** `on` (auf der Taskleiste) sieht integrierter aus, kämpft aber mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). `above` (knapp darüber) ist flackerfrei, überlagert aber die unterste Fensterkante.
+- **Multi-Monitor:** Die Leiste sitzt immer auf der **Primär-Taskleiste** (`Shell_TrayWnd`). Bei Hennings Setup ist der Primärmonitor der mittlere Ultrawide (3440×1440), daher landet sie dort. Ändert sich der Primärmonitor in Windows, folgt die Leiste automatisch. Sekundäre Taskleisten (`Shell_SecondaryTrayWnd`) werden nicht bespielt.
+- **DLL-Funktionsumfang:** `VirtualDesktopAccessor.dll` bietet KEINE Funktion zum Umsortieren von Desktops (Exports geprüft: u.a. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook` — aber kein `MoveDesktop`). Fürs Umsortieren müsste MScholtes/VirtualDesktop her (siehe Offene Punkte).
 
 ---
 
