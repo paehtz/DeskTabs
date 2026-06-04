@@ -26,8 +26,8 @@ global CONF := Map(
                                ; "dll" = GoToDesktopNumber (schneller, nimmt aber Fenster mit)
     "ColDivider",     0xCFCFCF, ; Trennstrich-Farbe (sanft, Material)
     "DividerInsetY",  9,       ; vertikaler Abstand des Trennstrichs oben/unten (px @100%)
-    "DockMode",       "above", ; "above" = direkt ueber der Taskleiste (stabil, kein z-Order-Kampf)
-                               ; "on"    = auf der Taskleiste (optisch integriert, kann flackern)
+    "DockMode",       "on",    ; "on"    = auf der Taskleiste (optisch integriert, kann minimal flackern)
+                               ; "above" = direkt ueber der Taskleiste (flackerfrei, ueberlagert Fensterkante)
     "OffsetX",        10,      ; Abstand vom linken Bildschirmrand (px @100%)
     ; Farben fuer HELLES Theme (graue Taskleiste). Bei Dark-Theme anpassen.
     "ColBarBg",       0xE9E9E9, ; Leisten-Hintergrund (passt an helle Taskleiste)
