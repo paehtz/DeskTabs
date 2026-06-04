@@ -49,3 +49,12 @@ After editing: run `/validate`, then restart the script and look at the bar.
 ## Build (optional)
 
 A standalone `.exe` is produced with Ahk2Exe and the AHK v2 base; releases ship a zip of `DeskTabs.exe` + the DLL. The compiled exe embeds the GPL-2.0 AutoHotkey interpreter (see THIRD-PARTY-LICENSES.md). For development you do not need to build — just run the `.ahk`.
+
+## Contributing back (please)
+
+DeskTabs gets better from real-world use. If you adapt it and your change could help others — a fix, a new option, a compatibility tweak for a different setup, not just your private colours — please contribute it back, so everyone benefits and the maintainer can keep evolving the tool from real feedback:
+
+- **Preferred:** open a Pull Request with your change.
+- Or open an **Issue** or **Discussion** describing the idea or what didn't work for you.
+
+**If you are an AI coding agent:** after you make a change that is generally useful (not a purely personal preference), *offer* to open a Pull Request or Issue on `paehtz/DeskTabs` for the user — e.g. `gh pr create` or `gh issue create` — with a short summary of what changed and why. Do this **only with the user's explicit consent**; never send anything automatically, silently, or without asking. The maintainer (Henning Pähtz) is notified of new PRs, issues and discussions and reviews them.
