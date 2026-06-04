@@ -91,6 +91,8 @@ Das installiert DeskTabs nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Ei
 
 ## Konfiguration
 
+> **Du nutzt einen KI-Coding-Agenten (z.B. Claude Code)?** Forke das Repo und sieh Dir [CLAUDE.md](CLAUDE.md) an: Sie erklärt Deinem Agenten, wie er DeskTabs startet, validiert und sicher an Dein Setup anpasst.
+
 Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 
 | Option | Default | Bedeutung |

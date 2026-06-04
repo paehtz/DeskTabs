@@ -91,6 +91,8 @@ This installs DeskTabs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and
 
 ## Configuration
 
+> **Using an AI coding agent (e.g. Claude Code)?** Fork the repo and see [CLAUDE.md](CLAUDE.md): it tells your agent how to run, validate and safely customize DeskTabs for your own setup.
+
 All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 
 | Option | Default | Meaning |
