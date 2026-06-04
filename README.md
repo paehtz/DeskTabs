@@ -56,7 +56,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DesktopSwitcher.ahk`:
 
 | Option | Default | Bedeutung |
 |---|---|---|
-| `DockMode` | `above` | `above` = knapp über der Taskleiste (stabil, kein Flackern). `on` = auf der Taskleiste (optisch integriert, kann beim Fensterwechsel kurz flackern). |
+| `DockMode` | `on` | `on` = auf der Taskleiste (gewünschter Standard, optisch integriert, kann beim Fensterwechsel minimal flackern). `above` = knapp über der Taskleiste (flackerfrei, überlagert aber die unterste Fensterkante). |
 | `OffsetX` | 10 | Abstand vom linken Bildschirmrand (px). |
 | `SwitchMethod` | `native` | `native` = Win+Strg+Pfeil nachbilden (Fenster bleiben stabil). `dll` = `GoToDesktopNumber` (schneller, nimmt aber Fenster mit). |
 | `ShowIndex` | 1 | Nummern-Präfix („3 · …"). |
@@ -111,7 +111,7 @@ Wolf Automobile=1565C0
 
 ## Offene Punkte / Ideen
 
-- Rest-Flackern in `DockMode=on` final lösen (zusätzliche Events: `EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`?) — oder bei `above` bleiben.
+- **Rest-Flackern in `DockMode=on` final lösen.** Henning bevorzugt klar die Buttons AUF der Taskleiste (Standard = `on`) und akzeptiert das minimale Zucken beim Fensterwechsel vorerst. Ziel: dauerhaft sichtbar OHNE Zucken. Nächste Ansätze: zusätzliche WinEvents (`EVENT_OBJECT_REORDER` 0x8004, `EVENT_SYSTEM_MINIMIZEEND` 0x0017), längerer/dichterer Burst, oder ein anderer Mechanismus, um über der Taskleiste zu bleiben.
 - Optional: Drag-to-Reorder der Buttons mit echter Windows-Umsortierung über [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop) (`/MoveDesktop`). Aktuell nicht nötig (Task-Ansicht reicht).
 - Optional: Dark-Theme-Farbsatz + automatische Theme-Erkennung.
 - Optional: Push zu GitHub.
