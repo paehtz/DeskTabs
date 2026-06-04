@@ -1,0 +1,9 @@
+# Benutzerspezifische Laufzeit-Datei (Position + Farb-Overrides)
+settings.ini
+
+# Debug-/Temp-Artefakte
+_debug.txt
+_error.log
+_dlgtext.txt
+_readerr.ahk
+repo.zip
