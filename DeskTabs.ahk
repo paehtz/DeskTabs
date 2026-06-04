@@ -555,12 +555,19 @@ Refresh() {
         BuildBar()
         ApplyWindowHooks()
     } else {
-        ; Namen aktualisieren
+        ; Hat sich ein Name geaendert? -> KOMPLETT neu bauen, damit die Button-BREITEN
+        ; zur neuen Textlaenge passen. Reines c.Text := ... laesst die Breite stehen
+        ; -> lange Namen werden abgeschnitten und die Abstaende kollabieren.
+        nameChanged := false
         for item in BTNS {
-            c := item["ctrl"]
-            newLabel := LabelFor(item["num"])
-            if (c.Text != newLabel)
-                c.Text := newLabel
+            if (item["ctrl"].Text != LabelFor(item["num"])) {
+                nameChanged := true
+                break
+            }
+        }
+        if (nameChanged) {
+            BuildBar()
+            ApplyWindowHooks()
         }
     }
     UpdateHighlight()
