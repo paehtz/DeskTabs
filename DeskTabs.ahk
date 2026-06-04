@@ -2,7 +2,7 @@
 #SingleInstance Force
 ; ============================================================================
 ;  DeskTabs  —  klickbare Buttons fuer virtuelle Desktops (Win 11)
-;  Von Henning Paehtz (paehtz.de), baut auf Ciantic/VirtualDesktopAccessor.dll
+;  Von Henning Pähtz (paehtz.de), baut auf Ciantic/VirtualDesktopAccessor.dll
 ;  MIT License
 ;  Stand: 2026-06-04
 ; ----------------------------------------------------------------------------
@@ -92,6 +92,8 @@ global gHidden := false      ; true, wenn wegen Vollbild ausgeblendet
 global gWinEventHook := 0    ; Hook auf Vordergrund-Wechsel (gegen Flackern)
 global gWinEventCb := 0
 global gBurst := 0           ; Restzahl schneller Re-Asserts nach Fensterwechsel
+global gBuilding := false    ; Re-Entrancy-Schutz: laeuft gerade ein BuildBar?
+global gSwitching := false   ; laeuft gerade ein Desktop-Wechsel? (gegen Rebuild-Race)
 
 ; ------------------------------- Start --------------------------------------
 Main()
@@ -218,7 +220,10 @@ px(v) => Round(v * SCALE)     ; logische px -> physische px
 
 ; --------------------------- Leiste aufbauen --------------------------------
 BuildBar() {
-    global MyGui, BTNS, GRIP, GUIW, GUIH
+    global MyGui, BTNS, GRIP, GUIW, GUIH, gBuilding
+    if (gBuilding)              ; verschachtelten Neuaufbau verhindern (Geometrie-Race)
+        return
+    gBuilding := true
     if (MyGui) {
         try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
         try MyGui.Destroy()
@@ -312,6 +317,7 @@ BuildBar() {
 
     ; Ziehen am Griff
     OnMessage(0x0201, OnLButtonDown)  ; WM_LBUTTONDOWN
+    gBuilding := false
 }
 
 ClampX(x) {
@@ -334,20 +340,24 @@ ClampY(y, h) {
 ; Wechselt zu einem Desktop. "native" bildet Strg+Win+Pfeil nach -> Fenster
 ; bleiben stabil auf ihren Desktops (kein Mitwandern wie bei GoToDesktopNumber).
 SwitchToDesktop(target) {
+    global gSwitching
     cur := GetCurrentDesktop()
     cnt := GetDesktopCount()
     if (target < 0 || target >= cnt || target = cur)
         return
+    gSwitching := true            ; sperrt Rebuilds + Mausrad-Folgeticks waehrend des Wechsels
     if (CONF["SwitchMethod"] = "native") {
         steps := Abs(target - cur)
         key := (target > cur) ? "{Right}" : "{Left}"
         Loop steps {
             Send("#^" key)            ; Win+Strg+Pfeil
-            Sleep(95)
+            if (A_Index < steps)      ; nur ZWISCHEN Schritten warten, nicht nach dem letzten -> snappy
+                Sleep(80)
         }
     } else {
         VD("GoToDesktopNumber", "Int", target)
     }
+    gSwitching := false
     UpdateHighlight()
 }
 
@@ -366,7 +376,7 @@ OnDesktopChanged(wParam, lParam, msg, hwnd) {
 }
 
 OnWheel(wParam, lParam, msg, hwnd) {
-    global MyGui
+    global MyGui, gSwitching
     ; Nur reagieren, wenn der Mauszeiger ueber unserer Leiste ist
     MouseGetPos(&mx, &my, &winHwnd)
     if (winHwnd != MyGui.Hwnd) {
@@ -374,6 +384,9 @@ OnWheel(wParam, lParam, msg, hwnd) {
         if !IsOverBar(mx, my)
             return
     }
+    ; Folgeticks ignorieren, solange ein Wechsel laeuft -> kein Stau, knackiger
+    if (gSwitching)
+        return 0
     delta := (wParam >> 16) & 0xFFFF
     if (delta > 0x7FFF)
         delta -= 0x10000
@@ -527,7 +540,9 @@ BurstTick() {
 
 Refresh() {
     ; Desktop-Anzahl oder Namen koennten sich geaendert haben -> ggf. neu bauen
-    global BTNS, gTheme
+    global BTNS, gTheme, gBuilding, gSwitching
+    if (gBuilding || gSwitching)   ; nicht mitten in Aufbau/Wechsel neu bauen (Geometrie-Race)
+        return
     ; Windows-Theme gewechselt? -> Farbsatz neu anwenden und Leiste neu bauen
     if (ResolveTheme() != gTheme) {
         ApplyTheme()

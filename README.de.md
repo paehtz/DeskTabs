@@ -52,8 +52,26 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 
 ## Installation & Start
 
+### Variante A: sofort startklar (ohne AutoHotkey)
+
+1. Die neueste `DeskTabs-vX.Y.Z.zip` von der [Releases-Seite](https://github.com/paehtz/DeskTabs/releases/latest) herunterladen.
+2. Irgendwohin entpacken und `DeskTabs.exe` und `VirtualDesktopAccessor.dll` zusammen im selben Ordner lassen.
+3. Doppelklick auf `DeskTabs.exe`.
+
+Oder per Einzeiler installieren (und aktualisieren) in PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
+```
+
+Das installiert DeskTabs nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Eintrag an und startet es. Erneut ausführen aktualisiert auf die neueste Version.
+
+> Hinweis: Eine mit AutoHotkey kompilierte `.exe` kann bei manchen Virenscannern Fehlalarme auslösen. Deshalb gibt es immer beides, die `.exe` und den vollständigen Quellcode; Du kannst stattdessen jederzeit aus dem Quellcode starten.
+
+### Variante B: aus dem Quellcode
+
 1. Repo klonen oder als ZIP herunterladen und in einen Ordner Deiner Wahl entpacken.
-2. AutoHotkey v2 installieren (falls noch nicht vorhanden).
+2. [AutoHotkey v2](https://www.autohotkey.com/) installieren (falls noch nicht vorhanden).
 3. Doppelklick auf `DeskTabs.ahk` (öffnet mit AHK v2), oder per Kommandozeile:
 
 ```

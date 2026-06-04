@@ -1,0 +1,57 @@
+name: Bug report
+description: Report something that does not work as expected
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much as you can.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: When I ..., the bar ...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: false
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      description: e.g. Windows 11 24H2 (build 26100) or 25H2 (26200)
+    validations:
+      required: false
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: How do you run DeskTabs?
+      options:
+        - Compiled DeskTabs.exe (from a release)
+        - DeskTabs.ahk with AutoHotkey v2
+    validations:
+      required: false
+  - type: input
+    id: config
+    attributes:
+      label: Relevant settings
+      description: e.g. DockMode, ThemeMode, number of desktops, monitor resolution
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If it is a visual issue, a screenshot of the bar helps a lot.
+    validations:
+      required: false

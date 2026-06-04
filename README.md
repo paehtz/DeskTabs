@@ -52,8 +52,26 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 
 ## Installation & start
 
+### Option A: ready to run (no AutoHotkey needed)
+
+1. Download the latest `DeskTabs-vX.Y.Z.zip` from the [Releases page](https://github.com/paehtz/DeskTabs/releases/latest).
+2. Extract it anywhere and keep `DeskTabs.exe` and `VirtualDesktopAccessor.dll` together in the same folder.
+3. Double-click `DeskTabs.exe`.
+
+Or install (and update) in one line, from PowerShell:
+
+```powershell
+irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
+```
+
+This installs DeskTabs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and launches it. Run it again any time to update.
+
+> Note: an AutoHotkey-compiled `.exe` can trigger false positives in some antivirus scanners. That is why both the `.exe` and the full source are provided; you can always run from source instead.
+
+### Option B: from source
+
 1. Clone the repo or download it as a ZIP and extract it to a folder of your choice.
-2. Install AutoHotkey v2 (if not already present).
+2. Install [AutoHotkey v2](https://www.autohotkey.com/) (if not already present).
 3. Double-click `DeskTabs.ahk` (opens with AHK v2), or run it from the command line:
 
 ```
