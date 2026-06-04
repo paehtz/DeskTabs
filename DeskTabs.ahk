@@ -1,8 +1,9 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 ; ============================================================================
-;  Desktop Switcher  —  klickbare Buttons fuer virtuelle Desktops (Win 11)
-;  Eigenbau fuer Henning Paehtz, baut auf Ciantic/VirtualDesktopAccessor.dll
+;  DeskTabs  —  klickbare Buttons fuer virtuelle Desktops (Win 11)
+;  Von Henning Paehtz (paehtz.de), baut auf Ciantic/VirtualDesktopAccessor.dll
+;  MIT License
 ;  Stand: 2026-06-04
 ; ----------------------------------------------------------------------------
 ;  - Liest Desktop-Namen LIVE aus Windows (in Windows benannt, nichts doppelt)
@@ -27,9 +28,11 @@ global CONF := Map(
     "ColDivider",     0xCFCFCF, ; Trennstrich-Farbe (sanft, Material)
     "DividerInsetY",  9,       ; vertikaler Abstand des Trennstrichs oben/unten (px @100%)
     "DockMode",       "on",    ; "on"    = auf der Taskleiste (optisch integriert, kann minimal flackern)
-                               ; "above" = direkt ueber der Taskleiste (flackerfrei, ueberlagert Fensterkante)
+                               ; "above" = direkt ueber der Taskleiste (flackerfrei)
     "OffsetX",        10,      ; Abstand vom linken Bildschirmrand (px @100%)
-    ; Farben fuer HELLES Theme (graue Taskleiste). Bei Dark-Theme anpassen.
+    "ThemeMode",      "auto",  ; "auto" = Windows-Theme folgen (Taskleisten-Helligkeit), "light", "dark"
+    ; Farben (werden beim Start je nach Theme aus THEME_LIGHT/THEME_DARK ueberschrieben).
+    ; Die Werte hier sind der HELLE Standard und dienen als Fallback.
     "ColBarBg",       0xE9E9E9, ; Leisten-Hintergrund (passt an helle Taskleiste)
     "ColInactiveBg",  0xE9E9E9, ; inaktive Buttons: blenden mit der Leiste
     "ColInactiveTx",  0x1F1F1F, ; dunkler Text
@@ -48,6 +51,34 @@ global CONF := Map(
     "Palette",        [0xE5471D, 0x2E7D32, 0x1565C0, 0x6A1B9A, 0xEF6C00, 0x00838F, 0xC2185B, 0x558B2F],
     "MaxNameLen",     22       ; Namen laenger als das werden gekuerzt
 )
+
+; ---- Theme-Farbsaetze (werden je nach Windows-Theme in CONF uebernommen) ----
+; Die Palette (Farbbalken pro Desktop) bleibt fuer beide Themes gleich.
+global THEME_LIGHT := Map(
+    "ColBarBg",      0xE9E9E9,
+    "ColInactiveBg", 0xE9E9E9,
+    "ColInactiveTx", 0x1F1F1F,
+    "ColActiveBg",   0x0078D4,
+    "ColActiveTx",   0xFFFFFF,
+    "ColGripBg",     0xE9E9E9,
+    "ColGripTx",     0x909090,
+    "ColHoverBg",    0xDCDCDC,
+    "ColHoverTx",    0x1F1F1F,
+    "ColDivider",    0xCFCFCF
+)
+global THEME_DARK := Map(
+    "ColBarBg",      0x202020,   ; dunkle Win-11-Taskleiste
+    "ColInactiveBg", 0x202020,
+    "ColInactiveTx", 0xE6E6E6,   ; heller Text
+    "ColActiveBg",   0x0078D4,   ; Akzentfarbe (liest sich auf dunkel gut)
+    "ColActiveTx",   0xFFFFFF,
+    "ColGripBg",     0x202020,
+    "ColGripTx",     0x808080,
+    "ColHoverBg",    0x3A3A3A,   ; etwas heller als die Leiste
+    "ColHoverTx",    0xFFFFFF,
+    "ColDivider",    0x3F3F3F
+)
+global gTheme := ""             ; aktuell angewandtes Theme ("light"/"dark")
 
 global SCALE := A_ScreenDPI / 96
 global VDA := 0
@@ -69,14 +100,15 @@ Main() {
     global VDA, MyGui
     OnError(LogErr)
     if !FileExist(CONF["DllPath"]) {
-        MsgBox("VirtualDesktopAccessor.dll nicht gefunden:`n" CONF["DllPath"], "Desktop Switcher", 0x10)
+        MsgBox("VirtualDesktopAccessor.dll nicht gefunden:`n" CONF["DllPath"], "DeskTabs", 0x10)
         ExitApp
     }
     VDA := DllCall("LoadLibrary", "Str", CONF["DllPath"], "Ptr")
     if !VDA {
-        MsgBox("DLL konnte nicht geladen werden.", "Desktop Switcher", 0x10)
+        MsgBox("DLL konnte nicht geladen werden.", "DeskTabs", 0x10)
         ExitApp
     }
+    ApplyTheme()                             ; Farbsatz passend zum Windows-Theme
     BuildBar()
     ApplyWindowHooks()                       ; Pin auf alle Desktops + Change-Hook
     OnMessage(MSG_VD_CHANGED, OnDesktopChanged)
@@ -116,6 +148,37 @@ ApplyWindowHooks() {
     global MyGui, MSG_VD_CHANGED
     DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", MyGui.Hwnd)
     DllCall("VirtualDesktopAccessor\RegisterPostMessageHook", "Ptr", MyGui.Hwnd, "Int", MSG_VD_CHANGED)
+}
+
+; --------------------------- Theme-Erkennung --------------------------------
+; Liest aus der Registry, ob die Taskleiste dunkel ist.
+; SystemUsesLightTheme = 1 -> helle Taskleiste, 0 -> dunkel. Fehlt der Wert -> hell.
+SystemIsDark() {
+    try {
+        v := RegRead("HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize", "SystemUsesLightTheme")
+        return (v = 0)
+    }
+    return false
+}
+
+; Ermittelt das anzuwendende Theme aus ThemeMode (auto/light/dark).
+ResolveTheme() {
+    mode := CONF["ThemeMode"]
+    if (mode = "light")
+        return "light"
+    if (mode = "dark")
+        return "dark"
+    return SystemIsDark() ? "dark" : "light"   ; auto
+}
+
+; Uebernimmt den passenden Farbsatz in die aktiven CONF-Schluessel.
+ApplyTheme() {
+    global gTheme, THEME_LIGHT, THEME_DARK
+    t := ResolveTheme()
+    set := (t = "dark") ? THEME_DARK : THEME_LIGHT
+    for k, val in set
+        CONF[k] := val
+    gTheme := t
 }
 
 GetDesktopCount() => VD("GetDesktopCount", "Int")
@@ -464,7 +527,15 @@ BurstTick() {
 
 Refresh() {
     ; Desktop-Anzahl oder Namen koennten sich geaendert haben -> ggf. neu bauen
-    global BTNS
+    global BTNS, gTheme
+    ; Windows-Theme gewechselt? -> Farbsatz neu anwenden und Leiste neu bauen
+    if (ResolveTheme() != gTheme) {
+        ApplyTheme()
+        BuildBar()
+        ApplyWindowHooks()
+        UpdateHighlight()
+        return
+    }
     if (GetDesktopCount() != BTNS.Length) {
         BuildBar()
         ApplyWindowHooks()
@@ -483,15 +554,15 @@ Refresh() {
 ; ------------------------------- Tray ---------------------------------------
 BuildTray() {
     A_TrayMenu.Delete()
-    A_TrayMenu.Add("Desktop Switcher", (*) => 0)
-    A_TrayMenu.Disable("Desktop Switcher")
+    A_TrayMenu.Add("DeskTabs", (*) => 0)
+    A_TrayMenu.Disable("DeskTabs")
     A_TrayMenu.Add()
     A_TrayMenu.Add("Leiste neu aufbauen", (*) => Refresh())
     A_TrayMenu.Add("Position zuruecksetzen", ResetPos)
     A_TrayMenu.Add()
     A_TrayMenu.Add("Beenden", (*) => ExitApp())
     TraySetIcon("shell32.dll", 27)
-    A_IconTip := "Desktop Switcher"
+    A_IconTip := "DeskTabs"
 }
 
 ResetPos(*) {
