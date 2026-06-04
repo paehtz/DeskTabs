@@ -165,7 +165,16 @@ DeskTabs ist KI-unterstützt mit [Claude Code](https://claude.com/claude-code) e
 
 ## Lizenz
 
-[MIT](LICENSE) © Henning Pähtz
+DeskTabs steht unter der [MIT-Lizenz](LICENSE) © Henning Pähtz.
+
+**Haftungsausschluss:** DeskTabs wird „wie besehen" bereitgestellt, ohne jede Gewährleistung und ohne Haftung, wie in der MIT-Lizenz festgehalten. Nutzung auf eigenes Risiko.
+
+### Drittkomponenten
+
+- **VirtualDesktopAccessor.dll** ([Ciantic](https://github.com/Ciantic/VirtualDesktopAccessor)) ist unter der **MIT-Lizenz** beigelegt.
+- Die kompilierte **`DeskTabs.exe`** (in den Releases) bettet den **AutoHotkey**-Interpreter ein, der unter **GPL-2.0** steht. Die kompilierte exe wird daher unter GPL-2.0 verteilt; der Skript-Quellcode liegt in diesem Repo, der AutoHotkey-Quellcode auf der [Projektseite](https://github.com/AutoHotkey/AutoHotkey). Beim Start aus dem Quellcode (`DeskTabs.ahk`) wird AutoHotkey nicht mitgeliefert.
+
+Vollständige Hinweise: [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
 
 ---
 
