@@ -10,9 +10,9 @@ Entwickelt von [Henning Pähtz](https://paehtz.de) als schlankes Werkzeug fürs 
 ![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-334455.svg)
 ![Windows 11](https://img.shields.io/badge/Windows-11-0078D4.svg)
 
-![DeskTabs, helles Theme](docs/screenshot-light.png)
+![DeskTabs, helles Farbschema](docs/screenshot-light-de.png)
 
-![DeskTabs, dunkles Theme](docs/screenshot-dark.png)
+![DeskTabs, dunkles Farbschema](docs/screenshot-dark-de.png)
 
 ---
 
