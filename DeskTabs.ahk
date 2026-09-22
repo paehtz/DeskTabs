@@ -841,7 +841,7 @@ BuildTray() {
     A_TrayMenu.Disable("DeskTabs")
     A_TrayMenu.Add()
     A_TrayMenu.Add("Leiste neu aufbauen", (*) => Refresh())
-    A_TrayMenu.Add("Position zuruecksetzen", ResetPos)
+    A_TrayMenu.Add("Position zurücksetzen", ResetPos)
     A_TrayMenu.Add()
     A_TrayMenu.Add("Beenden", (*) => ExitApp())
     TraySetIcon("shell32.dll", 27)
