@@ -118,6 +118,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
 | `TimeLog` | 1 | Write per-desktop stay times to `desktop-log_YYYY-MM.csv` next to the script. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
+| `Language` | `auto` | UI language: `auto` follows the Windows display language (German → `de`, everything else → `en`), or `de` / `en` fixed. Any other code loads `lang\<code>.ini`. Can also be set in `settings.ini` `[View] Language=`. Takes effect on restart. |
 | Colours | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` are copied at startup from `THEME_LIGHT` / `THEME_DARK` (depending on `ThemeMode`) into `CONF`. To customise, edit the two `THEME_*` maps near the top of the script. |
 
 ### settings.ini (created automatically)
@@ -142,6 +143,12 @@ Buchhaltung=BH
 ; Written automatically when you switch levels with Ctrl + mouse wheel:
 CompactMode=short
 ```
+
+---
+
+## Languages
+
+DeskTabs speaks German and English out of the box and picks the language from your Windows display language. To add a language, copy `lang\en.ini` to `lang\<code>.ini` (e.g. `lang\fr.ini`), translate the lines (`key=Text`, keep the `{1}` placeholders, `\n` is a line break, file is UTF-8) and set `Language=fr` in `settings.ini` under `[View]`. Pull requests with new languages are welcome.
 
 ---
 

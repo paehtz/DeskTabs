@@ -56,7 +56,8 @@ global CONF := Map(
     "MaxBarWidthPct", 40,      ; auto: max. Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird
     "ShortNameLen",   8,       ; Stufe "short": Namen laenger als das werden gekuerzt
     "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (desktop-log_YYYY-MM.csv)
-    "TimeLogIdleMin", 5        ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
+    "TimeLogIdleMin", 5,       ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
+    "Language",       "auto"   ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
 )
 
 ; ---- Theme-Farbsaetze (werden je nach Windows-Theme in CONF uebernommen) ----
@@ -198,19 +199,88 @@ global gSwitching := false   ; laeuft gerade ein Desktop-Wechsel? (gegen Rebuild
 global gCompact := "full"    ; aktuell dargestellte Stufe: "full" | "short" | "icon"
 global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-Budget im auto-Modus)
 
+; ------------------------------ Sprache -------------------------------------
+; Alle sichtbaren Texte laufen durch T("schluessel", args*). Deutsch und Englisch
+; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
+; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
+global LANG_DE := Map(
+    "err.dll_missing", "VirtualDesktopAccessor.dll nicht gefunden:`n{1}",
+    "err.dll_load",    "Die DLL konnte nicht geladen werden.",
+    "tray.rebuild",    "Leiste neu aufbauen",
+    "tray.resetpos",   "Position zurücksetzen",
+    "tray.exit",       "Beenden",
+    "view.tip",        "Ansicht: {1}",
+    "view.auto",       "automatisch ({1})",
+    "level.full",      "Nummer + Name",
+    "level.short",     "Nummer + Kürzel",
+    "level.icon",      "nur Kürzel/Nummer"
+)
+global LANG_EN := Map(
+    "err.dll_missing", "VirtualDesktopAccessor.dll not found:`n{1}",
+    "err.dll_load",    "The DLL could not be loaded.",
+    "tray.rebuild",    "Rebuild bar",
+    "tray.resetpos",   "Reset position",
+    "tray.exit",       "Exit",
+    "view.tip",        "View: {1}",
+    "view.auto",       "automatic ({1})",
+    "level.full",      "number + name",
+    "level.short",     "number + abbreviation",
+    "level.icon",      "abbreviation/number only"
+)
+global LANG := LANG_EN          ; aktive Texte (wird in InitLanguage gesetzt)
+global gLangCode := "en"
+
+; Sprache bestimmen: CONF/settings.ini "Language", sonst Windows-Anzeigesprache.
+; A_Language ist der Hex-Code der Windows-UI-Sprache (0407 = Deutsch, ...).
+InitLanguage() {
+    global LANG, LANG_DE, LANG_EN, gLangCode
+    code := CONF["Language"]
+    ov := IniRead(CONF["IniPath"], "View", "Language", "")
+    if (ov != "")
+        code := ov
+    if (code = "auto") {
+        deCodes := "0407,0807,0c07,1007,1407"           ; Deutschland, Schweiz, Oesterreich, Luxemburg, Liechtenstein
+        code := InStr(deCodes, A_Language) ? "de" : "en"
+    }
+    gLangCode := code
+    ; eingebaute Basis (unbekannte Codes starten auf Englisch), dann lang\<code>.ini drueber
+    LANG := (code = "de") ? LANG_DE.Clone() : LANG_EN.Clone()
+    file := A_ScriptDir "\lang\" code ".ini"
+    if FileExist(file) {
+        try {
+            Loop Parse, FileRead(file, "UTF-8"), "`n", "`r" {
+                line := Trim(A_LoopField)
+                if (line = "" || SubStr(line, 1, 1) = ";" || SubStr(line, 1, 1) = "[")
+                    continue
+                eq := InStr(line, "=")
+                if (eq > 1)
+                    LANG[Trim(SubStr(line, 1, eq - 1))] := StrReplace(Trim(SubStr(line, eq + 1)), "\n", "`n")
+            }
+        }
+    }
+}
+
+; Text holen und Platzhalter {1}, {2} ... fuellen; fehlende Schluessel fallen auf Englisch, dann auf den Schluessel zurueck
+T(key, args*) {
+    global LANG, LANG_EN
+    s := LANG.Has(key) ? LANG[key] : (LANG_EN.Has(key) ? LANG_EN[key] : key)
+    return args.Length ? Format(s, args*) : s
+}
+
 ; ------------------------------- Start --------------------------------------
 Main()
 
 Main() {
     global VDA, MyGui
     OnError(LogErr)
+    InitLanguage()
     if !FileExist(CONF["DllPath"]) {
-        MsgBox("VirtualDesktopAccessor.dll nicht gefunden:`n" CONF["DllPath"], "DeskTabs", 0x10)
+        MsgBox(T("err.dll_missing", CONF["DllPath"]), "DeskTabs", 0x10)
         ExitApp
     }
     VDA := DllCall("LoadLibrary", "Str", CONF["DllPath"], "Ptr")
     if !VDA {
-        MsgBox("DLL konnte nicht geladen werden.", "DeskTabs", 0x10)
+        MsgBox(T("err.dll_load"), "DeskTabs", 0x10)
         ExitApp
     }
     ApplyTheme()                             ; Farbsatz passend zum Windows-Theme
@@ -582,7 +652,7 @@ CycleCompact(dir) {
     ApplyWindowHooks()
     UpdateHighlight()
     ; kurze Rueckmeldung, welche Stufe jetzt gilt
-    txt := (new = "auto") ? "Ansicht: automatisch (" gCompact ")" : "Ansicht: " new
+    txt := (new = "auto") ? T("view.tip", T("view.auto", T("level." gCompact))) : T("view.tip", T("level." new))
     ToolTip(txt)
     SetTimer(() => ToolTip(), -900)
 }
@@ -840,10 +910,10 @@ BuildTray() {
     A_TrayMenu.Add("DeskTabs", (*) => 0)
     A_TrayMenu.Disable("DeskTabs")
     A_TrayMenu.Add()
-    A_TrayMenu.Add("Leiste neu aufbauen", (*) => Refresh())
-    A_TrayMenu.Add("Position zurücksetzen", ResetPos)
+    A_TrayMenu.Add(T("tray.rebuild"), (*) => Refresh())
+    A_TrayMenu.Add(T("tray.resetpos"), ResetPos)
     A_TrayMenu.Add()
-    A_TrayMenu.Add("Beenden", (*) => ExitApp())
+    A_TrayMenu.Add(T("tray.exit"), (*) => ExitApp())
     TraySetIcon("shell32.dll", 27)
     A_IconTip := "DeskTabs"
 }

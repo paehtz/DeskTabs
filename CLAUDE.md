@@ -68,6 +68,7 @@ All user-facing options are in the `CONF := Map(...)` block at the very top of `
 - **Per-desktop colour at runtime** → `settings.ini` section `[Colors]`, lines `Desktop name = RRGGBB`.
 - **Compact levels** → `CompactMode` (`auto` / `full` / `short` / `icon`), `MaxBarWidthPct` (auto budget), `ShortNameLen`. `BuildBar()` picks the level (auto steps down until the bar fits), `BuildBarAt()` does the actual build, `LabelFor()` renders the label for the current level (`gCompact`). Ctrl + mouse wheel calls `CycleCompact()` and persists the choice in `settings.ini [View]`.
 - **Per-desktop abbreviation** → `settings.ini` section `[Short]`, lines `Desktop name = ABBR` (used by `short`/`icon`).
+- **UI texts / languages** → every visible string goes through `T("key", args*)`. Built-in maps `LANG_DE` / `LANG_EN` near the top of the script; `lang\<code>.ini` (UTF-8, `key=Text`) overrides or adds a language, chosen by `Language` (`auto` = Windows display language). **When you add a UI string, add it to both maps and both `lang\*.ini` files.**
 - **Fullscreen auto-hide** → `IsForegroundFullscreen()` walks the z-order and checks the top-most real window *on the bar's monitor*; don't switch it back to `GetForegroundWindow()` (breaks with multiple monitors).
 
 After editing: run `/validate`, then restart the script and look at the bar.

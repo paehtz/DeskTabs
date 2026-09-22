@@ -118,6 +118,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `ShortNameLen` | 8 | Stufe `short`: Namen länger als das werden gekürzt (wenn kein Kürzel hinterlegt ist). |
 | `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `desktop-log_YYYY-MM.csv` neben dem Skript schreiben. `0` = aus. |
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
+| `Language` | `auto` | Oberflächensprache: `auto` folgt der Windows-Anzeigesprache (Deutsch → `de`, alles andere → `en`), oder `de` / `en` fest. Jeder andere Code lädt `lang\<code>.ini`. Auch in `settings.ini` `[View] Language=` setzbar. Wirkt nach Neustart. |
 | Farben | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` werden beim Start aus `THEME_LIGHT` / `THEME_DARK` (je nach `ThemeMode`) in die CONF übernommen. Anpassen → die beiden `THEME_*`-Maps oben im Skript. |
 
 ### settings.ini (wird automatisch angelegt)
@@ -142,6 +143,12 @@ Buchhaltung=BH
 ; Wird automatisch geschrieben, wenn Du mit Strg + Mausrad die Stufe wechselst:
 CompactMode=short
 ```
+
+---
+
+## Sprachen
+
+DeskTabs spricht von Haus aus Deutsch und Englisch und wählt die Sprache nach Deiner Windows-Anzeigesprache. Eine weitere Sprache ergänzt Du, indem Du `lang\en.ini` nach `lang\<code>.ini` kopierst (z.B. `lang\fr.ini`), die Zeilen übersetzt (`schlüssel=Text`, Platzhalter `{1}` stehen lassen, `\n` ist ein Zeilenumbruch, Datei ist UTF-8) und in `settings.ini` unter `[View]` `Language=fr` setzt. Pull Requests mit neuen Sprachen sind willkommen.
 
 ---
 
