@@ -18,7 +18,9 @@ Entwickelt von [Henning Pähtz](https://paehtz.de) als schlankes Werkzeug fürs 
 
 ## ⬇ Herunterladen
 
-**[DeskTabs für Windows 11 (ZIP, 0,9 MB)](https://github.com/paehtz/DeskTabs/releases/latest/download/DeskTabs-latest.zip)** — irgendwohin entpacken und `DeskTabs.exe` starten. Kein Installer, keine Administratorrechte, nichts in der Registry.
+**[Setup (empfohlen, 2,7 MB)](https://github.com/paehtz/DeskTabs/releases/latest/download/DeskTabs-Setup-latest.exe)** — ein ganz normaler Assistent: Ordner wählen (oder den Vorschlag lassen), Häkchen für den Autostart, fertig. Ohne Administratorrechte, und DeskTabs steht danach wie jedes andere Programm unter *Apps & Features*.
+
+**[Portable ZIP (0,9 MB)](https://github.com/paehtz/DeskTabs/releases/latest/download/DeskTabs-latest.zip)** — irgendwohin entpacken und `DeskTabs.exe` starten. Es wird nichts installiert und nichts in die Registry geschrieben; den Ordner löschen entfernt alles.
 
 Lieber eine Zeile in PowerShell? Das lädt die neueste Fassung, legt sie nach `%LOCALAPPDATA%\DeskTabs`, startet sie und richtet den Autostart ein:
 
