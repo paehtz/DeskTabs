@@ -71,7 +71,8 @@ global CONF := Map(
     "TabMargin",      4,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
     "ShowDividers",   0,       ; 1 = duenne Trennstriche zwischen den Tabs
     "ShowIcons",      1,       ; 1 = Symbole aus settings.ini [Icons] im Tab zeigen
-    "IconSize",       16,      ; Kantenlaenge des Symbols (px @100%)
+    "IconSize",       18,      ; Kantenlaenge des Symbols neben dem Text (px @100%)
+    "IconOnlySize",   24,      ; Kantenlaenge in der Stufe "nur Symbol" (px @100%), wie die Taskleisten-Symbole
     "IconGap",        7,       ; Abstand zwischen Symbol und Text (px @100%)
     "IconFont",       "Segoe Fluent Icons",  ; Symbolschrift von Windows 11 (Fallback: Segoe MDL2 Assets)
     "ColHoverBg",     0xFFFFFF, ; Hover-Farbe: wird mit HoverPct ueber den Leistengrund gelegt (Windows hellt auf)
@@ -1808,16 +1809,20 @@ BuildBarAt() {
     gap := px(CONF["Gap"])
     x := px(CONF["GripW"]) + gap
     iconSize := px(CONF["IconSize"]), iconGap := px(CONF["IconGap"])
+    bigSize := Min(px(CONF["IconOnlySize"]), btnH - px(8))
     Loop cnt {
         num := A_Index - 1
         label := LabelFor(num)
         icon := CONF["ShowIcons"] ? IconPathFor(num) : ""
-        if (icon != "" && gCompact = "icon")
-            label := ""                       ; kleinste Stufe: nur das Symbol
-        iw := (icon != "") ? iconSize : 0
+        big := (icon != "" && gCompact = "icon")  ; kleinste Stufe mit Symbol: gross und ohne Text
+        if (big)
+            label := ""
+        iw := (icon != "") ? (big ? bigSize : iconSize) : 0
         tw := (label != "") ? MeasureText(mG, font, sf, label) : 0
         w := px(CONF["PadX"]) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
-        BTNS.Push(Map("num", num, "label", label, "icon", icon, "x", x, "w", w, "hover", false))
+        if (big)
+            w := Max(btnH, iw + px(12) * 2)       ; quadratische Kachel wie die Taskleisten-Buttons
+        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false))
         x += w
         if (A_Index < cnt)
             x += gap
@@ -2071,8 +2076,10 @@ RenderBar(force := false) {
             FillRoundRectGrad(g, x, y, w, h, r, ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])), grad)
         }
         ; Symbol links, Text daneben (bzw. nur eins von beidem)
-        iw := (item["icon"] != "") ? L["iconSize"] : 0
+        iw := item["iw"]
         tx0 := x + px(CONF["PadX"]), tw := w - 2 * px(CONF["PadX"])
+        if (iw && item["label"] = "")
+            tx0 := x + (w - iw) // 2              ; nur Symbol: mittig in der Kachel
         if (iw) {
             iy := y + (h - iw) // 2 - px(1)
             if (IsGlyphSpec(item["icon"])) {
@@ -2092,7 +2099,9 @@ RenderBar(force := false) {
             DrawText(g, font, sf, item["label"], tx0, y, tw, h, ARGB(tx))
         ; Farbbalken unten im Tab (abgerundet, eingerueckt)
         if (CONF["ColorCoding"]) {
-            inset := px(10), ah := L["accH"]
+            iconOnly := (item["label"] = "" && iw)
+            inset := iconOnly ? px(5) : px(10)
+            ah := L["accH"] + (iconOnly ? px(1) : 0)   ; Symbol-Stufe: deutlicher Streifen als Kennung
             FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2, ARGB(col))
         }
         ; optionaler Trennstrich in der Luecke danach
