@@ -213,7 +213,32 @@ global LANG_DE := Map(
     "view.auto",       "automatisch ({1})",
     "level.full",      "Nummer + Name",
     "level.short",     "Nummer + Kürzel",
-    "level.icon",      "nur Kürzel/Nummer"
+    "level.icon",      "nur Kürzel/Nummer",
+    "menu.settings",   "Einstellungen…",
+    "menu.tab.short",  "Kürzel setzen…",
+    "menu.tab.color",  "Farbe",
+    "menu.color.custom", "Eigene Farbe (RRGGBB)…",
+    "menu.color.default", "Standardfarbe verwenden",
+    "menu.showindex",  "Nummern anzeigen",
+    "menu.colorcoding", "Farbcodierung",
+    "menu.view",       "Ansicht",
+    "menu.view.auto",  "Automatisch (nach Platz)",
+    "menu.theme",      "Farbschema",
+    "menu.theme.auto", "Automatisch (Windows)",
+    "menu.theme.light", "Hell",
+    "menu.theme.dark", "Dunkel",
+    "menu.dock",       "Andocken",
+    "menu.dock.on",    "Auf der Taskleiste",
+    "menu.dock.above", "Über der Taskleiste",
+    "menu.snap",       "An Taskleiste einrasten",
+    "menu.timelog",    "Zeit-Log schreiben",
+    "menu.language",   "Sprache",
+    "menu.language.auto", "Automatisch (Windows)",
+    "prompt.short.title", "Kürzel für „{1}“",
+    "prompt.short.text", "Kurzname für die Kompakt-Ansicht (leer = keins):",
+    "prompt.color.title", "Farbe für „{1}“",
+    "prompt.color.text", "Hex-Farbe RRGGBB, z.B. E5471D:",
+    "err.color",       "Ungültige Farbe. Bitte sechs Hex-Zeichen, z.B. E5471D."
 )
 global LANG_EN := Map(
     "err.dll_missing", "VirtualDesktopAccessor.dll not found:`n{1}",
@@ -225,7 +250,32 @@ global LANG_EN := Map(
     "view.auto",       "automatic ({1})",
     "level.full",      "number + name",
     "level.short",     "number + abbreviation",
-    "level.icon",      "abbreviation/number only"
+    "level.icon",      "abbreviation/number only",
+    "menu.settings",   "Settings…",
+    "menu.tab.short",  "Set abbreviation…",
+    "menu.tab.color",  "Colour",
+    "menu.color.custom", "Custom colour (RRGGBB)…",
+    "menu.color.default", "Use default colour",
+    "menu.showindex",  "Show numbers",
+    "menu.colorcoding", "Colour coding",
+    "menu.view",       "View",
+    "menu.view.auto",  "Automatic (by available space)",
+    "menu.theme",      "Theme",
+    "menu.theme.auto", "Automatic (Windows)",
+    "menu.theme.light", "Light",
+    "menu.theme.dark", "Dark",
+    "menu.dock",       "Docking",
+    "menu.dock.on",    "On the taskbar",
+    "menu.dock.above", "Above the taskbar",
+    "menu.snap",       "Snap to taskbar",
+    "menu.timelog",    "Write time log",
+    "menu.language",   "Language",
+    "menu.language.auto", "Automatic (Windows)",
+    "prompt.short.title", "Abbreviation for “{1}”",
+    "prompt.short.text", "Short name for the compact levels (empty = none):",
+    "prompt.color.title", "Colour for “{1}”",
+    "prompt.color.text", "Hex colour RRGGBB, e.g. E5471D:",
+    "err.color",       "Invalid colour. Please use six hex digits, e.g. E5471D."
 )
 global LANG := LANG_EN          ; aktive Texte (wird in InitLanguage gesetzt)
 global gLangCode := "en"
@@ -283,16 +333,14 @@ Main() {
         MsgBox(T("err.dll_load"), "DeskTabs", 0x10)
         ExitApp
     }
+    ApplyIniOverrides()                      ; gemerkte Einstellungen aus settings.ini [View]
     ApplyTheme()                             ; Farbsatz passend zum Windows-Theme
-    ; Gemerkte Kompakt-Stufe aus settings.ini [View] (per Strg+Mausrad gesetzt)
-    ov := IniRead(CONF["IniPath"], "View", "CompactMode", "")
-    if (ov = "auto" || ov = "full" || ov = "short" || ov = "icon")
-        CONF["CompactMode"] := ov
     BuildBar()
     ApplyWindowHooks()                       ; Pin auf alle Desktops + Change-Hook
     OnMessage(MSG_VD_CHANGED, OnDesktopChanged)
     if (CONF["WheelSwitch"])
         OnMessage(0x020A, OnWheel)          ; WM_MOUSEWHEEL
+    OnMessage(0x0205, OnRButtonUp)          ; WM_RBUTTONUP -> Kontextmenue
     ; Fallback-Timer (falls Hook mal nichts meldet) + Namen + Desktop-Anzahl frisch halten
     SetTimer(Refresh, 1200)
     ; Backstop: im Vordergrund halten (gegen z-Order-Verdraengung)
@@ -308,12 +356,182 @@ Main() {
     if (CONF["AutoHideFullscreen"])
         SetTimer(FullscreenTick, 500)
     UpdateHighlight()                        ; oeffnet auch das erste Zeit-Log-Segment
-    ; Zeit-Log: Sperren/Entsperren des Bildschirms als Pause erkennen
-    if (CONF["TimeLog"]) {
-        DllCall("Wtsapi32\WTSRegisterSessionNotification", "Ptr", A_ScriptHwnd, "UInt", 0)
-        OnMessage(0x02B1, OnSessionChange)  ; WM_WTSSESSION_CHANGE
-    }
+    ; Zeit-Log: Sperren/Entsperren des Bildschirms als Pause erkennen (immer
+    ; registrieren, TimeLog kann zur Laufzeit ueber das Menue eingeschaltet werden)
+    DllCall("Wtsapi32\WTSRegisterSessionNotification", "Ptr", A_ScriptHwnd, "UInt", 0)
+    OnMessage(0x02B1, OnSessionChange)      ; WM_WTSSESSION_CHANGE
     BuildTray()
+}
+
+; ------------------------ Einstellungen (settings.ini [View]) ---------------
+; Alles, was das Kontextmenue umschaltet, landet in settings.ini [View] und
+; ueberschreibt beim Start bzw. beim Live-Reload die CONF-Standardwerte.
+ApplyIniOverrides() {
+    for key, allowed in Map("CompactMode", "auto,full,short,icon", "ThemeMode", "auto,light,dark"
+                          , "DockMode", "on,above", "Language", "*") {
+        v := IniRead(CONF["IniPath"], "View", key, "")
+        if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
+            CONF[key] := v
+    }
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog"] {
+        v := IniRead(CONF["IniPath"], "View", key, "")
+        if (v = "0" || v = "1")
+            CONF[key] := Integer(v)
+    }
+}
+
+; Einstellung setzen, merken, anwenden
+SetView(key, val) {
+    CONF[key] := val
+    IniSet("View", key, val)
+    if (key = "TimeLog")
+        val ? LogOpen(GetCurrentDesktop()) : LogClose()
+    if (key = "Language") {
+        InitLanguage()
+        BuildTray()
+    }
+    if (key = "DockMode")
+        IniDel("Position", "Y")     ; Y neu aus dem Andock-Modus ableiten, X bleibt
+    ApplyTheme()
+    RebuildAll()
+}
+ToggleView(key, *) => SetView(key, CONF[key] ? 0 : 1)
+SetViewStr(key, val, *) => SetView(key, val)
+
+RebuildAll() {
+    BuildBar()
+    ApplyWindowHooks()
+    UpdateHighlight()
+}
+
+; ----------------------------- Kontextmenue --------------------------------
+; Rechtsklick auf einen Tab: Tab-Bereich (Kuerzel, Farbe) + allgemeine
+; Einstellungen. Rechtsklick auf Griff/Luecke oder Tray "Einstellungen…":
+; nur die allgemeinen Einstellungen.
+OnRButtonUp(wParam, lParam, msg, hwnd) {
+    global MyGui, BTNS
+    if (!MyGui)
+        return
+    if (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd)
+        return
+    num := -1
+    for item in BTNS {
+        if (hwnd = item["ctrl"].Hwnd || (item["acc"] && hwnd = item["acc"].Hwnd)) {
+            num := item["num"]
+            break
+        }
+    }
+    ShowContextMenu(num)
+    return 0
+}
+
+ShowContextMenu(num, *) {
+    m := Menu()
+    if (num >= 0) {
+        raw := GetDesktopNameRaw(num)
+        head := (num + 1) " · " raw
+        m.Add(head, (*) => 0)
+        m.Disable(head)
+        m.Add(T("menu.tab.short"), PromptShort.Bind(num))
+        cm := Menu()
+        cur := DesktopColor(num)
+        hit := false
+        for col in CONF["Palette"] {
+            label := Format("{:06X}", col)
+            cm.Add(label, SetColor.Bind(num, col))
+            if (col = cur && !hit) {
+                cm.Check(label)
+                hit := true
+            }
+        }
+        cm.Add()
+        cm.Add(T("menu.color.custom"), PromptColor.Bind(num))
+        if (!hit)
+            cm.Check(T("menu.color.custom"))
+        cm.Add(T("menu.color.default"), ClearColor.Bind(num))
+        m.Add(T("menu.tab.color"), cm)
+        m.Add()
+    }
+    m.Add(T("menu.showindex"), ToggleView.Bind("ShowIndex"))
+    if (CONF["ShowIndex"])
+        m.Check(T("menu.showindex"))
+    m.Add(T("menu.colorcoding"), ToggleView.Bind("ColorCoding"))
+    if (CONF["ColorCoding"])
+        m.Check(T("menu.colorcoding"))
+    vm := Menu()
+    for val, label in Map("auto", T("menu.view.auto"), "full", T("level.full"), "short", T("level.short"), "icon", T("level.icon")) {
+        vm.Add(label, SetViewStr.Bind("CompactMode", val))
+        if (CONF["CompactMode"] = val)
+            vm.Check(label)
+    }
+    m.Add(T("menu.view"), vm)
+    tm := Menu()
+    for val, label in Map("auto", T("menu.theme.auto"), "light", T("menu.theme.light"), "dark", T("menu.theme.dark")) {
+        tm.Add(label, SetViewStr.Bind("ThemeMode", val))
+        if (CONF["ThemeMode"] = val)
+            tm.Check(label)
+    }
+    m.Add(T("menu.theme"), tm)
+    dm := Menu()
+    for val, label in Map("on", T("menu.dock.on"), "above", T("menu.dock.above")) {
+        dm.Add(label, SetViewStr.Bind("DockMode", val))
+        if (CONF["DockMode"] = val)
+            dm.Check(label)
+    }
+    m.Add(T("menu.dock"), dm)
+    m.Add(T("menu.snap"), ToggleView.Bind("SnapToTaskbar"))
+    if (CONF["SnapToTaskbar"])
+        m.Check(T("menu.snap"))
+    m.Add(T("menu.timelog"), ToggleView.Bind("TimeLog"))
+    if (CONF["TimeLog"])
+        m.Check(T("menu.timelog"))
+    lm := Menu()
+    for val, label in Map("auto", T("menu.language.auto"), "de", "Deutsch", "en", "English") {
+        lm.Add(label, SetViewStr.Bind("Language", val))
+        if (CONF["Language"] = val)
+            lm.Check(label)
+    }
+    m.Add(T("menu.language"), lm)
+    m.Add()
+    m.Add(T("tray.rebuild"), (*) => RebuildAll())
+    m.Add(T("tray.resetpos"), ResetPos)
+    m.Add()
+    m.Add(T("tray.exit"), (*) => ExitApp())
+    m.Show()
+}
+
+PromptShort(num, *) {
+    raw := GetDesktopNameRaw(num)
+    ib := InputBox(T("prompt.short.text"), T("prompt.short.title", raw), "w380 h130", ShortNameFor(num))
+    if (ib.Result != "OK")
+        return
+    v := Trim(ib.Value)
+    v = "" ? IniDel("Short", raw) : IniSet("Short", raw, v)
+    RebuildAll()
+}
+
+PromptColor(num, *) {
+    raw := GetDesktopNameRaw(num)
+    ib := InputBox(T("prompt.color.text"), T("prompt.color.title", raw), "w380 h130", Format("{:06X}", DesktopColor(num)))
+    if (ib.Result != "OK")
+        return
+    v := StrReplace(Trim(ib.Value), "#", "")
+    if !RegExMatch(v, "^[0-9A-Fa-f]{6}$") {
+        MsgBox(T("err.color"), "DeskTabs", 0x30)
+        return
+    }
+    IniSet("Colors", raw, StrUpper(v))
+    RebuildAll()
+}
+
+SetColor(num, col, *) {
+    IniSet("Colors", GetDesktopNameRaw(num), Format("{:06X}", col))
+    RebuildAll()
+}
+
+ClearColor(num, *) {
+    IniDel("Colors", GetDesktopNameRaw(num))
+    RebuildAll()
 }
 
 LogErr(err, mode) {
@@ -503,12 +721,13 @@ BuildBarAt() {
         w := cw + px(CONF["PadX"]) * 2
         c.Move(x, margin, w, btnH)
         c.OnEvent("Click", BtnClick.Bind(num))
-        BTNS.Push(Map("ctrl", c, "num", num, "hover", false))
+        BTNS.Push(Map("ctrl", c, "num", num, "hover", false, "acc", 0))
         ; Farb-Akzentbalken UNTER dem Button (ueberlappungsfrei, Tab-Indikator-Stil)
         if (CONF["ColorCoding"]) {
             ac := MyGui.Add("Text", Format("x{1} y{2} w{3} h{4} Background{5}"
                 , x, margin + btnH + px(1), w, accH, Fmt(DesktopColor(num))))
             ac.OnEvent("Click", BtnClick.Bind(num))
+            BTNS[BTNS.Length]["acc"] := ac
         }
         x += w
         ; Trennstrich zwischen den Buttons (nicht nach dem letzten)
@@ -874,9 +1093,10 @@ Refresh() {
     ; settings.ini von aussen geaendert (z.B. von einem KI-Agenten: Kuerzel,
     ; Farben, Ansicht)? -> live uebernehmen, kein Neustart noetig
     if (SettingsChanged()) {
-        ov := IniRead(CONF["IniPath"], "View", "CompactMode", "")
-        if (ov = "auto" || ov = "full" || ov = "short" || ov = "icon")
-            CONF["CompactMode"] := ov
+        ApplyIniOverrides()
+        InitLanguage()
+        BuildTray()
+        ApplyTheme()
         BuildBar()
         ApplyWindowHooks()
         UpdateHighlight()
@@ -910,7 +1130,8 @@ BuildTray() {
     A_TrayMenu.Add("DeskTabs", (*) => 0)
     A_TrayMenu.Disable("DeskTabs")
     A_TrayMenu.Add()
-    A_TrayMenu.Add(T("tray.rebuild"), (*) => Refresh())
+    A_TrayMenu.Add(T("menu.settings"), (*) => ShowContextMenu(-1))
+    A_TrayMenu.Add(T("tray.rebuild"), (*) => RebuildAll())
     A_TrayMenu.Add(T("tray.resetpos"), ResetPos)
     A_TrayMenu.Add()
     A_TrayMenu.Add(T("tray.exit"), (*) => ExitApp())
@@ -945,6 +1166,11 @@ IniSet(sec, key, val) {
     global gIniStamp
     IniWrite(val, CONF["IniPath"], sec, key)
     try gIniStamp := FileGetTime(CONF["IniPath"], "M")   ; eigener Schreibzugriff, kein Live-Reload
+}
+IniDel(sec, key) {
+    global gIniStamp
+    try IniDelete(CONF["IniPath"], sec, key)
+    try gIniStamp := FileGetTime(CONF["IniPath"], "M")
 }
 
 OnExitCleanup(*) {

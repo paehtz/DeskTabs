@@ -38,6 +38,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
 - **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
+- **Rechtsklick-Menü:** Rechtsklick auf einen Tab für Kürzel und Farbe, dazu alle App-Einstellungen (Nummern, Farbcodierung, Ansichtsstufe, Farbschema, Andocken, Einrasten, Zeit-Log, Sprache). Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol bietet dieselben Einstellungen.
 - **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
 - **Mausrad** über der Leiste blättert durch die Desktops.
 - **Trennstriche** zwischen den Buttons (dezent).
@@ -140,8 +141,11 @@ BauPunkt Hain=BPH
 Buchhaltung=BH
 
 [View]
-; Wird automatisch geschrieben, wenn Du mit Strg + Mausrad die Stufe wechselst:
+; Wird vom Rechtsklick-Menü (und Strg + Mausrad) geschrieben; jeder Schlüssel
+; überschreibt den CONF-Standard: CompactMode, ThemeMode, DockMode, Language,
+; ShowIndex, ColorCoding, SnapToTaskbar, TimeLog
 CompactMode=short
+ShowIndex=1
 ```
 
 ---

@@ -35,8 +35,15 @@ BauPunkt Hain=BPH
 [Colors]                     ; accent colour per desktop, RRGGBB
 BauPunkt Hain=E5471D
 
-[View]                       ; label level: auto | full | short | icon
-CompactMode=auto
+[View]                       ; what the right-click menu saves; each key overrides CONF
+CompactMode=auto             ; auto | full | short | icon
+ThemeMode=auto               ; auto | light | dark
+DockMode=on                  ; on | above
+Language=auto                ; auto | de | en | <code of lang\<code>.ini>
+ShowIndex=1                  ; 0|1  numbers in front of names
+ColorCoding=1                ; 0|1  colour bar under each tab
+SnapToTaskbar=1              ; 0|1
+TimeLog=1                    ; 0|1
 
 [Icons]                      ; planned (issue #2): image path or website URL per desktop
 BauPunkt Hain=C:\Projects\BauPunkt\logo.png
@@ -68,6 +75,7 @@ All user-facing options are in the `CONF := Map(...)` block at the very top of `
 - **Per-desktop colour at runtime** → `settings.ini` section `[Colors]`, lines `Desktop name = RRGGBB`.
 - **Compact levels** → `CompactMode` (`auto` / `full` / `short` / `icon`), `MaxBarWidthPct` (auto budget), `ShortNameLen`. `BuildBar()` picks the level (auto steps down until the bar fits), `BuildBarAt()` does the actual build, `LabelFor()` renders the label for the current level (`gCompact`). Ctrl + mouse wheel calls `CycleCompact()` and persists the choice in `settings.ini [View]`.
 - **Per-desktop abbreviation** → `settings.ini` section `[Short]`, lines `Desktop name = ABBR` (used by `short`/`icon`).
+- **Right-click menu** → `ShowContextMenu(num)` (num = tab index or −1 for the general menu), opened from `OnRButtonUp` and the tray. Every switch goes through `SetView(key, val)` → writes `settings.ini [View]`, re-applies theme, rebuilds. `ApplyIniOverrides()` reads those keys at startup and on live reload. Per-tab actions: `PromptShort`, `PromptColor`, `SetColor`, `ClearColor`.
 - **UI texts / languages** → every visible string goes through `T("key", args*)`. Built-in maps `LANG_DE` / `LANG_EN` near the top of the script; `lang\<code>.ini` (UTF-8, `key=Text`) overrides or adds a language, chosen by `Language` (`auto` = Windows display language). **When you add a UI string, add it to both maps and both `lang\*.ini` files.**
 - **Fullscreen auto-hide** → `IsForegroundFullscreen()` walks the z-order and checks the top-most real window *on the bar's monitor*; don't switch it back to `GetForegroundWindow()` (breaks with multiple monitors).
 

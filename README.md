@@ -38,6 +38,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
+- **Right-click menu:** right-click a tab for its abbreviation and colour, plus all app settings (numbers, colour coding, view level, theme, docking, snapping, time log, language). No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same settings.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
 - **Mouse wheel** over the bar pages through the desktops.
 - **Separators** between the buttons (subtle).
@@ -140,8 +141,11 @@ BauPunkt Hain=BPH
 Buchhaltung=BH
 
 [View]
-; Written automatically when you switch levels with Ctrl + mouse wheel:
+; Written by the right-click menu (and Ctrl + mouse wheel); each key
+; overrides the CONF default: CompactMode, ThemeMode, DockMode, Language,
+; ShowIndex, ColorCoding, SnapToTaskbar, TimeLog
 CompactMode=short
+ShowIndex=1
 ```
 
 ---
