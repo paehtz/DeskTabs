@@ -258,6 +258,12 @@ start,end,seconds,desktop_index,desktop_name
 
 DeskTabs was built AI-assisted with [Claude Code](https://claude.com/claude-code). My background is in strategy, design and concept work, not classic software development: my programming experience came mainly from template languages, HTML and CSS. With AI-assisted work I now turn my own ideas directly into working tools. DeskTabs is one of them, and at the same time a hands-on example of exactly what I pass on to companies as AI consulting.
 
+## Privacy and builds
+
+DeskTabs collects nothing, shows no ads and has no telemetry. The only request it ever makes is a once-a-day check for the latest version number, which you can switch off: see [docs/privacy.md](docs/privacy.md) for what that request contains and what the program writes to disk.
+
+Release artifacts are built by [a GitHub Actions workflow](.github/workflows/build.yml) from the source in this repository, with checksums for every file, not compiled on a maintainer's machine. Who may approve a build is written down in the [code signing policy](docs/code-signing-policy.md).
+
 ## License
 
 DeskTabs is licensed under the [MIT License](LICENSE) © Henning Pähtz.

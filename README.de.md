@@ -258,6 +258,12 @@ start,end,seconds,desktop_index,desktop_name
 
 DeskTabs ist KI-unterstützt mit [Claude Code](https://claude.com/claude-code) entstanden. Mein Hintergrund liegt in Strategie, Design und Konzeption, nicht in klassischer Softwareentwicklung: Programmiererfahrung hatte ich vor allem aus Templatesprachen, HTML und CSS. Mit KI-gestütztem Arbeiten setze ich eigene Ideen heute direkt in funktionierende Werkzeuge um. DeskTabs ist eines davon und zugleich ein praktisches Beispiel für genau das, was ich als KI-Beratung an Unternehmen weitergebe.
 
+## Datenschutz und Builds
+
+DeskTabs sammelt nichts, zeigt keine Werbung und hat keine Telemetrie. Die einzige Anfrage ins Netz ist die tägliche Frage nach der neuesten Versionsnummer, und die lässt sich abschalten: [docs/privacy.md](docs/privacy.md) beschreibt, was dabei übertragen wird und was das Programm auf die Festplatte schreibt.
+
+Die Dateien eines Releases entstehen in [einem GitHub-Actions-Ablauf](.github/workflows/build.yml) aus dem Quelltext dieses Repositorys, mit Prüfsummen für jede Datei, nicht auf dem Rechner des Entwicklers. Wer einen Build freigeben darf, steht in der [Code-Signing-Policy](docs/code-signing-policy.md).
+
 ## Lizenz
 
 DeskTabs steht unter der [MIT-Lizenz](LICENSE) © Henning Pähtz.

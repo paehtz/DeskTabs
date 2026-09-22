@@ -1,0 +1,117 @@
+name: Build
+
+# Reproducible build of the release artifacts. Everything a release contains is
+# produced here from the source in this repository - nothing is compiled on a
+# maintainer's machine. Triggered by hand, and automatically for a version tag.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to build, e.g. 1.1.3"
+        required: true
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out the source
+        uses: actions/checkout@v4
+
+      - name: Work out the version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "push") {
+            $v = "${{ github.ref_name }}" -replace '^v', ''
+          } else {
+            $v = "${{ github.event.inputs.version }}"
+          }
+          "version=$v" >> $env:GITHUB_OUTPUT
+          "DeskTabs version: $v"
+
+      - name: Check the version in the source matches
+        shell: pwsh
+        run: |
+          $want = "${{ steps.ver.outputs.version }}"
+          $src = Get-Content DeskTabs.ahk -Raw
+          if ($src -notmatch 'APP_VERSION\s*:=\s*"([^"]+)"') { throw "APP_VERSION not found in DeskTabs.ahk" }
+          $have = $Matches[1]
+          if ($have -ne $want) { throw "DeskTabs.ahk says $have, the build asks for $want" }
+          "APP_VERSION matches: $have"
+
+      - name: Fetch AutoHotkey v2 and Ahk2Exe
+        shell: pwsh
+        run: |
+          $ahkVersion = '2.0.28'
+          $ahk2exe    = 'Ahk2Exe1.1.37.02a2'
+          New-Item -ItemType Directory -Force -Path tools\ahk, tools\ahk2exe | Out-Null
+          Invoke-WebRequest "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$ahkVersion/AutoHotkey_$ahkVersion.zip" -OutFile ahk.zip
+          Invoke-WebRequest "https://github.com/AutoHotkey/Ahk2Exe/releases/download/$ahk2exe/$ahk2exe.zip" -OutFile ahk2exe.zip
+          Expand-Archive ahk.zip    -DestinationPath tools\ahk    -Force
+          Expand-Archive ahk2exe.zip -DestinationPath tools\ahk2exe -Force
+          Get-FileHash ahk.zip, ahk2exe.zip | Format-List
+
+      - name: Check the script for syntax errors
+        shell: pwsh
+        run: |
+          $p = Start-Process tools\ahk\AutoHotkey64.exe -ArgumentList '/validate', '/ErrorStdOut', 'DeskTabs.ahk' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "AutoHotkey reported a syntax error" }
+
+      - name: Compile DeskTabs.exe
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist\package | Out-Null
+          $p = Start-Process tools\ahk2exe\Ahk2Exe.exe -ArgumentList '/in', 'DeskTabs.ahk', '/out', 'dist\package\DeskTabs.exe', '/base', 'tools\ahk\AutoHotkey64.exe', '/silent' -Wait -PassThru -NoNewWindow
+          if ($p.ExitCode -ne 0) { throw "Ahk2Exe failed" }
+          (Get-Item dist\package\DeskTabs.exe).VersionInfo | Format-List FileVersion, ProductName, LegalCopyright
+
+      - name: Assemble the package
+        shell: pwsh
+        run: |
+          $pkg = 'dist\package'
+          New-Item -ItemType Directory -Force -Path "$pkg\lang", "$pkg\data" | Out-Null
+          Copy-Item VirtualDesktopAccessor.dll, LICENSE, LICENSE-AutoHotkey.txt, THIRD-PARTY-LICENSES.md, README.md, README.de.md $pkg
+          Copy-Item lang\de.ini, lang\en.ini "$pkg\lang"
+          Copy-Item data\glyph-names.txt "$pkg\data"
+          Get-ChildItem $pkg -Recurse -File | Select-Object FullName, Length
+
+      - name: Build the ZIP
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          New-Item -ItemType Directory -Force -Path dist\out | Out-Null
+          Compress-Archive -Path dist\package\* -DestinationPath "dist\out\DeskTabs-v$v.zip" -CompressionLevel Optimal
+          Copy-Item "dist\out\DeskTabs-v$v.zip" dist\out\DeskTabs-latest.zip
+
+      - name: Build the installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { $iscc = 'C:\Program Files\Inno Setup 6\ISCC.exe' }
+          & $iscc "/DAppVersion=${{ steps.ver.outputs.version }}" "/DSourceDir=..\dist\package" installer\DeskTabs.iss
+          Copy-Item "dist\installer\DeskTabs-Setup-v${{ steps.ver.outputs.version }}.exe" dist\out\
+          Copy-Item "dist\installer\DeskTabs-Setup-v${{ steps.ver.outputs.version }}.exe" dist\out\DeskTabs-Setup-latest.exe
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist\out -File | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "{0}  {1}" -f $_.Hash.ToLower(), (Split-Path $_.Path -Leaf) } |
+            Tee-Object -FilePath dist\out\SHA256SUMS.txt
+          Get-Content dist\out\SHA256SUMS.txt
+
+      - name: Upload the artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeskTabs-${{ steps.ver.outputs.version }}
+          path: dist/out/*
+          if-no-files-found: error
