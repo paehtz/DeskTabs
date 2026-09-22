@@ -33,7 +33,7 @@ All versions and their release notes are on the [Releases page](https://github.c
 DeskTabs is not code-signed yet (a certificate costs money every year; free signing for open source is being applied for). Two different Windows features can react to that:
 
 - **SmartScreen** shows "Windows protected your PC". Click **More info → Run anyway**. This is the common case.
-- **Smart App Control** says "blocked an app that might be unsafe" and gives you **no way to allow it** — there is no per-app exception. If your Windows has it switched on, run DeskTabs from source instead: install [AutoHotkey v2](https://www.autohotkey.com/), download the repository and double-click `DeskTabs.ahk`. Please do not switch Smart App Control off just for this app.
+- **Smart App Control** says "blocked an app that might be unsafe" and gives you **no way to allow it** — there is no per-app exception. If your Windows has it switched on, run DeskTabs from source instead: install [AutoHotkey v2](https://www.autohotkey.com/), download the [source as a ZIP](https://github.com/paehtz/DeskTabs/archive/refs/heads/main.zip) (it contains the DLL, `lang\` and `data\`), unpack it and double-click `DeskTabs.ahk`. Verified on a Windows 11 laptop with Smart App Control switched on: AutoHotkey installs and the script runs with every feature, no warning. Please do not switch Smart App Control off just for this app.
 
 ---
 
