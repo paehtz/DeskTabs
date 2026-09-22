@@ -41,8 +41,8 @@ global CONF := Map(
     "PadX",           18,      ; Innenabstand links/rechts im Tab (px @100%)
     "Gap",            4,       ; Abstand zwischen den Tabs (px @100%), wie zwischen Taskleisten-Buttons
     "GripW",          16,      ; Breite des Ziehgriffs (px @100%)
-    "SwitchMethod",   "native", ; "native" = Strg+Win+Pfeil nachbilden (Fenster bleiben stabil)
-                               ; "dll" = GoToDesktopNumber (schneller, nimmt aber Fenster mit)
+    "SwitchMethod",   "dll",   ; "dll"    = Direktsprung per GoToDesktopNumber (Standard, ohne Zwischen-Desktops)
+                               ; "native" = Strg+Win+Pfeil nachbilden, Desktop fuer Desktop (Fallback; Menue "Direkt springen")
     "ColDivider",     0xCFCFCF, ; Trennstrich-Farbe (sanft, Material)
     "DividerInsetY",  9,       ; vertikaler Abstand des Trennstrichs oben/unten (px @100%)
     "DockMode",       "on",    ; "on"    = auf der Taskleiste (optisch integriert, kann minimal flackern)
@@ -69,8 +69,12 @@ global CONF := Map(
     "CornerRadius",   4,       ; Eckenradius der Tabs (px @100%), wie Windows-11-Taskleisten-Buttons
     "TabMargin",      4,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
     "ShowDividers",   0,       ; 1 = duenne Trennstriche zwischen den Tabs
-    "ColHoverBg",     0xDCDCDC, ; Button-Hintergrund beim Drueberfahren (Hover)
+    "ShowIcons",      1,       ; 1 = Symbole aus settings.ini [Icons] im Tab zeigen
+    "IconSize",       16,      ; Kantenlaenge des Symbols (px @100%)
+    "IconGap",        7,       ; Abstand zwischen Symbol und Text (px @100%)
+    "ColHoverBg",     0xFFFFFF, ; Hover-Farbe: wird mit HoverPct ueber den Leistengrund gelegt (Windows hellt auf)
     "ColHoverTx",     0x1F1F1F,
+    "HoverPct",      58,      ; Deckkraft (%) der Hover-Aufhellung; je Theme ueberschrieben
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
     "ClickActiveTaskView", 1,  ; 1 = Klick auf aktiven Desktop oeffnet Task-Ansicht (Win+Tab)
     "Palette",        [0xE5471D, 0x2E7D32, 0x1565C0, 0x6A1B9A, 0xEF6C00, 0x00838F, 0xC2185B, 0x558B2F],
@@ -94,7 +98,8 @@ global THEME_LIGHT := Map(
     "ColActiveTx",   0xFFFFFF,
     "ColGripBg",     0xE9E9E9,
     "ColGripTx",     0x909090,
-    "ColHoverBg",    0xDCDCDC,
+    "ColHoverBg",    0xFFFFFF,   ; hell: Weiss ueber den Grund -> Tab wird heller
+    "HoverPct",      58,
     "ColHoverTx",    0x1F1F1F,
     "ColDivider",    0xCFCFCF
 )
@@ -106,7 +111,8 @@ global THEME_DARK := Map(
     "ColActiveTx",   0xFFFFFF,
     "ColGripBg",     0x202020,
     "ColGripTx",     0x808080,
-    "ColHoverBg",    0x3A3A3A,   ; etwas heller als die Leiste
+    "ColHoverBg",    0xFFFFFF,   ; dunkel: wenig Weiss -> Tab wird leicht heller
+    "HoverPct",      12,
     "ColHoverTx",    0xFFFFFF,
     "ColDivider",    0x3F3F3F
 )
@@ -209,7 +215,11 @@ SettingsChanged() {
 global SCALE := A_ScreenDPI / 96
 global VDA := 0
 global BTNS := []            ; Array von Maps {ctrl, num}
-global PIC := 0              ; Picture-Control = Zeichenflaeche der Leiste
+global gBarDC := 0           ; Speicher-DC mit dem fertig gezeichneten Leistenbild (fuer WM_PAINT)
+global gBarBmp := 0          ; zugehoeriges HBITMAP
+global gRenderSig := ""      ; Zustand des letzten Renderns (nur bei Aenderung neu zeichnen)
+global gIconCache := Map()   ; Pfad -> geladenes GDI+-Bitmap (einmal laden, oft zeichnen)
+global gIconFetch := Map()   ; URLs, die in dieser Sitzung schon geholt wurden
 global gLayout := 0          ; Geometrie der aktuellen Leiste (Map)
 global gGdipToken := 0
 global GUIW := 0, GUIH := 0
@@ -243,6 +253,16 @@ global LANG_DE := Map(
     "menu.settings",   "Einstellungen…",
     "menu.tab.short",  "Kürzel setzen…",
     "menu.tab.color",  "Farbe",
+    "menu.tab.icon",   "Symbol",
+    "menu.icon.url",   "Von einer Webseite holen…",
+    "menu.icon.file",  "Eigene Bilddatei wählen…",
+    "menu.icon.clear", "Symbol entfernen",
+    "menu.showicons",  "Symbole anzeigen",
+    "prompt.iconurl.title", "Symbol für „{1}“",
+    "prompt.iconurl.text", "Adresse der Webseite (leer = Symbol entfernen):",
+    "prompt.iconfile.title", "Bilddatei für „{1}“ wählen",
+    "icon.fetching",   "Symbol wird geholt…",
+    "err.icon_fetch",  "Von dieser Adresse konnte kein Symbol geladen werden.",
     "menu.color.custom", "Eigene Farbe…",
     "menu.color.default", "Standardfarbe verwenden",
     "color.E5471D",    "Rot",
@@ -269,6 +289,7 @@ global LANG_DE := Map(
     "menu.dock",       "Andocken",
     "menu.dock.on",    "Auf der Taskleiste",
     "menu.dock.above", "Über der Taskleiste",
+    "menu.directjump", "Direkt springen (ohne Zwischen-Desktops)",
     "menu.snap",       "An Taskleiste einrasten",
     "menu.timelog",    "Zeit-Log schreiben",
     "menu.language",   "Sprache",
@@ -321,6 +342,16 @@ global LANG_EN := Map(
     "menu.settings",   "Settings…",
     "menu.tab.short",  "Set abbreviation…",
     "menu.tab.color",  "Colour",
+    "menu.tab.icon",   "Icon",
+    "menu.icon.url",   "Fetch from a website…",
+    "menu.icon.file",  "Choose an image file…",
+    "menu.icon.clear", "Remove icon",
+    "menu.showicons",  "Show icons",
+    "prompt.iconurl.title", "Icon for “{1}”",
+    "prompt.iconurl.text", "Website address (empty = remove the icon):",
+    "prompt.iconfile.title", "Choose an image file for “{1}”",
+    "icon.fetching",   "Fetching icon…",
+    "err.icon_fetch",  "No icon could be loaded from that address.",
     "menu.color.custom", "Custom colour…",
     "menu.color.default", "Use default colour",
     "color.E5471D",    "Red",
@@ -347,6 +378,7 @@ global LANG_EN := Map(
     "menu.dock",       "Docking",
     "menu.dock.on",    "On the taskbar",
     "menu.dock.above", "Above the taskbar",
+    "menu.directjump", "Jump directly (skip desktops in between)",
     "menu.snap",       "Snap to taskbar",
     "menu.timelog",    "Write time log",
     "menu.language",   "Language",
@@ -477,12 +509,13 @@ Main() {
 ; ueberschreibt beim Start bzw. beim Live-Reload die CONF-Standardwerte.
 ApplyIniOverrides() {
     for key, allowed in Map("CompactMode", "auto,full,short,icon", "ThemeMode", "auto,light,dark"
-                          , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid") {
+                          , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid"
+                          , "SwitchMethod", "native,dll") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
             CONF[key] := v
     }
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -511,6 +544,248 @@ RebuildAll() {
     BuildBar()
     ApplyWindowHooks()
     UpdateHighlight()
+}
+
+; ------------------------------- Symbole ------------------------------------
+; settings.ini [Icons] "Desktopname = Pfad ODER URL". Eine URL wird einmal geholt
+; (hochaufgeloestes Seiten-Symbol) und in icons\<Desktopname>.png zwischengespeichert.
+IconsDir() => A_ScriptDir "\icons"
+
+; Dateiname aus einem Desktop-Namen (ohne verbotene Zeichen)
+SafeName(s) {
+    for , ch in StrSplit('<>:"/\|?*')
+        s := StrReplace(s, ch, "_")
+    return Trim(s)
+}
+
+IsUrl(s) => (SubStr(s, 1, 7) = "http://" || SubStr(s, 1, 8) = "https://" || RegExMatch(s, "i)^[a-z0-9\-]+(\.[a-z0-9\-]+)+(/|$)"))
+
+; Zu zeichnende Bilddatei fuer einen Desktop ("" = keine)
+IconPathFor(num) {
+    raw := GetDesktopNameRaw(num)
+    spec := IniRead(CONF["IniPath"], "Icons", raw, "")
+    if (spec = "")
+        return ""
+    if (!IsUrl(spec)) {
+        path := (InStr(spec, ":") || SubStr(spec, 1, 1) = "\") ? spec : A_ScriptDir "\" spec
+        return FileExist(path) ? path : ""
+    }
+    cache := IconsDir() "\" SafeName(raw) ".png"
+    if FileExist(cache)
+        return cache
+    FetchSiteIconOnce(spec, cache)
+    return FileExist(cache) ? cache : ""
+}
+
+; Pro Sitzung nur einen Versuch je URL (sonst bremst ein toter Link jeden Neuaufbau)
+FetchSiteIconOnce(url, dest) {
+    global gIconFetch
+    if (gIconFetch.Has(url))
+        return
+    gIconFetch[url] := true
+    FetchSiteIcon(url, dest)
+}
+
+HttpGetBytes(url, timeoutMs := 6000) {
+    global APP_VERSION
+    try {
+        req := ComObject("WinHttp.WinHttpRequest.5.1")
+        req.SetTimeouts(timeoutMs, timeoutMs, timeoutMs, timeoutMs)
+        req.Open("GET", url, false)
+        req.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DeskTabs/" APP_VERSION)
+        req.Send()
+        if (req.Status = 200)
+            return req.ResponseBody
+    }
+    return 0
+}
+
+SaveBytes(bytes, path) {
+    try {
+        stream := ComObject("ADODB.Stream")
+        stream.Type := 1
+        stream.Open()
+        stream.Write(bytes)
+        stream.SaveToFile(path, 2)
+        stream.Close()
+        return FileExist(path) ? true : false
+    }
+    return false
+}
+
+; Holt das beste Symbol einer Webseite: erst apple-touch-icon / grosse <link rel=icon>
+; aus dem HTML, dann /favicon.ico, zuletzt ein Favicon-Dienst. Ergebnis wird als PNG
+; in der gewuenschten Groesse gespeichert.
+FetchSiteIcon(url, dest) {
+    if (SubStr(url, 1, 4) != "http")
+        url := "https://" url
+    if !RegExMatch(url, "i)^(https?://[^/]+)", &m)
+        return false
+    origin := m[1]
+    cands := []
+    html := ""
+    try {
+        req := ComObject("WinHttp.WinHttpRequest.5.1")
+        req.SetTimeouts(6000, 6000, 6000, 6000)
+        req.Open("GET", url, false)
+        req.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) DeskTabs")
+        req.Send()
+        if (req.Status = 200)
+            html := req.ResponseText
+    }
+    if (html != "") {
+        pos := 1
+        while (pos := RegExMatch(html, "is)<link\b[^>]*>", &lm, pos)) {
+            tag := lm[0], pos += lm.Len
+            if !RegExMatch(tag, 'is)rel\s*=\s*["\x27]?([^"\x27>]*)', &rm)
+                continue
+            rel := StrLower(rm[1])
+            if !InStr(rel, "icon")
+                continue
+            if !RegExMatch(tag, 'is)href\s*=\s*["\x27]?([^"\x27> ]+)', &hm)
+                continue
+            href := hm[1]
+            size := 0
+            if RegExMatch(tag, "is)sizes\s*=\s*[\x22\x27]?(\d+)", &sm)
+                size := Integer(sm[1])
+            if (InStr(rel, "apple-touch"))
+                size := Max(size, 180)
+            cands.Push(Map("href", AbsUrl(href, origin, url), "size", size))
+        }
+    }
+    ; grosse zuerst
+    Loop cands.Length - 1 {
+        i := A_Index
+        Loop cands.Length - i {
+            j := A_Index
+            if (cands[j]["size"] < cands[j + 1]["size"]) {
+                tmp := cands[j], cands[j] := cands[j + 1], cands[j + 1] := tmp
+            }
+        }
+    }
+    cands.Push(Map("href", origin "/favicon.ico", "size", 0))
+    host := RegExReplace(origin, "i)^https?://")
+    cands.Push(Map("href", "https://www.google.com/s2/favicons?sz=128&domain=" host, "size", 0))
+
+    DirCreate(IconsDir())
+    tmpFile := IconsDir() "\_dl.tmp"
+    for cand in cands {
+        bytes := HttpGetBytes(cand["href"])
+        if (!bytes)
+            continue
+        try FileDelete(tmpFile)
+        if (!SaveBytes(bytes, tmpFile))
+            continue
+        if (ConvertToPng(tmpFile, dest, 128)) {   ; grosszuegig zwischenspeichern, beim Zeichnen sauber verkleinert
+            try FileDelete(tmpFile)
+            return true
+        }
+    }
+    try FileDelete(tmpFile)
+    return false
+}
+
+; Relative Adresse auf eine vollstaendige URL bringen
+AbsUrl(href, origin, pageUrl) {
+    if (SubStr(href, 1, 4) = "http")
+        return href
+    if (SubStr(href, 1, 2) = "//")
+        return "https:" href
+    if (SubStr(href, 1, 1) = "/")
+        return origin href
+    base := RegExReplace(pageUrl, "/[^/]*$", "/")
+    return base href
+}
+
+; Bilddatei (ico/png/jpg/svg-frei) als quadratisches PNG in Zielgroesse speichern
+ConvertToPng(src, dest, size) {
+    GdipStart()
+    img := 0
+    if (DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", src, "Ptr*", &img) != 0 || !img)
+        return false
+    w := 0, h := 0
+    DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
+    DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
+    if (!w || !h) {
+        DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+        return false
+    }
+    out := 0, g := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", size, "Int", size, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &out)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", out, "Ptr*", &g)
+    DllCall("gdiplus\GdipSetInterpolationMode", "Ptr", g, "Int", 7)   ; HighQualityBicubic
+    DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
+    ; proportional einpassen
+    scale := Min(size / w, size / h)
+    dw := Round(w * scale), dh := Round(h * scale)
+    DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", img, "Int", (size - dw) // 2, "Int", (size - dh) // 2, "Int", dw, "Int", dh)
+    ok := SavePng(out, dest)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", out)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+    return ok
+}
+
+SavePng(pBitmap, path) {
+    ; CLSID des PNG-Encoders
+    clsid := Buffer(16, 0)
+    if (DllCall("ole32\CLSIDFromString", "WStr", "{557CF406-1A04-11D3-9A73-0000F81EF32E}", "Ptr", clsid) != 0)
+        return false
+    return DllCall("gdiplus\GdipSaveImageToFile", "Ptr", pBitmap, "WStr", path, "Ptr", clsid, "Ptr", 0) = 0
+}
+
+; Bild einmal laden und im Cache halten
+LoadIconBitmap(path) {
+    global gIconCache
+    key := path "|" (FileExist(path) ? FileGetTime(path, "M") : "")
+    if (gIconCache.Has(key))
+        return gIconCache[key]
+    GdipStart()
+    img := 0
+    DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", path, "Ptr*", &img)
+    gIconCache[key] := img
+    return img
+}
+
+; --- Menuebefehle ---
+PromptIconUrl(num, *) {
+    raw := GetDesktopNameRaw(num)
+    cur := IniRead(CONF["IniPath"], "Icons", raw, "")
+    ib := InputBox(T("prompt.iconurl.text"), T("prompt.iconurl.title", raw), "w420 h130", IsUrl(cur) ? cur : "")
+    if (ib.Result != "OK")
+        return
+    url := Trim(ib.Value)
+    if (url = "") {
+        ClearIcon(num)
+        return
+    }
+    cache := IconsDir() "\" SafeName(raw) ".png"
+    try FileDelete(cache)
+    ToolTip(T("icon.fetching"))
+    ok := FetchSiteIcon(url, cache)
+    ToolTip()
+    if (!ok) {
+        MsgBox(T("err.icon_fetch"), "DeskTabs", 0x30)
+        return
+    }
+    IniSet("Icons", raw, url)
+    RebuildAll()
+}
+
+PromptIconFile(num, *) {
+    raw := GetDesktopNameRaw(num)
+    file := FileSelect(3, , T("prompt.iconfile.title", raw), "Bilder (*.ico; *.png; *.jpg; *.jpeg; *.bmp; *.gif)")
+    if (file = "")
+        return
+    IniSet("Icons", raw, file)
+    RebuildAll()
+}
+
+ClearIcon(num, *) {
+    raw := GetDesktopNameRaw(num)
+    IniDel("Icons", raw)
+    try FileDelete(IconsDir() "\" SafeName(raw) ".png")
+    RebuildAll()
 }
 
 ; ----------------------------- Kontextmenue --------------------------------
@@ -556,6 +831,13 @@ ShowContextMenu(num, *) {
         }
         cm.Add(T("menu.color.default"), ClearColor.Bind(num))
         m.Add(T("menu.tab.color"), cm)
+        im := Menu()
+        im.Add(T("menu.icon.url"), PromptIconUrl.Bind(num))
+        im.Add(T("menu.icon.file"), PromptIconFile.Bind(num))
+        im.Add(T("menu.icon.clear"), ClearIcon.Bind(num))
+        if (IniRead(CONF["IniPath"], "Icons", raw, "") = "")
+            im.Disable(T("menu.icon.clear"))
+        m.Add(T("menu.tab.icon"), im)
         m.Add()
     }
     FillSettingsMenu(m)
@@ -581,6 +863,9 @@ FillSettingsMenu(m) {
     m.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
     if (CONF["ShowDividers"])
         m.Check(T("menu.dividers"))
+    m.Add(T("menu.showicons"), ToggleView.Bind("ShowIcons"))
+    if (CONF["ShowIcons"])
+        m.Check(T("menu.showicons"))
     vm := Menu()
     for val, label in Map("auto", T("menu.view.auto"), "full", T("level.full"), "short", T("level.short"), "icon", T("level.icon")) {
         vm.Add(label, SetViewStr.Bind("CompactMode", val))
@@ -602,6 +887,9 @@ FillSettingsMenu(m) {
             dm.Check(label)
     }
     m.Add(T("menu.dock"), dm)
+    m.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
+    if (CONF["SwitchMethod"] = "dll")
+        m.Check(T("menu.directjump"))
     m.Add(T("menu.snap"), ToggleView.Bind("SnapToTaskbar"))
     if (CONF["SnapToTaskbar"])
         m.Check(T("menu.snap"))
@@ -1004,12 +1292,12 @@ BuildBar() {
 }
 
 BuildBarAt() {
-    global MyGui, BTNS, PIC, GUIW, GUIH, gTaskbarW, gLayout
+    global MyGui, BTNS, GUIW, GUIH, gTaskbarW, gLayout
     if (MyGui) {
         try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
         try MyGui.Destroy()
     }
-    BTNS := [], PIC := 0
+    BTNS := []
 
     ; NOACTIVATE (0x08000000): Klicks klauen nicht den Fokus vom Arbeitsfenster
     MyGui := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08000000 -DPIScale")
@@ -1047,11 +1335,17 @@ BuildBarAt() {
     font := MakeFont(), sf := MakeFormat()
     gap := px(CONF["Gap"])
     x := px(CONF["GripW"]) + gap
+    iconSize := px(CONF["IconSize"]), iconGap := px(CONF["IconGap"])
     Loop cnt {
         num := A_Index - 1
         label := LabelFor(num)
-        w := MeasureText(mG, font, sf, label) + px(CONF["PadX"]) * 2
-        BTNS.Push(Map("num", num, "label", label, "x", x, "w", w, "hover", false))
+        icon := CONF["ShowIcons"] ? IconPathFor(num) : ""
+        if (icon != "" && gCompact = "icon")
+            label := ""                       ; kleinste Stufe: nur das Symbol
+        iw := (icon != "") ? iconSize : 0
+        tw := (label != "") ? MeasureText(mG, font, sf, label) : 0
+        w := px(CONF["PadX"]) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
+        BTNS.Push(Map("num", num, "label", label, "icon", icon, "x", x, "w", w, "hover", false))
         x += w
         if (A_Index < cnt)
             x += gap
@@ -1065,10 +1359,8 @@ BuildBarAt() {
     GUIW := x
     GUIH := tbH
     gLayout := Map("margin", margin, "btnH", btnH, "gripW", px(CONF["GripW"]), "gap", gap
-        , "radius", px(CONF["CornerRadius"]), "accH", px(CONF["AccentBarH"]))
-
-    ; Zeichenflaeche: ein Picture-Control ueber die ganze Leiste (SS_NOTIFY fuer Mausklicks)
-    PIC := MyGui.Add("Picture", Format("x0 y0 w{1} h{2} +0x100", GUIW, GUIH))
+        , "radius", px(CONF["CornerRadius"]), "accH", px(CONF["AccentBarH"])
+        , "iconSize", iconSize, "iconGap", iconGap)
 
     ; Position: aus settings.ini, sonst Standard = unten links.
     ; "above" => direkt ueber der Taskleiste (sicher sichtbar)
@@ -1085,7 +1377,11 @@ BuildBarAt() {
             posY := snapY
     }
 
-    RenderBar()
+    ; Eigenes Zeichnen: WM_PAINT blittet das Pufferbild, WM_ERASEBKGND wird
+    ; unterdrueckt -> kein Flackern bei Hover/Refresh
+    OnMessage(0x000F, OnPaint)        ; WM_PAINT
+    OnMessage(0x0014, OnEraseBkgnd)   ; WM_ERASEBKGND
+    RenderBar(true)
     MyGui.Show(Format("x{1} y{2} w{3} h{4} NoActivate", posX, posY, GUIW, GUIH))
 
     ; Maus: Ziehen am Griff (LBUTTONDOWN), Tab-Klick (LBUTTONUP)
@@ -1178,11 +1474,18 @@ FillRoundRect(g, x, y, w, h, r, argb) {
     DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
 }
 
-; Leiste komplett neu zeichnen und ins Picture-Control legen
-RenderBar() {
-    global BTNS, GUIW, GUIH, PIC, gCurrent, gTheme, gLayout
-    if (!PIC)
+; Leiste komplett neu in den Puffer zeichnen und das Fenster neu blitten lassen.
+; Ohne force nur, wenn sich der sichtbare Zustand geaendert hat.
+RenderBar(force := false) {
+    global BTNS, GUIW, GUIH, MyGui, gCurrent, gTheme, gLayout, gBarDC, gBarBmp, gRenderSig
+    if (!MyGui || !gLayout)
         return
+    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"]
+    for item in BTNS
+        sig .= (item["hover"] ? "h" : "-") item["icon"]
+    if (!force && sig = gRenderSig)
+        return
+    gRenderSig := sig
     L := gLayout
     W := GUIW, H := GUIH
     pBmp := 0, g := 0
@@ -1190,6 +1493,8 @@ RenderBar() {
     DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", pBmp, "Ptr*", &g)
     DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)         ; AntiAlias
     DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 5)     ; ClearTypeGridFit (opaker Grund)
+    DllCall("gdiplus\GdipSetInterpolationMode", "Ptr", g, "Int", 7)   ; HighQualityBicubic (Symbole)
+    DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
     bg := CONF["ColBarBg"]
     DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", ARGB(bg))
     font := MakeFont(), sf := MakeFormat()
@@ -1215,10 +1520,24 @@ RenderBar() {
                 FillRoundRect(g, x, y, w, h, r, ARGB(Mix(base, bg, tint)))
             }
         } else if (item["hover"]) {
-            ; dezent wie der Taskleisten-Hover: Textfarbe mit wenig Deckkraft ueber dem Grund
-            FillRoundRect(g, x, y, w, h, r, ARGB(Mix(CONF["ColInactiveTx"], bg, 7)))
+            ; wie der Windows-Taskleisten-Hover: der Tab wird HELLER, nicht dunkler
+            FillRoundRect(g, x, y, w, h, r, ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])))
         }
-        DrawText(g, font, sf, item["label"], x, y, w, h, ARGB(tx))
+        ; Symbol links, Text daneben (bzw. nur eins von beidem)
+        iw := (item["icon"] != "") ? L["iconSize"] : 0
+        tx0 := x + px(CONF["PadX"]), tw := w - 2 * px(CONF["PadX"])
+        if (iw) {
+            img := LoadIconBitmap(item["icon"])
+            if (img)
+                DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", img, "Int", tx0
+                    , "Int", y + (h - iw) // 2 - px(1), "Int", iw, "Int", iw)
+            else
+                iw := 0
+            tx0 += iw ? iw + L["iconGap"] : 0
+            tw -= iw ? iw + L["iconGap"] : 0
+        }
+        if (item["label"] != "")
+            DrawText(g, font, sf, item["label"], tx0, y, tw, h, ARGB(tx))
         ; Farbbalken unten im Tab (abgerundet, eingerueckt)
         if (CONF["ColorCoding"]) {
             inset := px(10), ah := L["accH"]
@@ -1234,12 +1553,35 @@ RenderBar() {
     }
     hbm := 0
     DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", "Ptr", pBmp, "Ptr*", &hbm, "UInt", ARGB(bg))
-    try PIC.Value := "HBITMAP:*" hbm
-    DllCall("DeleteObject", "Ptr", hbm)
+    if (!gBarDC)
+        gBarDC := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr")
+    DllCall("SelectObject", "Ptr", gBarDC, "Ptr", hbm, "Ptr")
+    if (gBarBmp)
+        DllCall("DeleteObject", "Ptr", gBarBmp)
+    gBarBmp := hbm
+    DllCall("InvalidateRect", "Ptr", MyGui.Hwnd, "Ptr", 0, "Int", 0)   ; ohne Loeschen
+    DllCall("UpdateWindow", "Ptr", MyGui.Hwnd)
     DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
     DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
     DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
     DllCall("gdiplus\GdipDisposeImage", "Ptr", pBmp)
+}
+
+OnPaint(wParam, lParam, msg, hwnd) {
+    global MyGui, GUIW, GUIH, gBarDC
+    if (!MyGui || hwnd != MyGui.Hwnd || !gBarDC)
+        return
+    ps := Buffer(72, 0)
+    hdc := DllCall("BeginPaint", "Ptr", hwnd, "Ptr", ps, "Ptr")
+    DllCall("BitBlt", "Ptr", hdc, "Int", 0, "Int", 0, "Int", GUIW, "Int", GUIH, "Ptr", gBarDC, "Int", 0, "Int", 0, "UInt", 0x00CC0020)  ; SRCCOPY
+    DllCall("EndPaint", "Ptr", hwnd, "Ptr", ps)
+    return 0
+}
+
+OnEraseBkgnd(wParam, lParam, msg, hwnd) {
+    global MyGui
+    if (MyGui && hwnd = MyGui.Hwnd)
+        return 1                        ; Hintergrund nicht loeschen (WM_PAINT deckt alles)
 }
 
 ; Tab an einer X-Position (Fensterkoordinaten), sonst 0
@@ -1283,7 +1625,7 @@ ClampY(y, h) {
 ; Wechselt zu einem Desktop. "native" bildet Strg+Win+Pfeil nach -> Fenster
 ; bleiben stabil auf ihren Desktops (kein Mitwandern wie bei GoToDesktopNumber).
 SwitchToDesktop(target) {
-    global gSwitching
+    global gSwitching, MyGui
     cur := GetCurrentDesktop()
     cnt := GetDesktopCount()
     if (target < 0 || target >= cnt || target = cur)
@@ -1298,7 +1640,16 @@ SwitchToDesktop(target) {
                 Sleep(80)
         }
     } else {
+        ; Direktsprung in einem Schritt (~100 ms, keine Zwischen-Desktops).
+        ; Sicherheitsnetz: Auf manchen Builds landet GoToDesktopNumber intern bei
+        ; switch_desktop_and_move_foreground_view und nimmt das Vordergrundfenster
+        ; mit. Gemessen auf 25H2/26200 passiert das nicht; falls doch, schieben wir
+        ; das Fenster sofort auf seinen Desktop zurueck.
+        fg := DllCall("GetForegroundWindow", "Ptr")
+        fgDesk := (fg && fg != MyGui.Hwnd) ? VD("GetWindowDesktopNumber", "Ptr", fg, "Int") : -1
         VD("GoToDesktopNumber", "Int", target)
+        if (fgDesk >= 0 && VD("GetWindowDesktopNumber", "Ptr", fg, "Int") != fgDesk)
+            VD("MoveWindowToDesktopNumber", "Ptr", fg, "Int", fgDesk)
     }
     gSwitching := false
     UpdateHighlight()
