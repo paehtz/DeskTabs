@@ -4,7 +4,7 @@
 ;@Ahk2Exe-SetName DeskTabs
 ;@Ahk2Exe-SetDescription DeskTabs - clickable taskbar buttons for Windows 11 virtual desktops
 ;@Ahk2Exe-SetCopyright Henning Pähtz (MIT License)
-;@Ahk2Exe-SetVersion 1.1.0.0
+;@Ahk2Exe-SetVersion 1.1.1.0
 ; ============================================================================
 ;  DeskTabs  —  klickbare Buttons fuer virtuelle Desktops (Win 11)
 ;  Von Henning Pähtz (paehtz.de), baut auf Ciantic/VirtualDesktopAccessor.dll
@@ -21,7 +21,7 @@
 
 ; ------------------------------ Programm ------------------------------------
 ; Versionsnummer: bei jedem Release zusammen mit ;@Ahk2Exe-SetVersion oben anheben.
-global APP_VERSION := "1.1.0"
+global APP_VERSION := "1.1.1"
 global APP_URL      := "https://github.com/paehtz/DeskTabs"
 global APP_DOCS_URL := Map("en", APP_URL "#readme", "de", APP_URL "/blob/main/README.de.md")  ; spaeter: paehtz.de/desktabs
 global APP_CHANGELOG_URL := APP_URL "/releases"
