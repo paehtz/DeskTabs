@@ -226,6 +226,7 @@ global BTNS := []            ; Array von Maps {ctrl, num}
 global gBarDC := 0           ; Speicher-DC mit dem fertig gezeichneten Leistenbild (fuer WM_PAINT)
 global gBarBmp := 0          ; zugehoeriges HBITMAP
 global gRenderSig := ""      ; Zustand des letzten Renderns (nur bei Aenderung neu zeichnen)
+global gGripHover := false   ; Maus ueber dem Ziehgriff?
 global gIconCache := Map()   ; Pfad -> geladenes GDI+-Bitmap (einmal laden, oft zeichnen)
 global gIconFetch := Map()   ; URLs, die in dieser Sitzung schon geholt wurden
 global gLayout := 0          ; Geometrie der aktuellen Leiste (Map)
@@ -692,7 +693,7 @@ MenuGlyph(menu, item, code) {
 ; hundert Steuerelemente - sonst baut sich das Raster beim Rollen sichtbar auf.
 ; Fertige Seiten bleiben im Zwischenspeicher, die Nachbarseiten werden vorbereitet.
 ShowIconLibrary(num, *) {
-    static COLS := 12, ROWS := 8, CELL := 44
+    COLS := 12, ROWS := 8, CELL := 44   ; als lokale Variablen, damit die inneren Funktionen sie mitbekommen
     glyphs := GlyphList()
     raw := GetDesktopNameRaw(num)
     col := DesktopColor(num)
@@ -743,7 +744,7 @@ ShowIconLibrary(num, *) {
             idx := off * COLS + i
             if (idx > filtered.Length)
                 break
-            cx := Mod(i - 1, COLS) * CELL, cy := (i - 1) // CELL * 0 + ((i - 1) // COLS) * CELL
+            cx := Mod(i - 1, COLS) * CELL, cy := ((i - 1) // COLS) * CELL
             if (i = hover)
                 FillRoundRect(gr, cx + 2, cy + 2, CELL - 4, CELL - 4, 5, ARGB(Mix(0x000000, 0xF6F6F6, 7)))
             DrawText(gr, font, sf, GlyphChar("glyph:" glyphs[filtered[idx]]["code"]), cx, cy, CELL, CELL, ARGB(col))
@@ -1864,6 +1865,7 @@ BuildBarAt() {
     ; Maus: Ziehen am Griff (LBUTTONDOWN), Tab-Klick (LBUTTONUP)
     OnMessage(0x0201, OnLButtonDown)  ; WM_LBUTTONDOWN
     OnMessage(0x0202, OnLButtonUp)    ; WM_LBUTTONUP
+    OnMessage(0x0020, OnSetCursor)    ; WM_SETCURSOR -> Verschiebe-Zeiger ueber dem Griff
 }
 
 ; --------------------------- Zeichnen (GDI+) --------------------------------
@@ -2030,10 +2032,10 @@ FillRoundRect(g, x, y, w, h, r, argb) {
 ; Leiste komplett neu in den Puffer zeichnen und das Fenster neu blitten lassen.
 ; Ohne force nur, wenn sich der sichtbare Zustand geaendert hat.
 RenderBar(force := false) {
-    global BTNS, GUIW, GUIH, MyGui, gCurrent, gTheme, gLayout, gBarDC, gBarBmp, gRenderSig
+    global BTNS, GUIW, GUIH, MyGui, gCurrent, gTheme, gLayout, gBarDC, gBarBmp, gRenderSig, gGripHover
     if (!MyGui || !gLayout)
         return
-    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"]
+    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
@@ -2053,8 +2055,12 @@ RenderBar(force := false) {
     font := MakeFont(), sf := MakeFormat()
     y := L["margin"], h := L["btnH"], r := L["radius"]
 
-    ; Griff
-    DrawText(g, font, sf, "≡", 0, y, L["gripW"], h, ARGB(CONF["ColGripTx"]))
+    ; Griff (beim Drueberfahren leicht hervorgehoben)
+    if (gGripHover)
+        FillRoundRect(g, px(1), y, L["gripW"] - px(2), h, L["radius"]
+            , ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])))
+    DrawText(g, font, sf, "≡", 0, y, L["gripW"], h
+        , ARGB(gGripHover ? CONF["ColInactiveTx"] : CONF["ColGripTx"]))
 
     style := CONF["ActiveStyle"]
     grad := CONF["GradientPct"]
@@ -2143,6 +2149,19 @@ OnEraseBkgnd(wParam, lParam, msg, hwnd) {
     global MyGui
     if (MyGui && hwnd = MyGui.Hwnd)
         return 1                        ; Hintergrund nicht loeschen (WM_PAINT deckt alles)
+}
+
+; Ueber dem Griff zeigt Windows den Verschiebe-Zeiger (Vierfachpfeil), damit
+; sichtbar ist, dass man die Leiste dort anfassen kann.
+OnSetCursor(wParam, lParam, msg, hwnd) {
+    global MyGui, gLayout
+    if (!MyGui || !gLayout || hwnd != MyGui.Hwnd)
+        return
+    lx := BarMouseX()
+    if (lx < 0 || lx >= gLayout["gripW"])
+        return
+    DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", 32646, "Ptr"))   ; IDC_SIZEALL
+    return 1
 }
 
 ; Tab an einer X-Position (Fensterkoordinaten), sonst 0
@@ -2360,11 +2379,14 @@ UpdateHighlight() {
 
 ; Hover: Tab unter dem Mauszeiger leicht hervorheben
 HoverTick() {
-    global BTNS, gHidden, gBuilding
+    global BTNS, gHidden, gBuilding, gGripHover, gLayout
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
-    over := ItemAtX(BarMouseX())
-    changed := false
+    lx := BarMouseX()
+    over := ItemAtX(lx)
+    grip := (lx >= 0 && lx < gLayout["gripW"])
+    changed := (grip != gGripHover)
+    gGripHover := grip
     for item in BTNS {
         h := (over && item["num"] = over["num"])
         if (h != item["hover"]) {
