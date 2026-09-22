@@ -64,6 +64,11 @@ global CONF := Map(
     "ShowIndex",      1,       ; 1 = Nummer vor dem Namen ("3 · Wolf Automobile")
     "ColorCoding",    1,       ; 1 = farbiger Akzentbalken pro Desktop unten am Button
     "AccentBarH",     3,       ; Hoehe des Farbbalkens (px @100%)
+    "ActiveStyle",    "desktop", ; aktiver Tab: "desktop" = eigene Desktop-Farbe, getoent | "accent" = Windows-Akzentfarbe, getoent | "solid" = kraeftig gefuellt
+    "TintPct",        22,      ; Deckkraft der Toenung (%) fuer desktop/accent (dunkles Theme automatisch staerker)
+    "CornerRadius",   6,       ; Eckenradius der Tabs (px @100%)
+    "TabMargin",      5,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
+    "ShowDividers",   0,       ; 1 = duenne Trennstriche zwischen den Tabs
     "ColHoverBg",     0xDCDCDC, ; Button-Hintergrund beim Drueberfahren (Hover)
     "ColHoverTx",     0x1F1F1F,
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
@@ -204,7 +209,9 @@ SettingsChanged() {
 global SCALE := A_ScreenDPI / 96
 global VDA := 0
 global BTNS := []            ; Array von Maps {ctrl, num}
-global GRIP := 0
+global PIC := 0              ; Picture-Control = Zeichenflaeche der Leiste
+global gLayout := 0          ; Geometrie der aktuellen Leiste (Map)
+global gGdipToken := 0
 global GUIW := 0, GUIH := 0
 global MyGui := 0
 global MSG_VD_CHANGED := 0x1400
@@ -248,6 +255,11 @@ global LANG_DE := Map(
     "color.558B2F",    "Olivgrün",
     "menu.showindex",  "Nummern anzeigen",
     "menu.colorcoding", "Farbcodierung",
+    "menu.active",     "Aktiver Desktop",
+    "menu.active.desktop", "In seiner Desktop-Farbe (getönt)",
+    "menu.active.accent", "Einheitlich in Akzentfarbe (getönt)",
+    "menu.active.solid", "Einheitlich, kräftig gefüllt",
+    "menu.dividers",   "Trennstriche anzeigen",
     "menu.view",       "Ansicht",
     "menu.view.auto",  "Automatisch (nach Platz)",
     "menu.theme",      "Farbschema",
@@ -321,6 +333,11 @@ global LANG_EN := Map(
     "color.558B2F",    "Olive",
     "menu.showindex",  "Show numbers",
     "menu.colorcoding", "Colour coding",
+    "menu.active",     "Active desktop",
+    "menu.active.desktop", "In its own desktop colour (tinted)",
+    "menu.active.accent", "Uniform accent colour (tinted)",
+    "menu.active.solid", "Uniform, solid fill",
+    "menu.dividers",   "Show dividers",
     "menu.view",       "View",
     "menu.view.auto",  "Automatic (by available space)",
     "menu.theme",      "Theme",
@@ -460,12 +477,12 @@ Main() {
 ; ueberschreibt beim Start bzw. beim Live-Reload die CONF-Standardwerte.
 ApplyIniOverrides() {
     for key, allowed in Map("CompactMode", "auto,full,short,icon", "ThemeMode", "auto,light,dark"
-                          , "DockMode", "on,above", "Language", "*") {
+                          , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
             CONF[key] := v
     }
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -506,14 +523,8 @@ OnRButtonUp(wParam, lParam, msg, hwnd) {
         return
     if (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd)
         return
-    num := -1
-    for item in BTNS {
-        if (hwnd = item["ctrl"].Hwnd || (item["acc"] && hwnd = item["acc"].Hwnd)) {
-            num := item["num"]
-            break
-        }
-    }
-    ShowContextMenu(num)
+    item := ItemAtX(BarMouseX())
+    ShowContextMenu(item ? item["num"] : -1)
     return 0
 }
 
@@ -560,6 +571,16 @@ FillSettingsMenu(m) {
     m.Add(T("menu.colorcoding"), ToggleView.Bind("ColorCoding"))
     if (CONF["ColorCoding"])
         m.Check(T("menu.colorcoding"))
+    am := Menu()
+    for val, label in Map("desktop", T("menu.active.desktop"), "accent", T("menu.active.accent"), "solid", T("menu.active.solid")) {
+        am.Add(label, SetViewStr.Bind("ActiveStyle", val))
+        if (CONF["ActiveStyle"] = val)
+            am.Check(label)
+    }
+    m.Add(T("menu.active"), am)
+    m.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
+    if (CONF["ShowDividers"])
+        m.Check(T("menu.dividers"))
     vm := Menu()
     for val, label in Map("auto", T("menu.view.auto"), "full", T("level.full"), "short", T("level.short"), "icon", T("level.icon")) {
         vm.Add(label, SetViewStr.Bind("CompactMode", val))
@@ -983,12 +1004,12 @@ BuildBar() {
 }
 
 BuildBarAt() {
-    global MyGui, BTNS, GRIP, GUIW, GUIH, gTaskbarW
+    global MyGui, BTNS, PIC, GUIW, GUIH, gTaskbarW, gLayout
     if (MyGui) {
         try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
         try MyGui.Destroy()
     }
-    BTNS := []
+    BTNS := [], PIC := 0
 
     ; NOACTIVATE (0x08000000): Klicks klauen nicht den Fokus vom Arbeitsfenster
     MyGui := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08000000 -DPIScale")
@@ -1008,10 +1029,8 @@ BuildBarAt() {
     }
     gTaskbarW := tbW
 
-    margin := px(3)
-    accH := px(CONF["AccentBarH"])
-    reserve := CONF["ColorCoding"] ? (accH + px(2)) : 0   ; Platz unter dem Button fuer den Farbbalken
-    btnH := tbH - 2 * margin - reserve
+    margin := px(CONF["TabMargin"])
+    btnH := tbH - 2 * margin
     if (btnH < px(20))
         btnH := px(20)
 
@@ -1019,51 +1038,37 @@ BuildBarAt() {
     if (cnt < 1)
         cnt := 1
 
-    ; Griff (zum Verschieben)
-    GRIP := MyGui.Add("Text", Format("x0 y0 w{1} h{2} +Center +0x200 Background{3} c{4}"
-        , px(CONF["GripW"]), btnH, Fmt(CONF["ColGripBg"]), Fmt(CONF["ColGripTx"])), "≡")
-
-    dw := Max(1, px(1))                       ; Trennstrich-Breite
-    divH := btnH - 2 * px(CONF["DividerInsetY"])
-    if (divH < px(8))
-        divH := btnH
-    divY := margin + (btnH - divH) // 2
-
-    x := px(CONF["GripW"]) + px(CONF["Gap"])
+    ; Layout: Breiten der Tabs per GDI+ messen (die Leiste wird komplett gezeichnet,
+    ; siehe RenderBar), Positionen in BTNS merken
+    GdipStart()
+    mBmp := 0, mG := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", 1, "Int", 1, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &mBmp)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", mBmp, "Ptr*", &mG)
+    font := MakeFont(), sf := MakeFormat()
+    gap := px(CONF["Gap"])
+    x := px(CONF["GripW"]) + gap
     Loop cnt {
         num := A_Index - 1
-        name := LabelFor(num)
-        ; Erst auto-breit anlegen, um Textbreite zu messen
-        ; +0x200 = SS_CENTERIMAGE (vertikal zentriert), +0x80 = SS_NOPREFIX (& woertlich zeigen)
-        c := MyGui.Add("Text", Format("x{1} y{2} +Center +0x200 +0x80 Background{3} c{4}"
-            , x, margin, Fmt(CONF["ColInactiveBg"]), Fmt(CONF["ColInactiveTx"])), name)
-        cw := 0, ch := 0
-        c.GetPos(, , &cw, &ch)
-        w := cw + px(CONF["PadX"]) * 2
-        c.Move(x, margin, w, btnH)
-        c.OnEvent("Click", BtnClick.Bind(num))
-        BTNS.Push(Map("ctrl", c, "num", num, "hover", false, "acc", 0))
-        ; Farb-Akzentbalken UNTER dem Button (ueberlappungsfrei, Tab-Indikator-Stil)
-        if (CONF["ColorCoding"]) {
-            ac := MyGui.Add("Text", Format("x{1} y{2} w{3} h{4} Background{5}"
-                , x, margin + btnH + px(1), w, accH, Fmt(DesktopColor(num))))
-            ac.OnEvent("Click", BtnClick.Bind(num))
-            BTNS[BTNS.Length]["acc"] := ac
-        }
+        label := LabelFor(num)
+        w := MeasureText(mG, font, sf, label) + px(CONF["PadX"]) * 2
+        BTNS.Push(Map("num", num, "label", label, "x", x, "w", w, "hover", false))
         x += w
-        ; Trennstrich zwischen den Buttons (nicht nach dem letzten)
-        if (A_Index < cnt) {
-            gap := px(CONF["Gap"])
-            divX := x + (gap - dw) // 2
-            MyGui.Add("Text", Format("x{1} y{2} w{3} h{4} Background{5}"
-                , divX, divY, dw, divH, Fmt(CONF["ColDivider"])))
+        if (A_Index < cnt)
             x += gap
-        }
     }
-    x += px(CONF["Gap"])                       ; etwas Luft am rechten Rand
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
+    x += gap                                   ; etwas Luft am rechten Rand
 
     GUIW := x
     GUIH := tbH
+    gLayout := Map("margin", margin, "btnH", btnH, "gripW", px(CONF["GripW"]), "gap", gap
+        , "radius", px(CONF["CornerRadius"]), "accH", px(CONF["AccentBarH"]))
+
+    ; Zeichenflaeche: ein Picture-Control ueber die ganze Leiste (SS_NOTIFY fuer Mausklicks)
+    PIC := MyGui.Add("Picture", Format("x0 y0 w{1} h{2} +0x100", GUIW, GUIH))
 
     ; Position: aus settings.ini, sonst Standard = unten links.
     ; "above" => direkt ueber der Taskleiste (sicher sichtbar)
@@ -1080,11 +1085,181 @@ BuildBarAt() {
             posY := snapY
     }
 
-    GRIP.OnEvent("Click", (*) => 0)   ; Klick auf Griff: nichts (Ziehen via LBUTTONDOWN)
+    RenderBar()
     MyGui.Show(Format("x{1} y{2} w{3} h{4} NoActivate", posX, posY, GUIW, GUIH))
 
-    ; Ziehen am Griff
+    ; Maus: Ziehen am Griff (LBUTTONDOWN), Tab-Klick (LBUTTONUP)
     OnMessage(0x0201, OnLButtonDown)  ; WM_LBUTTONDOWN
+    OnMessage(0x0202, OnLButtonUp)    ; WM_LBUTTONUP
+}
+
+; --------------------------- Zeichnen (GDI+) --------------------------------
+; Die Leiste ist ein einziges Bild: Griff, abgerundete Tabs, Text, Farbbalken.
+; Zustaende (aktiv/hover) aendern nur das Bild, keine Controls.
+GdipStart() {
+    global gGdipToken
+    if (gGdipToken)
+        return
+    DllCall("LoadLibrary", "Str", "gdiplus", "Ptr")
+    si := Buffer(24, 0), NumPut("UInt", 1, si)
+    tok := 0
+    DllCall("gdiplus\GdiplusStartup", "Ptr*", &tok, "Ptr", si, "Ptr", 0)
+    gGdipToken := tok
+}
+
+ARGB(rgb, a := 255) => (a << 24) | (rgb & 0xFFFFFF)
+
+; fg mit pct % Deckkraft ueber bg mischen (Toenung auf opakem Grund)
+Mix(fg, bg, pct) {
+    r := ((fg >> 16 & 0xFF) * pct + (bg >> 16 & 0xFF) * (100 - pct)) // 100
+    g := ((fg >> 8 & 0xFF) * pct + (bg >> 8 & 0xFF) * (100 - pct)) // 100
+    b := ((fg & 0xFF) * pct + (bg & 0xFF) * (100 - pct)) // 100
+    return (r << 16) | (g << 8) | b
+}
+
+MakeFont(bold := false) {
+    fam := 0, font := 0
+    DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", CONF["FontName"], "Ptr", 0, "Ptr*", &fam)
+    if (!fam)
+        DllCall("gdiplus\GdipGetGenericFontFamilySansSerif", "Ptr*", &fam)
+    sizePx := CONF["FontSizePt"] * SCALE * 96 / 72
+    DllCall("gdiplus\GdipCreateFont", "Ptr", fam, "Float", sizePx, "Int", bold ? 1 : 0, "Int", 2, "Ptr*", &font)  ; Unit 2 = Pixel
+    DllCall("gdiplus\GdipDeleteFontFamily", "Ptr", fam)
+    return font
+}
+
+MakeFormat() {
+    sf := 0
+    DllCall("gdiplus\GdipCreateStringFormat", "Int", 0x1000 | 0x4000, "Int", 0, "Ptr*", &sf)  ; NoWrap | NoClip
+    DllCall("gdiplus\GdipSetStringFormatAlign", "Ptr", sf, "Int", 1)       ; horizontal zentriert
+    DllCall("gdiplus\GdipSetStringFormatLineAlign", "Ptr", sf, "Int", 1)   ; vertikal zentriert
+    DllCall("gdiplus\GdipSetStringFormatTrimming", "Ptr", sf, "Int", 0)
+    return sf
+}
+
+MeasureText(g, font, sf, s) {
+    layout := Buffer(16, 0), bound := Buffer(16, 0)
+    NumPut("Float", 0, "Float", 0, "Float", 10000, "Float", 1000, layout)
+    DllCall("gdiplus\GdipMeasureString", "Ptr", g, "Str", s, "Int", -1, "Ptr", font, "Ptr", layout, "Ptr", sf, "Ptr", bound, "Ptr", 0, "Ptr", 0)
+    return Ceil(NumGet(bound, 8, "Float"))
+}
+
+DrawText(g, font, sf, s, x, y, w, h, argb) {
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", argb, "Ptr*", &brush)
+    rect := Buffer(16, 0)
+    NumPut("Float", x, "Float", y, "Float", w, "Float", h, rect)
+    DllCall("gdiplus\GdipDrawString", "Ptr", g, "Str", s, "Int", -1, "Ptr", font, "Ptr", rect, "Ptr", sf, "Ptr", brush)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+}
+
+RoundRectPath(x, y, w, h, r) {
+    path := 0
+    DllCall("gdiplus\GdipCreatePath", "Int", 0, "Ptr*", &path)
+    d := Min(r * 2, w, h)
+    if (d <= 0) {
+        DllCall("gdiplus\GdipAddPathRectangle", "Ptr", path, "Float", x, "Float", y, "Float", w, "Float", h)
+        return path
+    }
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", x, "Float", y, "Float", d, "Float", d, "Float", 180, "Float", 90)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", x + w - d, "Float", y, "Float", d, "Float", d, "Float", 270, "Float", 90)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", x + w - d, "Float", y + h - d, "Float", d, "Float", d, "Float", 0, "Float", 90)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", x, "Float", y + h - d, "Float", d, "Float", d, "Float", 90, "Float", 90)
+    DllCall("gdiplus\GdipClosePathFigure", "Ptr", path)
+    return path
+}
+
+FillRoundRect(g, x, y, w, h, r, argb) {
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", argb, "Ptr*", &brush)
+    path := RoundRectPath(x, y, w, h, r)
+    DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", path)
+    DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+}
+
+; Leiste komplett neu zeichnen und ins Picture-Control legen
+RenderBar() {
+    global BTNS, GUIW, GUIH, PIC, gCurrent, gTheme, gLayout
+    if (!PIC)
+        return
+    L := gLayout
+    W := GUIW, H := GUIH
+    pBmp := 0, g := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", W, "Int", H, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &pBmp)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", pBmp, "Ptr*", &g)
+    DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)         ; AntiAlias
+    DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 5)     ; ClearTypeGridFit (opaker Grund)
+    bg := CONF["ColBarBg"]
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", ARGB(bg))
+    font := MakeFont(), sf := MakeFormat()
+    y := L["margin"], h := L["btnH"], r := L["radius"]
+
+    ; Griff
+    DrawText(g, font, sf, "≡", 0, y, L["gripW"], h, ARGB(CONF["ColGripTx"]))
+
+    tint := CONF["TintPct"] * (gTheme = "dark" ? 1.6 : 1)
+    tint := Min(100, Round(tint))
+    style := CONF["ActiveStyle"]
+    for item in BTNS {
+        x := item["x"], w := item["w"]
+        col := DesktopColor(item["num"])
+        active := (item["num"] = gCurrent)
+        tx := CONF["ColInactiveTx"]
+        if (active) {
+            if (style = "solid") {
+                FillRoundRect(g, x, y, w, h, r, ARGB(CONF["ColActiveBg"]))
+                tx := CONF["ColActiveTx"]
+            } else {
+                base := (style = "accent") ? CONF["ColActiveBg"] : col
+                FillRoundRect(g, x, y, w, h, r, ARGB(Mix(base, bg, tint)))
+            }
+        } else if (item["hover"]) {
+            FillRoundRect(g, x, y, w, h, r, ARGB(CONF["ColHoverBg"]))
+        }
+        DrawText(g, font, sf, item["label"], x, y, w, h, ARGB(tx))
+        ; Farbbalken unten im Tab (abgerundet, eingerueckt)
+        if (CONF["ColorCoding"]) {
+            inset := px(8), ah := L["accH"]
+            FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2, ARGB(col))
+        }
+        ; optionaler Trennstrich in der Luecke danach
+        if (CONF["ShowDividers"] && A_Index < BTNS.Length) {
+            dw := Max(1, px(1)), divH := h - 2 * px(CONF["DividerInsetY"])
+            if (divH < px(8))
+                divH := h
+            FillRoundRect(g, x + w + (L["gap"] - dw) / 2, y + (h - divH) / 2, dw, divH, 0, ARGB(CONF["ColDivider"]))
+        }
+    }
+    hbm := 0
+    DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", "Ptr", pBmp, "Ptr*", &hbm, "UInt", ARGB(bg))
+    try PIC.Value := "HBITMAP:*" hbm
+    DllCall("DeleteObject", "Ptr", hbm)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", pBmp)
+}
+
+; Tab an einer X-Position (Fensterkoordinaten), sonst 0
+ItemAtX(lx) {
+    global BTNS
+    for item in BTNS
+        if (lx >= item["x"] && lx < item["x"] + item["w"])
+            return item
+    return 0
+}
+
+; Mausposition relativ zur Leiste (-1 = nicht ueber der Leiste)
+BarMouseX() {
+    global MyGui
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my, &winId)
+    if (!MyGui || winId != MyGui.Hwnd)
+        return -1
+    wx := 0, wy := 0
+    MyGui.GetPos(&wx, &wy)
+    return mx - wx
 }
 
 ClampX(x) {
@@ -1208,8 +1383,10 @@ IsOverBar(mx, my) {
 ; ein, solange die Leiste die Taskleiste ueberlappt (oder nah dran ist). Ganz
 ; weggezogen wird Y frei. Deterministisch statt natives Drag + WM_MOVING.
 OnLButtonDown(wParam, lParam, msg, hwnd) {
-    global GRIP, MyGui, GUIW, GUIH
-    if (hwnd != GRIP.Hwnd)
+    global MyGui, GUIW, GUIH, gLayout
+    if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
+        return
+    if (BarMouseX() >= gLayout["gripW"])   ; nur der Griff zieht
         return
     CoordMode("Mouse", "Screen")
     MouseGetPos(&sx, &sy)
@@ -1250,48 +1427,41 @@ SavePosDeferred() {
 }
 
 ; ---------------------------- Hervorhebung ----------------------------------
-; Faerbt einen Button nach Zustand: aktiv > hover > inaktiv
-PaintButton(item) {
-    global gCurrent
-    if (item["num"] = gCurrent) {
-        bg := CONF["ColActiveBg"]
-        tx := CONF["ColActiveTx"]
-    } else if (item["hover"]) {
-        bg := CONF["ColHoverBg"]
-        tx := CONF["ColHoverTx"]
-    } else {
-        bg := CONF["ColInactiveBg"]
-        tx := CONF["ColInactiveTx"]
-    }
-    c := item["ctrl"]
-    c.Opt("+Background" Fmt(bg) " c" Fmt(tx))
-    DllCall("InvalidateRect", "Ptr", c.Hwnd, "Ptr", 0, "Int", 1)
+; Tab-Klick (beim Loslassen, wie ein Button)
+OnLButtonUp(wParam, lParam, msg, hwnd) {
+    global MyGui
+    if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
+        return
+    item := ItemAtX(BarMouseX())
+    if (item)
+        BtnClick(item["num"])
+    return 0
 }
 
 UpdateHighlight() {
     global BTNS, gCurrent
     gCurrent := GetCurrentDesktop()
     LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
-    for item in BTNS
-        PaintButton(item)
+    RenderBar()
 }
 
-; Hover: Button unter dem Mauszeiger leicht aufhellen
+; Hover: Tab unter dem Mauszeiger leicht hervorheben
 HoverTick() {
-    global MyGui, BTNS, gHidden, gBuilding
+    global BTNS, gHidden, gBuilding
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
-    MouseGetPos(, , &winId, &ctrlHwnd, 2)
-    overOur := (winId = MyGui.Hwnd)
+    over := ItemAtX(BarMouseX())
+    changed := false
     for item in BTNS {
-        h := (overOur && ctrlHwnd = item["ctrl"].Hwnd)
+        h := (over && item["num"] = over["num"])
         if (h != item["hover"]) {
             item["hover"] := h
-            PaintButton(item)
+            changed := true
         }
     }
+    if (changed)
+        RenderBar()
 }
-
 ; Vollbild-App im Vordergrund -> Leiste ausblenden, sonst wieder zeigen
 FullscreenTick() {
     global MyGui, gHidden, gBuilding
@@ -1432,7 +1602,7 @@ Refresh() {
         ; -> lange Namen werden abgeschnitten und die Abstaende kollabieren.
         nameChanged := false
         for item in BTNS {
-            if (item["ctrl"].Text != LabelFor(item["num"])) {
+            if (item["label"] != LabelFor(item["num"])) {
                 nameChanged := true
                 break
             }
