@@ -44,6 +44,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Help menu:** documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
 - **Update check:** once a day DeskTabs asks the GitHub releases API for the latest version number (nothing else is sent) and shows a tray notification if a newer release exists. Disable via the Help menu or `UpdateCheck = 0`.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
+- **Keyboard shortcuts (off by default):** jump straight to desktop 1 to 10 with a number key, from the number row or the numpad (the numpad works with NumLock on or off). Pick the modifier in the menu: Ctrl+Win, Ctrl+Alt, Win+Alt or Ctrl+Shift.
 - **Mouse wheel** over the bar pages through the desktops.
 - **Separators** between the tabs (off by default, switchable).
 - **Movable** by the handle `≡` on the left; the position is remembered in `settings.ini`.
@@ -140,6 +141,8 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ShowIcons` | 1 | Show the icons from `[Icons]` in the tabs. |
 | `IconSize` / `IconGap` | 16 / 7 | Icon size and the gap between icon and text. |
 | `ShowDividers` | 0 | Thin separators between the tabs. |
+| `Hotkeys` | 0 | 1 = register the number-key shortcuts for jumping to a desktop. |
+| `HotkeyMod` | `^#` | Modifier for those shortcuts, in AutoHotkey notation: `^#` Ctrl+Win, `^!` Ctrl+Alt, `#!` Win+Alt, `^+` Ctrl+Shift. |
 | `SwitchMethod` | `dll` | `dll` = jump straight to the desktop, `native` = emulate `Win+Ctrl+Arrow` step by step. |
 | `Language` | `auto` | UI language: `auto` follows the Windows display language (German → `de`, everything else → `en`), or `de` / `en` fixed. Any other code loads `lang\<code>.ini`. Can also be set in `settings.ini` `[View] Language=`. Takes effect on restart. |
 | Colours | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` are copied at startup from `THEME_LIGHT` / `THEME_DARK` (depending on `ThemeMode`) into `CONF`. To customise, edit the two `THEME_*` maps near the top of the script. |

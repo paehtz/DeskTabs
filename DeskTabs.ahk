@@ -89,7 +89,9 @@ global CONF := Map(
     "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (desktop-log_YYYY-MM.csv)
     "TimeLogIdleMin", 5,       ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
     "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
-    "UpdateCheck",    1        ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
+    "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
+    "Hotkeys",        0,       ; 1 = Tastenkuerzel fuer den Direktsprung (Ziffernreihe UND Ziffernblock)
+    "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
 )
 
 ; ---- Theme-Farbsaetze (werden je nach Windows-Theme in CONF uebernommen) ----
@@ -227,6 +229,7 @@ global gBarDC := 0           ; Speicher-DC mit dem fertig gezeichneten Leistenbi
 global gBarBmp := 0          ; zugehoeriges HBITMAP
 global gRenderSig := ""      ; Zustand des letzten Renderns (nur bei Aenderung neu zeichnen)
 global gGripHover := false   ; Maus ueber dem Ziehgriff?
+global gHotkeys := []        ; aktuell registrierte Tastenkuerzel
 global gIconCache := Map()   ; Pfad -> geladenes GDI+-Bitmap (einmal laden, oft zeichnen)
 global gIconFetch := Map()   ; URLs, die in dieser Sitzung schon geholt wurden
 global gLayout := 0          ; Geometrie der aktuellen Leiste (Map)
@@ -318,6 +321,13 @@ global LANG_DE := Map(
     "menu.dock",       "Andocken",
     "menu.dock.on",    "Auf der Taskleiste",
     "menu.dock.above", "Über der Taskleiste",
+    "menu.hotkeys",    "Tastenkürzel",
+    "menu.hotkeys.on", "Direktsprung per Zifferntaste",
+    "key.ctrl",        "Strg",
+    "key.win",         "Windows",
+    "key.alt",         "Alt",
+    "key.shift",       "Umschalt",
+    "err.hotkeys",     "Die Tastenkürzel konnten nicht registriert werden. Vermutlich belegt sie ein anderes Programm. Bitte einen anderen Modifikator wählen.",
     "menu.directjump", "Direkt springen (ohne Zwischen-Desktops)",
     "menu.snap",       "An Taskleiste einrasten",
     "menu.timelog",    "Zeit-Log schreiben",
@@ -432,6 +442,13 @@ global LANG_EN := Map(
     "menu.dock",       "Docking",
     "menu.dock.on",    "On the taskbar",
     "menu.dock.above", "Above the taskbar",
+    "menu.hotkeys",    "Keyboard shortcuts",
+    "menu.hotkeys.on", "Jump to a desktop with a number key",
+    "key.ctrl",        "Ctrl",
+    "key.win",         "Windows",
+    "key.alt",         "Alt",
+    "key.shift",       "Shift",
+    "err.hotkeys",     "The shortcuts could not be registered. Another program probably uses them. Please pick a different modifier.",
     "menu.directjump", "Jump directly (skip desktops in between)",
     "menu.snap",       "Snap to taskbar",
     "menu.timelog",    "Write time log",
@@ -562,6 +579,7 @@ Main() {
     BuildTray()
     SetTimer(AutoUpdateTick, -20000)         ; Update-Pruefung 20 s nach dem Start, hoechstens einmal pro Tag
     SetTimer(FirstRunHint, -1500)            ; beim allerersten Start kurz erklaeren, wo die Einstellungen sind
+    ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
 }
 
 ; Beim allerersten Start (noch keine settings.ini) einmalig erklaeren, wie man
@@ -580,12 +598,12 @@ FirstRunHint() {
 ApplyIniOverrides() {
     for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
                           , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid"
-                          , "SwitchMethod", "native,dll") {
+                          , "SwitchMethod", "native,dll", "HotkeyMod", "^#,^!,#!,^+") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
             CONF[key] := v
     }
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -598,6 +616,8 @@ SetView(key, val) {
     IniSet("View", key, val)
     if (key = "TimeLog")
         val ? LogOpen(GetCurrentDesktop()) : LogClose()
+    if (key = "Hotkeys" || key = "HotkeyMod")
+        ApplyHotkeys()
     if (key = "Language") {
         InitLanguage()
         BuildTray()
@@ -1383,6 +1403,21 @@ FillSettingsMenu(m) {
     }
     m.Add(T("menu.dock"), dm)
     MenuGlyph(m, T("menu.dock"), "ECAA")
+    km := Menu()
+    km.Add(T("menu.hotkeys.on"), ToggleView.Bind("Hotkeys"))
+    if (CONF["Hotkeys"])
+        km.Check(T("menu.hotkeys.on"))
+    km.Add()
+    for val in ["^#", "^!", "#!", "^+"] {
+        label := HotkeyLabel(val)
+        km.Add(label, SetViewStr.Bind("HotkeyMod", val))
+        if (CONF["HotkeyMod"] = val)
+            km.Check(label)
+        if (!CONF["Hotkeys"])
+            km.Disable(label)
+    }
+    m.Add(T("menu.hotkeys"), km)
+    MenuGlyph(m, T("menu.hotkeys"), "E961")
     m.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
     if (CONF["SwitchMethod"] = "dll")
         m.Check(T("menu.directjump"))
@@ -2285,7 +2320,8 @@ SwitchToDesktop(target) {
         ; mit. Gemessen auf 25H2/26200 passiert das nicht; falls doch, schieben wir
         ; das Fenster sofort auf seinen Desktop zurueck.
         fg := DllCall("GetForegroundWindow", "Ptr")
-        fgDesk := (fg && fg != MyGui.Hwnd) ? VD("GetWindowDesktopNumber", "Ptr", fg, "Int") : -1
+        barHwnd := MyGui ? MyGui.Hwnd : 0
+        fgDesk := (fg && fg != barHwnd) ? VD("GetWindowDesktopNumber", "Ptr", fg, "Int") : -1
         VD("GoToDesktopNumber", "Int", target)
         if (fgDesk >= 0 && VD("GetWindowDesktopNumber", "Ptr", fg, "Int") != fgDesk)
             VD("MoveWindowToDesktopNumber", "Ptr", fg, "Int", fgDesk)
@@ -2580,6 +2616,7 @@ Refresh() {
     if (SettingsChanged()) {
         ApplyIniOverrides()
         InitLanguage()
+        ApplyHotkeys()
         BuildTray()
         ApplyTheme()
         BuildBar()
@@ -2607,6 +2644,80 @@ Refresh() {
         }
     }
     UpdateHighlight()
+}
+
+; ------------------------------ Tastenkuerzel -------------------------------
+; Direktsprung auf Desktop 1..10 per Zifferntaste. Registriert werden immer beide
+; Reihen: die Zifferntasten oben und der Ziffernblock - dort zusaetzlich die
+; Zweitbelegung, damit es auch ohne eingeschaltetes NumLock funktioniert.
+; Zweitbelegung des Ziffernblocks (NumLock aus)
+NumpadAlias(digit) {
+    alias := Map("1", "NumpadEnd", "2", "NumpadDown", "3", "NumpadPgDn", "4", "NumpadLeft", "5", "NumpadClear"
+               , "6", "NumpadRight", "7", "NumpadHome", "8", "NumpadUp", "9", "NumpadPgUp", "0", "NumpadIns")
+    return alias.Has(digit) ? alias[digit] : ""
+}
+
+NumpadScan(digit) {
+    ; Scancodes des Ziffernblocks. Ueber den Scancode gilt eine Taste unabhaengig
+    ; davon, ob NumLock an ist - mit den Namen (Numpad2 vs. NumpadDown) muesste man
+    ; beide Zustaende getrennt registrieren, was nicht zuverlaessig greift.
+    sc := Map("1", "sc04F", "2", "sc050", "3", "sc051", "4", "sc04B", "5", "sc04C"
+            , "6", "sc04D", "7", "sc047", "8", "sc048", "9", "sc049", "0", "sc052")
+    return sc.Has(digit) ? sc[digit] : ""
+}
+
+ApplyHotkeys() {
+    global gHotkeys
+    for , key in gHotkeys
+        try Hotkey(key, "Off")
+    gHotkeys := []
+    if (!CONF["Hotkeys"])
+        return
+    mk := CONF["HotkeyMod"]                 ; nicht "mod" nennen: das ist die eingebaute Funktion Mod()
+    failed := 0
+    Loop 10 {
+        idx := A_Index - 1                      ; Desktop 1..10 -> Index 0..9
+        digit := (A_Index = 10) ? "0" : String(A_Index)
+        ; Zifferreihe, Ziffernblock per Scancode (gilt unabhaengig von NumLock) und
+        ; zusaetzlich beide Namensvarianten - was zuerst greift, greift.
+        for , key in [mk digit, mk NumpadScan(digit), mk "Numpad" digit, mk NumpadAlias(digit)] {
+            if (key = mk)
+                continue
+            try {
+                Hotkey(key, JumpToDesktop.Bind(idx), "On")
+                gHotkeys.Push(key)
+            } catch {
+                failed++
+            }
+        }
+    }
+    if (failed && gHotkeys.Length = 0) {
+        MsgBox(T("err.hotkeys"), "DeskTabs", 0x30)
+        CONF["Hotkeys"] := 0
+        IniSet("View", "Hotkeys", 0)
+    }
+}
+
+JumpToDesktop(idx, *) {
+    if (idx < GetDesktopCount())
+        SwitchToDesktop(idx)
+}
+
+; Lesbare Beschriftung eines Modifikators, z.B. "Strg + Windows + 1 … 0"
+HotkeyLabel(mk) {
+    parts := []
+    if (InStr(mk, "^"))
+        parts.Push(T("key.ctrl"))
+    if (InStr(mk, "#"))
+        parts.Push(T("key.win"))
+    if (InStr(mk, "!"))
+        parts.Push(T("key.alt"))
+    if (InStr(mk, "+"))
+        parts.Push(T("key.shift"))
+    out := ""
+    for , v in parts
+        out .= (out = "" ? "" : " + ") v
+    return out " + 1 … 0"
 }
 
 ; ------------------------------- Tray ---------------------------------------

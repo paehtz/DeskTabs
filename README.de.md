@@ -44,6 +44,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Hilfe-Menü:** Dokumentation, Änderungsverlauf, Fehler melden und Wunsch einreichen (öffnet ein vorausgefülltes GitHub-Issue), E-Mail an den Autor, Update-Prüfung und *Über DeskTabs* (Version, Lizenz, Links).
 - **Update-Prüfung:** einmal täglich fragt DeskTabs die GitHub-Releases-API nach der aktuellen Versionsnummer (mehr wird nicht übertragen) und zeigt bei einer neueren Version einen Tray-Hinweis. Abschaltbar im Hilfe-Menü oder per `UpdateCheck = 0`.
 - **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
+- **Tastenkürzel (standardmäßig aus):** mit einer Zifferntaste direkt auf Desktop 1 bis 10 springen, wahlweise über die Zifferreihe oder den Ziffernblock (dort unabhängig davon, ob NumLock an ist). Modifikator im Menü wählbar: Strg+Windows, Strg+Alt, Windows+Alt oder Strg+Umschalt.
 - **Mausrad** über der Leiste blättert durch die Desktops.
 - **Trennstriche** zwischen den Tabs (standardmäßig aus, umschaltbar).
 - **Verschiebbar** am Griff `≡` links; Position wird in `settings.ini` gemerkt.
@@ -140,6 +141,8 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `ShowIcons` | 1 | Symbole aus `[Icons]` in den Tabs anzeigen. |
 | `IconSize` / `IconGap` | 16 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
 | `ShowDividers` | 0 | Dünne Trennstriche zwischen den Tabs. |
+| `Hotkeys` | 0 | 1 = Tastenkürzel für den Direktsprung auf einen Desktop registrieren. |
+| `HotkeyMod` | `^#` | Modifikator dafür, in AutoHotkey-Schreibweise: `^#` Strg+Windows, `^!` Strg+Alt, `#!` Windows+Alt, `^+` Strg+Umschalt. |
 | `SwitchMethod` | `dll` | `dll` = direkt zum Desktop springen, `native` = `Win+Strg+Pfeil` schrittweise nachbilden. |
 | `Language` | `auto` | Oberflächensprache: `auto` folgt der Windows-Anzeigesprache (Deutsch → `de`, alles andere → `en`), oder `de` / `en` fest. Jeder andere Code lädt `lang\<code>.ini`. Auch in `settings.ini` `[View] Language=` setzbar. Wirkt nach Neustart. |
 | Farben | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` werden beim Start aus `THEME_LIGHT` / `THEME_DARK` (je nach `ThemeMode`) in die CONF übernommen. Anpassen → die beiden `THEME_*`-Maps oben im Skript. |
