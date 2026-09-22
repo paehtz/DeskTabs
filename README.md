@@ -16,6 +16,20 @@ Built by [Henning Pähtz](https://paehtz.de) as a lean tool for per-project time
 
 ---
 
+## ⬇ Download
+
+**[DeskTabs for Windows 11 (ZIP, 0.9 MB)](https://github.com/paehtz/DeskTabs/releases/latest/download/DeskTabs-latest.zip)** — unpack it anywhere and run `DeskTabs.exe`. No installer, no admin rights, nothing written to the registry.
+
+Prefer one line in PowerShell? This downloads the latest version, puts it in `%LOCALAPPDATA%\DeskTabs`, starts it and sets up autostart:
+
+```powershell
+irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
+```
+
+All versions and their release notes are on the [Releases page](https://github.com/paehtz/DeskTabs/releases). Windows SmartScreen may warn on first start because the file is not signed: **More info → Run anyway**.
+
+---
+
 ## Background
 
 I organise my projects and my time tracking around virtual desktops: one desktop per project, with exactly the windows and the layout I need for it. Switching desktops serves two purposes at once. First, it swaps the entire working context: every window of the project is instantly there. Second, [ManicTime](https://www.manictime.com), which I use to track my working hours, records the active desktop. In the daily view I can later see precisely when and how long I worked on which project.

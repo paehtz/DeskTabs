@@ -16,6 +16,20 @@ Entwickelt von [Henning Pähtz](https://paehtz.de) als schlankes Werkzeug fürs 
 
 ---
 
+## ⬇ Herunterladen
+
+**[DeskTabs für Windows 11 (ZIP, 0,9 MB)](https://github.com/paehtz/DeskTabs/releases/latest/download/DeskTabs-latest.zip)** — irgendwohin entpacken und `DeskTabs.exe` starten. Kein Installer, keine Administratorrechte, nichts in der Registry.
+
+Lieber eine Zeile in PowerShell? Das lädt die neueste Fassung, legt sie nach `%LOCALAPPDATA%\DeskTabs`, startet sie und richtet den Autostart ein:
+
+```powershell
+irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
+```
+
+Alle Versionen samt Änderungsnotizen stehen auf der [Releases-Seite](https://github.com/paehtz/DeskTabs/releases). Windows SmartScreen warnt beim ersten Start eventuell, weil die Datei nicht signiert ist: **Weitere Informationen → Trotzdem ausführen**.
+
+---
+
 ## Hintergrund
 
 Ich strukturiere meine Projekte und mein Zeit-Tracking über virtuelle Desktops: pro Projekt ein Desktop mit genau den Fenstern und der Oberfläche, die ich dafür brauche. Das Umschalten erfüllt dabei zwei Zwecke gleichzeitig. Erstens wechselt es den kompletten Arbeitskontext, alle Fenster des Projekts sind sofort da. Zweitens erfasst [ManicTime](https://www.manictime.com), womit ich meine Arbeitszeit tracke, den jeweils aktiven Desktop. In der Tagesansicht kann ich später präzise nachvollziehen, wann und wie lange ich an welchem Projekt gearbeitet habe.
