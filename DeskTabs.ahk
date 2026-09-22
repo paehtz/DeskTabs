@@ -341,7 +341,7 @@ global LANG_DE := Map(
     "about.version",   "Version {1}",
     "about.author",    "von {1}",
     "about.license",   "Lizenz: MIT (Quelltext frei verfügbar)",
-    "about.components", "Enthält VirtualDesktopAccessor (MIT, Jari Pennanen){1}",
+    "about.components", "Enthält VirtualDesktopAccessor (MIT, Jari Pennanen){1}.`nSymbol-Bibliothek: Schrift „Segoe Fluent Icons“ von Windows; Symbolnamen aus der`nMicrosoft-Dokumentation (CC BY 4.0).",
     "about.ahk",       "und AutoHotkey v2 (GPL-2.0)",
     "about.website",   "Website",
     "about.github",    "Projekt auf GitHub",
@@ -448,7 +448,7 @@ global LANG_EN := Map(
     "about.version",   "Version {1}",
     "about.author",    "by {1}",
     "about.license",   "License: MIT (source code freely available)",
-    "about.components", "Includes VirtualDesktopAccessor (MIT, Jari Pennanen){1}",
+    "about.components", "Includes VirtualDesktopAccessor (MIT, Jari Pennanen){1}.`nIcon library: the Windows font “Segoe Fluent Icons”; icon names from the`nMicrosoft documentation (CC BY 4.0).",
     "about.ahk",       "and AutoHotkey v2 (GPL-2.0)",
     "about.website",   "Website",
     "about.github",    "Project on GitHub",
@@ -693,11 +693,11 @@ MenuGlyph(menu, item, code) {
 ; hundert Steuerelemente - sonst baut sich das Raster beim Rollen sichtbar auf.
 ; Fertige Seiten bleiben im Zwischenspeicher, die Nachbarseiten werden vorbereitet.
 ShowIconLibrary(num, *) {
-    COLS := 12, ROWS := 8, CELL := 44   ; als lokale Variablen, damit die inneren Funktionen sie mitbekommen
+    NCOLS := 12, NROWS := 8, CELLW := 44   ; als lokale Variablen, damit die inneren Funktionen sie mitbekommen
     glyphs := GlyphList()
     raw := GetDesktopNameRaw(num)
     col := DesktopColor(num)
-    gridW := COLS * CELL, gridH := ROWS * CELL
+    gridW := NCOLS * CELLW, gridH := NROWS * CELLW
     filtered := [], offset := 0, pages := Map(), sig := "", hoverIdx := 0
 
     g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("iconlib.title", raw))
@@ -739,15 +739,15 @@ ShowIconLibrary(num, *) {
         DllCall("gdiplus\GdipGraphicsClear", "Ptr", gr, "UInt", ARGB(0xF6F6F6))
         font := MakeIconFont(28)
         sf := MakeFormat()
-        Loop COLS * ROWS {
+        Loop NCOLS * NROWS {
             i := A_Index
-            idx := off * COLS + i
+            idx := off * NCOLS + i
             if (idx > filtered.Length)
                 break
-            cx := Mod(i - 1, COLS) * CELL, cy := ((i - 1) // COLS) * CELL
+            cx := Mod(i - 1, NCOLS) * CELLW, cy := ((i - 1) // NCOLS) * CELLW
             if (i = hover)
-                FillRoundRect(gr, cx + 2, cy + 2, CELL - 4, CELL - 4, 5, ARGB(Mix(0x000000, 0xF6F6F6, 7)))
-            DrawText(gr, font, sf, GlyphChar("glyph:" glyphs[filtered[idx]]["code"]), cx, cy, CELL, CELL, ARGB(col))
+                FillRoundRect(gr, cx + 2, cy + 2, CELLW - 4, CELLW - 4, 5, ARGB(Mix(0x000000, 0xF6F6F6, 7)))
+            DrawText(gr, font, sf, GlyphChar("glyph:" glyphs[filtered[idx]]["code"]), cx, cy, CELLW, CELLW, ARGB(col))
         }
         DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
         DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
@@ -760,19 +760,19 @@ ShowIconLibrary(num, *) {
     }
     ShowPage() {
         sheet.Value := "HBITMAP:*" PageBitmap(offset, hoverIdx)
-        SetScroll(Ceil(filtered.Length / COLS), ROWS, offset)
+        SetScroll(Ceil(filtered.Length / NCOLS), NROWS, offset)
         count.Text := T("iconlib.count", filtered.Length)
         SetTimer(Preload, -60)          ; Nachbarseiten im Hintergrund vorbereiten
     }
     Preload() {
-        maxOff := Max(0, Ceil(filtered.Length / COLS) - ROWS)
-        for , off in [offset + 1, offset - 1, offset + ROWS, offset - ROWS]
+        maxOff := Max(0, Ceil(filtered.Length / NCOLS) - NROWS)
+        for , off in [offset + 1, offset - 1, offset + NROWS, offset - NROWS]
             if (off >= 0 && off <= maxOff)
                 PageBitmap(off, 0)
     }
-    SetScroll(rows, page, pos) {
+    SetScroll(nRows, pageSize, pos) {
         si := Buffer(28, 0)
-        NumPut("UInt", 28, "UInt", 0x17, "Int", 0, "Int", Max(0, rows - 1), "UInt", page, "Int", pos, si)
+        NumPut("UInt", 28, "UInt", 0x17, "Int", 0, "Int", Max(0, nRows - 1), "UInt", pageSize, "Int", pos, si)
         DllCall("SetScrollInfo", "Ptr", sb.Hwnd, "Int", 2, "Ptr", si, "Int", 1)
     }
     ApplyFilter(needle) {
@@ -785,7 +785,7 @@ ShowIconLibrary(num, *) {
         ShowPage()
     }
     Scroll(deltaRows) {
-        maxOff := Max(0, Ceil(filtered.Length / COLS) - ROWS)
+        maxOff := Max(0, Ceil(filtered.Length / NCOLS) - NROWS)
         newOff := Min(Max(offset + deltaRows, 0), maxOff)
         if (newOff = offset)
             return
@@ -803,19 +803,19 @@ ShowIconLibrary(num, *) {
         lx := mx - gx - sx, ly := my - gy - sy
         if (lx < 0 || ly < 0 || lx >= gridW || ly >= gridH)
             return false
-        cell := (ly // CELL) * COLS + (lx // CELL) + 1
-        idx := offset * COLS + cell
-        return (idx <= filtered.Length) ? cell : false
+        hitCell := (ly // CELLW) * NCOLS + (lx // CELLW) + 1
+        idx := offset * NCOLS + hitCell
+        return (idx <= filtered.Length) ? hitCell : false
     }
     HoverTickLib() {
         if (!WinExist("ahk_id " g.Hwnd))
             return
         idx := 0
-        cell := CellAt(&idx)
-        if (cell != hoverIdx) {
-            hoverIdx := cell ? cell : 0
+        hitCell := CellAt(&idx)
+        if (hitCell != hoverIdx) {
+            hoverIdx := hitCell ? hitCell : 0
             sheet.Value := "HBITMAP:*" PageBitmap(offset, hoverIdx)
-            if (cell)
+            if (hitCell)
                 ToolTip(glyphs[idx]["name"])
             else
                 ToolTip()
@@ -832,8 +832,8 @@ ShowIconLibrary(num, *) {
         switch (wParam & 0xFFFF) {
             case 0: Scroll(-1)
             case 1: Scroll(1)
-            case 2: Scroll(-ROWS)
-            case 3: Scroll(ROWS)
+            case 2: Scroll(-NROWS)
+            case 3: Scroll(NROWS)
             case 4, 5: Scroll(((wParam >> 16) & 0xFFFF) - offset)
             case 6: Scroll(-99999)
             case 7: Scroll(99999)
@@ -1609,7 +1609,7 @@ ShowAbout(*) {
     g.Add("Text", "x84 y+2", T("about.tagline"))
     g.Add("Text", "x84 y+4", T("about.version", APP_VERSION) "  ·  " T("about.author", APP_AUTHOR))
     g.Add("Text", "x20 y+18 w420", T("about.license"))
-    g.Add("Text", "x20 y+2 w420", T("about.components", A_IsCompiled ? " " T("about.ahk") : ""))
+    g.Add("Text", "x20 y+2 w440", T("about.components", A_IsCompiled ? " " T("about.ahk") : ""))
     g.Add("Link", "x20 y+14", '<a href="' APP_AUTHOR_URL '">' T("about.website") '</a>    ·    '
         . '<a href="' APP_URL '">' T("about.github") '</a>    ·    '
         . '<a href="' APP_URL '/issues">' T("about.feedback") '</a>')
