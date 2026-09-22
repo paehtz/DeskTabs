@@ -323,6 +323,8 @@ global LANG_DE := Map(
     "menu.dock.above", "Über der Taskleiste",
     "menu.hotkeys",    "Tastenkürzel",
     "menu.hotkeys.on", "Direktsprung per Zifferntaste",
+    "menu.hotkeys.off", "aus",
+    "err.hotkey_mod",  "Mindestens eine Zusatztaste muss gewählt bleiben, sonst würden die blanken Zifferntasten belegt.",
     "key.ctrl",        "Strg",
     "key.win",         "Windows",
     "key.alt",         "Alt",
@@ -444,6 +446,8 @@ global LANG_EN := Map(
     "menu.dock.above", "Above the taskbar",
     "menu.hotkeys",    "Keyboard shortcuts",
     "menu.hotkeys.on", "Jump to a desktop with a number key",
+    "menu.hotkeys.off", "off",
+    "err.hotkey_mod",  "At least one modifier has to stay selected, otherwise the plain number keys would be taken.",
     "key.ctrl",        "Ctrl",
     "key.win",         "Windows",
     "key.alt",         "Alt",
@@ -598,11 +602,15 @@ FirstRunHint() {
 ApplyIniOverrides() {
     for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
                           , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid"
-                          , "SwitchMethod", "native,dll", "HotkeyMod", "^#,^!,#!,^+") {
+                          , "SwitchMethod", "native,dll") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
             CONF[key] := v
     }
+    ; Modifikator frei, aber nur aus den vier Zeichen und nicht leer
+    v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
+    if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
+        CONF["HotkeyMod"] := v
     for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
@@ -1403,21 +1411,23 @@ FillSettingsMenu(m) {
     }
     m.Add(T("menu.dock"), dm)
     MenuGlyph(m, T("menu.dock"), "ECAA")
+    ; Der Hauptmenue-Eintrag zeigt gleich, ob die Kuerzel an sind und welche gelten -
+    ; sonst sucht man den Schalter im Untermenue und haelt die Funktion fuer kaputt.
     km := Menu()
     km.Add(T("menu.hotkeys.on"), ToggleView.Bind("Hotkeys"))
     if (CONF["Hotkeys"])
         km.Check(T("menu.hotkeys.on"))
     km.Add()
-    for val in ["^#", "^!", "#!", "^+"] {
-        label := HotkeyLabel(val)
-        km.Add(label, SetViewStr.Bind("HotkeyMod", val))
-        if (CONF["HotkeyMod"] = val)
+    ; Modifikatoren frei kombinieren: Strg, Umschalt, Alt, Windows.
+    ; Ein Klick hier schaltet die Kuerzel gleich mit ein.
+    for sign, label in Map("^", T("key.ctrl"), "+", T("key.shift"), "!", T("key.alt"), "#", T("key.win")) {
+        km.Add(label, ToggleHotkeyMod.Bind(sign))
+        if (InStr(CONF["HotkeyMod"], sign))
             km.Check(label)
-        if (!CONF["Hotkeys"])
-            km.Disable(label)
     }
-    m.Add(T("menu.hotkeys"), km)
-    MenuGlyph(m, T("menu.hotkeys"), "E961")
+    hkHead := T("menu.hotkeys") ": " (CONF["Hotkeys"] ? HotkeyLabel(CONF["HotkeyMod"]) : T("menu.hotkeys.off"))
+    m.Add(hkHead, km)
+    MenuGlyph(m, hkHead, "E961")
     m.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
     if (CONF["SwitchMethod"] = "dll")
         m.Check(T("menu.directjump"))
@@ -2696,6 +2706,26 @@ ApplyHotkeys() {
         CONF["Hotkeys"] := 0
         IniSet("View", "Hotkeys", 0)
     }
+}
+
+; Einen Modifikator zu- oder abschalten. Mindestens einer muss bleiben, sonst
+; wuerden die blossen Zifferntasten belegt.
+ToggleHotkeyMod(sign, *) {
+    cur := CONF["HotkeyMod"]
+    einschalten := !CONF["Hotkeys"]         ; wer hier waehlt, will die Kuerzel auch nutzen
+    neu := InStr(cur, sign) ? StrReplace(cur, sign) : cur sign
+    ; in eine feste Reihenfolge bringen: Strg, Umschalt, Alt, Windows
+    out := ""
+    for , s in ["^", "+", "!", "#"]
+        if (InStr(neu, s))
+            out .= s
+    if (out = "") {
+        MsgBox(T("err.hotkey_mod"), "DeskTabs", 0x30)
+        return
+    }
+    SetView("HotkeyMod", out)
+    if (einschalten)
+        SetView("Hotkeys", 1)
 }
 
 JumpToDesktop(idx, *) {
