@@ -50,3 +50,16 @@ SOFTWARE.
 - The corresponding source is available: the DeskTabs script in this repository, and the AutoHotkey interpreter source at <https://github.com/AutoHotkey/AutoHotkey>.
 
 MIT (the DeskTabs script) is compatible with GPL-2.0, so combining them in the compiled binary is permitted; the resulting binary as a whole follows GPL-2.0.
+
+---
+
+## Segoe Fluent Icons (icon library)
+
+- **Source:** the `Segoe Fluent Icons` font that ships with Windows 11
+- **Bundled:** no. DeskTabs only *uses* the font that is already installed on the system; no font file is distributed with DeskTabs. On systems without it, DeskTabs falls back to `Segoe MDL2 Assets`.
+
+## Icon names (`data/glyph-names.txt`)
+
+- **Source:** [MicrosoftDocs/windows-dev-docs](https://github.com/MicrosoftDocs/windows-dev-docs), file `hub/apps/design/iconography/segoe-fluent-icons-font.md`
+- **License:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/) © Microsoft Corporation
+- **Bundled:** yes. `data/glyph-names.txt` lists the glyph codes and their official names, filtered to the glyphs present in the font, plus German search keywords added by this project. It is used only to make the icon library searchable.

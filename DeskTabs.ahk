@@ -263,8 +263,17 @@ global LANG_DE := Map(
     "menu.tab.icon",   "Symbol",
     "menu.icon.library", "Aus der Symbol-Bibliothek…",
     "iconlib.title",   "Symbol für „{1}“",
-    "iconlib.hint",    "Ein Symbol anklicken. Es wird in der Farbe des Desktops angezeigt.",
+    "iconlib.hint",    "Symbol anklicken. Es erscheint in der Farbe des Desktops. Suchen geht deutsch und englisch.",
     "iconlib.search",  "Suchen, z.B. Kalender, Ordner, Zeit…",
+    "iconlib.count",   "{1} Symbole",
+    "iconlib.t.files", "Dateien",
+    "iconlib.t.time",  "Zeit",
+    "iconlib.t.people", "Personen",
+    "iconlib.t.comm",  "Nachrichten",
+    "iconlib.t.media", "Medien",
+    "iconlib.t.data",  "Daten",
+    "iconlib.t.system", "System",
+    "iconlib.t.places", "Orte",
     "iconlib.none",    "Kein Symbol gefunden.",
     "menu.icon.url",   "Von einer Webseite holen…",
     "menu.icon.file",  "Eigene Bilddatei wählen…",
@@ -279,6 +288,8 @@ global LANG_DE := Map(
     "err.icon_fetch",  "Von dieser Adresse konnte kein Symbol geladen werden.",
     "menu.color.custom", "Eigene Farbe…",
     "menu.color.default", "Standardfarbe verwenden",
+    "menu.color.fromicon", "Farbe aus dem Symbol übernehmen",
+    "err.color_icon",  "Aus diesem Symbol lässt sich keine Farbe ableiten. Das geht nur bei Symbolen von einer Webseite oder aus einer Bilddatei.",
     "color.E5471D",    "Rot",
     "color.2E7D32",    "Grün",
     "color.1565C0",    "Blau",
@@ -359,8 +370,17 @@ global LANG_EN := Map(
     "menu.tab.icon",   "Icon",
     "menu.icon.library", "From the icon library…",
     "iconlib.title",   "Icon for “{1}”",
-    "iconlib.hint",    "Click an icon. It is drawn in the desktop's colour.",
+    "iconlib.hint",    "Click an icon. It is drawn in the desktop's colour. Search works in English and German.",
     "iconlib.search",  "Search, e.g. calendar, folder, time…",
+    "iconlib.count",   "{1} icons",
+    "iconlib.t.files", "Files",
+    "iconlib.t.time",  "Time",
+    "iconlib.t.people", "People",
+    "iconlib.t.comm",  "Messages",
+    "iconlib.t.media", "Media",
+    "iconlib.t.data",  "Data",
+    "iconlib.t.system", "System",
+    "iconlib.t.places", "Places",
     "iconlib.none",    "No icon found.",
     "menu.icon.url",   "Fetch from a website…",
     "menu.icon.file",  "Choose an image file…",
@@ -375,6 +395,8 @@ global LANG_EN := Map(
     "err.icon_fetch",  "No icon could be loaded from that address.",
     "menu.color.custom", "Custom colour…",
     "menu.color.default", "Use default colour",
+    "menu.color.fromicon", "Take the colour from the icon",
+    "err.color_icon",  "No colour could be derived from this icon. That only works for icons fetched from a website or loaded from an image file.",
     "color.E5471D",    "Red",
     "color.2E7D32",    "Green",
     "color.1565C0",    "Blue",
@@ -576,119 +598,40 @@ GlyphList() {
     return list
 }
 
-; Symbole der Bibliothek mit Suchbegriffen (deutsch und englisch), je Zeile "CODE|woerter"
+; Die vollstaendige Bibliothek steht in data\glyph-names.txt ("CODE|Name|Suchbegriffe").
+; Fehlt die Datei (z.B. weil nur das Skript kopiert wurde), bleibt die eingebaute
+; Kurzauswahl uebrig, damit die Bibliothek trotzdem nutzbar ist.
 ParseGlyphs() {
-    raw := "
-(
-E713|einstellungen optionen konfiguration zahnrad settings options config gear
-E790|farbe palette design kunst grafik colour color paint art
-E91B|bild foto grafik galerie image photo picture
-E8AC|text schrift umbenennen texte word text rename font
-E8EF|rechner zahlen buchhaltung kalkulation calculator numbers accounting
-E8FD|liste aufgaben punkte list tasks items
-E793|kontrast hell dunkel design contrast theme
-E7E8|ein aus energie strom power on off
-E7C4|fenster tabs projekte windows tabs projects
-E8B9|bild galerie fotos gallery images photos
-E706|sonne hell tag licht sun light day
-E708|mond dunkel nacht moon dark night
-E946|info information hinweis info about
-E897|hilfe frage support help question
-E72C|aktualisieren neu laden sync refresh reload update
-E80F|start zuhause haus home start
-E71D|liste notizen aufgaben list notes tasks agenda
-E74E|speichern datei sicherung backup save file disk
-E8BD|chat nachricht kommunikation gespraech chat message comment
-E81C|verlauf historie zeit rueckblick history time recent
-E9D9|analyse monitoring puls leistung analytics monitoring performance pulse
-EB51|favorit herz gesundheit liebe heart favourite health
-E734|favorit stern bewertung star favourite rating
-E735|favorit stern wichtig star favourite important
-E8A5|dokument datei text unterlagen document file text
-E7C3|seite dokument blatt page document sheet
-E90F|werkzeug wartung technik reparatur tool wrench maintenance
-E9CE|hilfe frage unklar help question support
-EA80|idee konzept einfall gluehbirne idea concept lightbulb
-E8C8|kopieren duplikat vorlage copy duplicate
-ECAA|apps programme kacheln anwendungen apps programs tiles
-E71B|link verknuepfung url adresse link url
-E8F1|bibliothek wissen doku buecher lernen library books docs knowledge
-E7EE|kontakt kunde person visitenkarte contact customer person
-E787|kalender termin planung datum calendar appointment schedule date
-E823|uhr zeit zeiterfassung stunden clock time tracking hours
-E8EC|etikett tag kategorie label tag category
-E81E|ebenen stapel design layers stack
-E9D2|diagramm statistik analyse kurve chart statistics analytics graph
-E9F5|automatisierung prozesse technik zahnraeder automation process gears
-EA35|speichern archiv ablage save archive
-E7C1|markierung ziel flagge meilenstein flag goal milestone
-E7B8|eingang postfach ablage inbox tray
-E77B|person konto kunde benutzer person account user customer
-E7EF|sicherheit schutz datenschutz schild security shield privacy
-E774|web internet global sprache weltkugel web internet global language
-E896|download herunterladen download
-E8BB|schliessen abbrechen kreuz close cancel
-E961|tastatur eingabe tippen keyboard input typing
-E8C4|checkliste sortieren reihenfolge checklist sort order
-E759|verschieben bewegen position move position
-E890|ansehen vorschau auge view preview eye
-E8A9|uebersicht raster dashboard kacheln dashboard grid overview
-E7B3|ansehen beobachten auge watch view eye
-E8A7|teilen extern oeffnen link share external open
-E8C6|schneiden schere ausschneiden cut scissors
-E71E|suchen lupe finden search find magnifier
-E8FB|erledigt haken fertig done check complete
-E72D|teilen senden weiterleiten share send forward
-E715|mail email post nachricht mail email message
-E8D7|schluessel passwort zugang key password access
-E779|kontakte liste adressbuch contacts list addressbook
-E8D4|kontaktkarte profil kunde contact card profile
-E8A1|karte zahlung konto card payment account
-E8EA|telefon handy mobil phone mobile
-E7BA|warnung achtung fehler warning alert error
-E9D5|checkliste aufgaben abhaken checklist tasks todo
-E838|ordner dateien projekt folder files project
-E8B7|ordner offen dateien folder open files
-E8DE|ordner verschieben export folder move export
-E707|ort karte standort adresse location map place
-E8E5|datei teilen senden file share send
-E7C0|zug transport logistik train transport logistics
-E8F4|ordner neu anlegen folder new add
-E8EB|wiederholen schleife zyklus repeat loop cycle
-E7AD|scheibe daten speicher disc data storage
-E912|koffer werkzeugkasten arbeit briefcase toolbox work
-E930|erledigt bestaetigt haken done confirmed check
-EC42|kommentar sprechblase feedback comment bubble feedback
-E8A0|zurueck eingang box back inbox
-E945|energie blitz schnell power flash fast energy
-E9A9|einstellungen sonne helligkeit settings brightness
-EC05|funk netzwerk signal wlan signal network wifi
-E703|geraete bildschirme monitore devices screens monitors
-ED5E|notizen zettel liste notes list
-E81D|aufnahme punkt rekord record dot
-E8CE|netzwerk server rechner network server computer
-E7F4|bildschirm monitor computer screen monitor desktop
-E71C|filter sortieren auswahl filter sort
-E8F3|nachrichten news artikel zeitung news article press
-E762|checkliste plan aufgaben checklist plan tasks
-E8AE|praesentation vortrag schulung presentation training
-E8D6|musik audio ton music audio sound
-F156|ebenen sammlung stapel layers collection
-E9F9|balkendiagramm auswertung bericht bar chart report
-EB44|ziel zielscheibe fokus target goal focus
-EC50|archiv kiste ablage archive box storage
-F0E3|zwischenablage pruefen abnahme clipboard check review
-)"
     out := []
-    Loop Parse, raw, "`n", "`r" {
-        line := Trim(A_LoopField)
-        if (line = "")
-            continue
-        parts := StrSplit(line, "|")
-        out.Push(Map("code", parts[1], "kw", parts.Length > 1 ? parts[2] : ""))
+    file := A_ScriptDir "\data\glyph-names.txt"
+    if FileExist(file) {
+        try {
+            Loop Parse, FileRead(file, "UTF-8"), "`n", "`r" {
+                line := Trim(A_LoopField)
+                if (line = "" || SubStr(line, 1, 1) = ";")
+                    continue
+                parts := StrSplit(line, "|")
+                if (parts.Length >= 2)
+                    out.Push(Map("code", parts[1], "name", parts[2]
+                        , "kw", StrLower(parts[1] " " parts[2] " " (parts.Length > 2 ? parts[3] : ""))))
+            }
+        }
     }
+    if (out.Length)
+        return out
+    for code in StrSplit("E713 E790 E91B E8AC E8EF E8FD E793 E7C4 E8B9 E706 E708 E946"
+        . " E897 E72C E80F E71D E74E E8BD E81C E9D9 E734 E8A5 E90F EA80 E8C8 ECAA E71B"
+        . " E8F1 E7EE E787 E823 E8EC E81E E9D2 E9F5 E7C1 E7B8 E77B E7EF E774 E896 E71E"
+        . " E8FB E715 E8D7 E838 E8B7 E707 E912 E930 E945 E703 E7F4 E71C E8AE E9F9 EB44", " ")
+        out.Push(Map("code", code, "name", code, "kw", StrLower(code)))
     return out
 }
+
+; Schnellfilter: Beschriftung => Suchbegriff
+GlyphTopics() => Map(T("iconlib.t.files"), "ordner", T("iconlib.t.time"), "zeit"
+    , T("iconlib.t.people"), "person", T("iconlib.t.comm"), "nachricht"
+    , T("iconlib.t.media"), "bild", T("iconlib.t.data"), "diagramm"
+    , T("iconlib.t.system"), "einstellungen", T("iconlib.t.places"), "ort")
 
 IsGlyphSpec(s) => (SubStr(s, 1, 6) = "glyph:")
 GlyphChar(spec) => Chr(Integer("0x" SubStr(spec, 7)))
@@ -743,55 +686,143 @@ MenuGlyph(menu, item, code) {
     }
 }
 
-; Auswahlfenster mit Suchfeld: tippen filtert die Symbole nach Schlagwoertern
+; Auswahlfenster: Suchfeld, Schnellfilter und ein rollbares Raster ueber die
+; gesamte Bibliothek. Sichtbar sind immer nur COLS x ROWS Zellen; beim Rollen
+; werden diese Zellen neu belegt (sonst waeren es tausend Steuerelemente).
 ShowIconLibrary(num, *) {
+    static COLS := 12, ROWS := 8, CELL := 44
     glyphs := GlyphList()
     raw := GetDesktopNameRaw(num)
     col := DesktopColor(num)
-    cols := 12, cell := 44, rows := Ceil(glyphs.Length / cols)
-    gridX := 14, gridY := 84, gridH := rows * cell
+    gridW := COLS * CELL, gridH := ROWS * CELL
+    filtered := [], offset := 0, cache := Map(), cells := []
 
     g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("iconlib.title", raw))
     g.SetFont("s10", "Segoe UI")
     g.MarginX := 14, g.MarginY := 12
-    g.Add("Text", "xm ym w" (cols * cell) , T("iconlib.hint"))
-    search := g.Add("Edit", "xm y+8 w" (cols * cell) " h26")
-    try search.Opt("+0x0080")            ; ES_AUTOHSCROLL
+    g.Add("Text", "xm ym w" (gridW + 20), T("iconlib.hint"))
+    search := g.Add("Edit", "xm y+8 w" (gridW + 20) " h26")
     SendMessage(0x1501, 1, StrPtr(T("iconlib.search")), search)   ; EM_SETCUEBANNER
-
-    ctrls := []
-    for item in glyphs {
-        hbm := GlyphHBitmap("glyph:" item["code"], 28, col, 0xF6F6F6)
-        pic := g.Add("Picture", "x0 y0 w28 h28 +0x100 Hidden", "HBITMAP:*" hbm)
-        DllCall("DeleteObject", "Ptr", hbm)
-        pic.OnEvent("Click", SetGlyphIcon.Bind(num, item["code"], g))
-        ctrls.Push(Map("ctrl", pic, "kw", item["kw"] " " item["code"]))
+    g.SetFont("s9")
+    topics := []
+    first := true
+    for label, term in GlyphTopics() {
+        b := g.Add("Button", (first ? "xm y+8" : "x+4 yp") " h24 w" (Max(58, StrLen(label) * 8)), label)
+        b.OnEvent("Click", ((t, *) => (search.Value := t, ApplyFilter(t))).Bind(term))
+        topics.Push(b)
+        first := false
     }
-    empty := g.Add("Text", "x" gridX " y" (gridY + 10) " w" (cols * cell) " h24 Hidden", T("iconlib.none"))
-    btnCancel := g.Add("Button", "x" (gridX + cols * cell - 120) " y" (gridY + gridH + 12) " w120", T("dlg.cancel"))
-    btnCancel.OnEvent("Click", (*) => g.Destroy())
+    g.SetFont("s10")
+    gridX := 14, gridY := 0
+    topics[1].GetPos(, &ty, , &th)
+    gridY := ty + th + 10
 
-    LayoutIcons(needle) {
-        needle := Trim(StrLower(needle))
-        shown := 0
-        for c in ctrls {
-            hit := (needle = "" || InStr(c["kw"], needle))
-            if (hit) {
-                cx := gridX + Mod(shown, cols) * cell + 8
-                cy := gridY + (shown // cols) * cell + 6
-                c["ctrl"].Move(cx, cy)
-                c["ctrl"].Visible := true
-                shown++
+    Loop COLS * ROWS {
+        i := A_Index
+        cx := gridX + Mod(i - 1, COLS) * CELL + 8
+        cy := gridY + ((i - 1) // COLS) * CELL + 6
+        pic := g.Add("Picture", Format("x{1} y{2} w28 h28 +0x100 Hidden", cx, cy))
+        pic.OnEvent("Click", CellClick.Bind(i))
+        cells.Push(Map("ctrl", pic, "code", ""))
+    }
+    empty := g.Add("Text", "x" gridX " y" (gridY + 8) " w" gridW " h24 Hidden", T("iconlib.none"))
+    ; echte Rollleiste rechts neben dem Raster (SBS_VERT)
+    sb := g.Add("Custom", Format("ClassScrollBar x{1} y{2} w17 h{3} 0x1", gridX + gridW + 4, gridY, gridH))
+    count := g.Add("Text", "x" gridX " y" (gridY + gridH + 14) " w220 h24 +0x200", "")
+    btnCancel := g.Add("Button", "x" (gridX + gridW - 104) " y" (gridY + gridH + 12) " w120 h28", T("dlg.cancel"))
+    btnCancel.OnEvent("Click", (*) => Close())
+
+    ; --- Hilfsfunktionen (schliessen ueber die Variablen oben) ---
+    GlyphBmp(code) {
+        if (!cache.Has(code))
+            cache[code] := GlyphHBitmap("glyph:" code, 28, col, 0xF6F6F6)
+        return cache[code]
+    }
+    Paint() {
+        total := filtered.Length
+        maxOff := Max(0, Ceil(total / COLS) - ROWS)
+        offset := Min(Max(offset, 0), maxOff)
+        Loop COLS * ROWS {
+            i := A_Index
+            idx := offset * COLS + i
+            cell := cells[i]
+            if (idx <= total) {
+                item := glyphs[filtered[idx]]
+                cell["code"] := item["code"]
+                cell["ctrl"].Value := "HBITMAP:*" GlyphBmp(item["code"])
+                cell["ctrl"].Visible := true
             } else {
-                c["ctrl"].Visible := false
+                cell["code"] := ""
+                cell["ctrl"].Visible := false
             }
         }
-        empty.Visible := (shown = 0)
+        empty.Visible := (total = 0)
+        count.Text := T("iconlib.count", total)
+        SetScroll(Ceil(total / COLS), ROWS, offset)
     }
-    LayoutIcons("")
-    search.OnEvent("Change", (ctrl, *) => LayoutIcons(ctrl.Value))
-    g.OnEvent("Escape", (*) => g.Destroy())
-    g.OnEvent("Close", (*) => g.Destroy())
+    SetScroll(rows, page, pos) {
+        si := Buffer(28, 0)
+        NumPut("UInt", 28, "UInt", 0x17, "Int", 0, "Int", Max(0, rows - 1), "UInt", page, "Int", pos, si)  ; RANGE|PAGE|POS|DISABLENOSCROLL
+        DllCall("SetScrollInfo", "Ptr", sb.Hwnd, "Int", 2, "Ptr", si, "Int", 1)   ; SB_CTL
+    }
+    ApplyFilter(needle) {
+        needle := Trim(StrLower(needle))
+        filtered := []
+        for i, item in glyphs
+            if (needle = "" || InStr(item["kw"], needle))
+                filtered.Push(i)
+        offset := 0
+        Paint()
+    }
+    Scroll(deltaRows) {
+        offset += deltaRows
+        Paint()
+    }
+    CellClick(i, *) {
+        code := cells[i]["code"]
+        if (code != "")
+            SetGlyphIcon(num, code, g)
+    }
+    OnVScroll(wParam, lParam, msg, hwnd) {
+        if (lParam != sb.Hwnd)
+            return
+        act := wParam & 0xFFFF
+        switch act {
+            case 0: Scroll(-1)                      ; SB_LINEUP
+            case 1: Scroll(1)                       ; SB_LINEDOWN
+            case 2: Scroll(-ROWS)                   ; SB_PAGEUP
+            case 3: Scroll(ROWS)                    ; SB_PAGEDOWN
+            case 4, 5:                              ; SB_THUMBPOSITION / SB_THUMBTRACK
+                offset := (wParam >> 16) & 0xFFFF
+                Paint()
+            case 6: offset := 0, Paint()
+            case 7: offset := 99999, Paint()
+        }
+        return 0
+    }
+    OnPickerWheel(wParam, lParam, msg, hwnd) {
+        if (!WinExist("ahk_id " g.Hwnd) || !WinActive("ahk_id " g.Hwnd))
+            return
+        d := (wParam >> 16) & 0xFFFF
+        if (d > 0x7FFF)
+            d -= 0x10000
+        Scroll(d > 0 ? -1 : 1)
+        return 0
+    }
+    Close() {
+        OnMessage(0x0115, OnVScroll, 0)
+        OnMessage(0x020A, OnPickerWheel, 0)
+        for , h in cache
+            DllCall("DeleteObject", "Ptr", h)
+        g.Destroy()
+    }
+
+    search.OnEvent("Change", (ctrl, *) => ApplyFilter(ctrl.Value))
+    OnMessage(0x0115, OnVScroll)      ; WM_VSCROLL
+    OnMessage(0x020A, OnPickerWheel)  ; WM_MOUSEWHEEL
+    g.OnEvent("Escape", (*) => Close())
+    g.OnEvent("Close", (*) => Close())
+    ApplyFilter("")
     SetGuiIcon(g)
     g.Show("AutoSize Center")
     search.Focus()
@@ -1006,6 +1037,93 @@ LoadIconBitmap(path) {
     return img
 }
 
+; Hauptfarbe einer Bilddatei: Pixel nach Farbton gebuendelt, der kraeftigste
+; Bereich gewinnt (Weiss, Schwarz und blasse Pixel zaehlen nicht mit). Fuer
+; einfarbige Logos wird ersatzweise der dunkle Mittelwert genommen. -1 = nichts gefunden.
+DominantColor(path) {
+    GdipStart()
+    img := 0
+    if (DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", path, "Ptr*", &img) != 0 || !img)
+        return -1
+    w := 0, h := 0
+    DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
+    DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
+    if (!w || !h) {
+        DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+        return -1
+    }
+    rect := Buffer(16, 0)
+    NumPut("Int", 0, "Int", 0, "Int", w, "Int", h, rect)
+    bd := Buffer(32, 0)
+    if (DllCall("gdiplus\GdipBitmapLockBits", "Ptr", img, "Ptr", rect, "UInt", 1, "Int", 0x26200A, "Ptr", bd) != 0) {
+        DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+        return -1
+    }
+    stride := NumGet(bd, 8, "Int"), scan := NumGet(bd, 16, "Ptr")
+    step := Max(1, w // 64)                       ; grosse Bilder ausduennen
+    buckets := Map(), darkW := 0, darkR := 0, darkG := 0, darkB := 0
+    y := 0
+    while (y < h) {
+        x := 0
+        while (x < w) {
+            px := NumGet(scan + y * stride + x * 4, "UInt")
+            a := (px >> 24) & 0xFF
+            if (a >= 100) {
+                r := (px >> 16) & 0xFF, gg := (px >> 8) & 0xFF, b := px & 0xFF
+                hsl := RgbToHsl((r << 16) | (gg << 8) | b)
+                if (hsl["l"] < 0.55) {
+                    darkW += 1, darkR += r, darkG += gg, darkB += b
+                }
+                if (hsl["s"] >= 0.18 && hsl["l"] > 0.12 && hsl["l"] < 0.93) {
+                    key := Floor(hsl["h"] * 24)
+                    wgt := hsl["s"]
+                    if (!buckets.Has(key))
+                        buckets[key] := Map("w", 0, "r", 0, "g", 0, "b", 0)
+                    bk := buckets[key]
+                    bk["w"] += wgt, bk["r"] += r * wgt, bk["g"] += gg * wgt, bk["b"] += b * wgt
+                }
+            }
+            x += step
+        }
+        y += step
+    }
+    DllCall("gdiplus\GdipBitmapUnlockBits", "Ptr", img, "Ptr", bd)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+
+    best := 0, bestW := 0
+    for , bk in buckets {
+        if (bk["w"] > bestW)
+            bestW := bk["w"], best := bk
+    }
+    if (best && bestW > 0) {
+        r := Round(best["r"] / bestW), gg := Round(best["g"] / bestW), b := Round(best["b"] / bestW)
+    } else if (darkW > 0) {                       ; einfarbiges Logo
+        r := Round(darkR / darkW), gg := Round(darkG / darkW), b := Round(darkB / darkW)
+    } else {
+        return -1
+    }
+    ; fuer den Farbbalken auf eine gut sichtbare Helligkeit bringen
+    hsl := RgbToHsl((r << 16) | (gg << 8) | b)
+    l := Min(0.58, Max(0.30, hsl["l"]))
+    return HslToRgb(hsl["h"], hsl["s"], l)
+}
+
+; Farbe des Desktops aus seinem Symbol uebernehmen
+ColorFromIcon(num, *) {
+    spec := IconPathFor(num)
+    if (spec = "" || IsGlyphSpec(spec)) {
+        MsgBox(T("err.color_icon"), "DeskTabs", 0x30)
+        return
+    }
+    col := DominantColor(spec)
+    if (col < 0) {
+        MsgBox(T("err.color_icon"), "DeskTabs", 0x30)
+        return
+    }
+    IniSet("Colors", GetDesktopNameRaw(num), Format("{:06X}", col))
+    RebuildAll()
+}
+
 ; --- Menuebefehle ---
 ; Eingabefeld mit festem, grauem "https://" davor - so ist sichtbar, dass die
 ; blosse Domain genuegt. Rueckgabe: Map("ok", true/false, "value", Text ohne Schema).
@@ -1114,6 +1232,11 @@ ShowContextMenu(num, *) {
             cm.Default := T("menu.color.custom")
             MenuSwatch(cm, T("menu.color.custom"), cur)
         }
+        iconSpec := IconPathFor(num)
+        cm.Add(T("menu.color.fromicon"), ColorFromIcon.Bind(num))
+        MenuGlyph(cm, T("menu.color.fromicon"), "EF3B")
+        if (iconSpec = "" || IsGlyphSpec(iconSpec))
+            cm.Disable(T("menu.color.fromicon"))
         cm.Add(T("menu.color.default"), ClearColor.Bind(num))
         m.Add(T("menu.tab.color"), cm)
         MenuGlyph(m, T("menu.tab.color"), "E790")

@@ -1,0 +1,1536 @@
+; Suchindex fuer die eingebaute Symbol-Bibliothek (Schrift: Segoe Fluent Icons, Windows 11).
+; Format: CODE|Name|Suchbegriffe (deutsch und englisch)
+; Namen aus MicrosoftDocs/windows-dev-docs (CC BY 4.0), gefiltert auf die Zeichen der Schrift.
+E700|GlobalNavButton|button global nav
+E701|Wifi|funk wifi wlan
+E702|Bluetooth|bluetooth
+E703|Connect|connect
+E704|InternetSharing|internet sharing
+E705|VPN|vpn
+E706|Brightness|brightness
+E707|MapPin|anheften karte map pin
+E708|QuietHours|hours quiet
+E709|Airplane|airplane flugzeug
+E70A|Tablet|tablet
+E70B|QuickNote|note notiz quick
+E70C|RememberedDevice|device geraet remembered
+E70D|ChevronDown|chevron down
+E70E|ChevronUp|chevron up
+E70F|Edit|bearbeiten edit
+E710|Add|add hinzufuegen neu plus
+E711|Cancel|abbrechen cancel
+E712|More|mehr more weitere
+E713|Settings|einstellungen optionen settings
+E714|Video|film video
+E715|Mail|email mail post
+E716|People|leute people personen
+E717|Phone|phone telefon
+E718|Pin|anheften pin
+E719|Shop|laden shop
+E71A|Stop|stop stopp
+E71B|Link|link verknuepfung
+E71C|Filter|filter
+E71D|AllApps|all apps
+E71E|Zoom|vergroessern zoom
+E71F|ZoomOut|out vergroessern zoom
+E720|Microphone|microphone
+E721|Search|lupe search suche suchen
+E722|Camera|camera kamera
+E723|Attach|anhang anheften attach
+E724|Send|send senden
+E725|SendFill|fill send senden
+E726|WalkSolid|solid walk
+E727|InPrivate|in private
+E728|FavoriteList|favorit favorite list liste
+E729|PageSolid|page seite solid
+E72A|Forward|forward weiterleiten
+E72B|Back|back
+E72C|Refresh|aktualisieren refresh
+E72D|Share|share teilen
+E72E|Lock|lock schloss sperren
+E730|ReportHacked|auswertung bericht hacked report
+E731|EMI|emi
+E733|Blocked|blocked
+E734|FavoriteStar|favorit favorite star stern
+E735|FavoriteStarFill|favorit favorite fill star stern
+E736|ReadingMode|mode reading
+E737|Favicon|favicon
+E738|Remove|entfernen remove
+E739|Checkbox|checkbox
+E73A|CheckboxComposite|checkbox composite
+E73B|CheckboxFill|checkbox fill
+E73C|CheckboxIndeterminate|checkbox indeterminate
+E73D|CheckboxCompositeReversed|checkbox composite reversed
+E73E|CheckMark|check erledigt haken mark
+E73F|BackToWindow|back to window
+E740|FullScreen|bildschirm full screen
+E741|ResizeTouchLarger|larger resize touch
+E742|ResizeTouchSmaller|resize smaller touch
+E743|ResizeMouseSmall|maus mouse resize small
+E744|ResizeMouseMedium|maus medium mouse resize
+E745|ResizeMouseWide|maus mouse resize wide
+E746|ResizeMouseTall|maus mouse resize tall
+E747|ResizeMouseLarge|large maus mouse resize
+E748|SwitchUser|benutzer switch user
+E749|Print|drucken drucker print
+E74A|Up|up
+E74B|Down|down
+E74C|OEM|oem
+E74D|Delete|delete loeschen
+E74E|Save|save speichern
+E74F|Mute|mute stumm
+E750|BackSpaceQWERTY|back qwerty space
+E751|ReturnKey|key passwort return schluessel
+E752|UpArrowShiftKey|arrow key passwort schluessel shift up
+E753|Cloud|cloud wolke
+E754|Flashlight|flashlight
+E755|RotationLock|lock rotation schloss sperren
+E756|CommandPrompt|command prompt
+E759|SIPMove|move sip
+E75A|SIPUndock|sip undock
+E75B|SIPRedock|redock sip
+E75C|EraseTool|erase tool werkzeug
+E75D|UnderscoreSpace|space underscore
+E75E|GripperTool|gripper tool werkzeug
+E75F|Dialpad|dialpad
+E760|PageLeft|left page seite
+E761|PageRight|page right seite
+E762|MultiSelect|multi select
+E763|KeyboardLeftHanded|handed keyboard left tastatur
+E764|KeyboardRightHanded|handed keyboard right tastatur
+E765|KeyboardClassic|classic keyboard tastatur
+E766|KeyboardSplit|keyboard split tastatur
+E767|Volume|lautstaerke volume
+E768|Play|abspielen play start
+E769|Pause|pause
+E76B|ChevronLeft|chevron left
+E76C|ChevronRight|chevron right
+E76D|InkingTool|inking tool werkzeug
+E76E|Emoji2|emoji2
+E76F|GripperBarHorizontal|bar gripper horizontal
+E770|System|system
+E771|Personalize|personalize
+E772|Devices|devices geraete
+E773|SearchAndApps|and apps lupe search suche suchen
+E774|Globe|global globe weltkugel
+E775|TimeLanguage|language sprache time zeit
+E776|EaseOfAccess|access ease of
+E777|UpdateRestore|aktualisierung restore update
+E778|HangUp|hang up
+E779|ContactInfo|contact info information kontakt
+E77A|Unpin|unpin
+E77B|Contact|contact kontakt
+E77C|Memo|memo
+E77E|IncomingCall|call incoming
+E77F|Paste|einfuegen paste
+E780|PhoneBook|book buch phone telefon
+E781|LEDLight|led light
+E783|Error|error fehler
+E784|GripperBarVertical|bar gripper vertical
+E785|Unlock|entsperren unlock
+E786|Slideshow|praesentation slideshow
+E787|Calendar|calendar kalender termin
+E788|GripperResize|gripper resize
+E789|Megaphone|megaphone
+E78A|Trim|trim
+E78B|NewWindow|neu new window
+E78C|SaveLocal|local save speichern
+E790|Color|color farbe
+E791|DataSense|data daten sense
+E792|SaveAs|as save speichern
+E793|Light|light
+E794|Effects|effects
+E799|AspectRatio|aspect ratio
+E7A1|Contrast|contrast
+E7A5|DataSenseBar|bar data daten sense
+E7A6|Redo|redo wiederholen
+E7A7|Undo|rueckgaengig undo
+E7A8|Crop|crop zuschneiden
+E7AA|PhotoCollection|bild collection foto photo
+E7AC|OpenWith|oeffnen open with
+E7AD|Rotate|rotate
+E7B3|RedEye|eye red
+E7B5|SetlockScreen|bildschirm screen setlock
+E7B7|MapPin2|karte map pin2
+E7B8|Package|package
+E7BA|Warning|achtung warning warnung
+E7BC|ReadingList|list liste reading
+E7BE|Education|education
+E7BF|ShoppingCart|cart einkauf shopping warenkorb
+E7C0|Train|bahn train zug
+E7C1|Flag|flag flagge markierung
+E7C2|Move|move
+E7C3|Page|page seite
+E7C4|TaskView|ansehen ansicht aufgabe task view
+E7C5|BrowsePhotos|browse photos
+E7C6|HalfStarLeft|favorit half left star stern
+E7C7|HalfStarRight|favorit half right star stern
+E7C8|Record|aufnahme record
+E7C9|TouchPointer|pointer touch
+E7DE|LangJPN|jpn lang
+E7E3|Ferry|ferry
+E7E6|Highlight|highlight
+E7E7|ActionCenterNotification|action center notification
+E7E8|PowerButton|button energie power strom
+E7EA|ResizeTouchNarrower|narrower resize touch
+E7EB|ResizeTouchShorter|resize shorter touch
+E7EC|DrivingMode|driving mode
+E7ED|RingerSilent|ringer silent
+E7EE|OtherUser|benutzer other user
+E7EF|Admin|admin administrator rechte
+E7F0|CC|cc
+E7F1|SDCard|card karte sd
+E7F2|CallForwarding|call forwarding
+E7F3|SettingsDisplaySound|display einstellungen klang optionen settings sound ton
+E7F4|TVMonitor|bildschirm monitor tv
+E7F5|Speakers|speakers
+E7F6|Headphone|headphone
+E7F7|DeviceLaptopPic|device geraet laptop notebook pic
+E7F8|DeviceLaptopNoPic|device geraet laptop no notebook pic
+E7F9|DeviceMonitorRightPic|bildschirm device geraet monitor pic right
+E7FA|DeviceMonitorLeftPic|bildschirm device geraet left monitor pic
+E7FB|DeviceMonitorNoPic|bildschirm device geraet monitor no pic
+E7FC|Game|game spiel
+E7FD|HorizontalTabKey|horizontal key passwort schluessel tab
+E800|Nav2DMapView|ansehen ansicht d karte map nav2 view
+E802|StreetsideSplitMinimize|minimize split streetside
+E803|StreetsideSplitExpand|expand split streetside
+E804|Car|auto car fahrzeug
+E805|Walk|walk
+E806|Bus|bus
+E809|TiltUp|tilt up
+E80A|TiltDown|down tilt
+E80B|CallControl|call control
+E80C|RotateMapRight|karte map right rotate
+E80D|RotateMapLeft|karte left map rotate
+E80F|Home|haus home start zuhause
+E811|ParkingLocation|location ort parking standort
+E812|MapCompassTop|compass karte map top
+E813|MapCompassBottom|bottom compass karte map
+E814|IncidentTriangle|incident triangle
+E815|Touch|touch
+E816|MapDirections|directions karte map
+E819|StartPoint|point start
+E81A|StopPoint|point stop stopp
+E81B|EndPoint|end point
+E81C|History|historie history verlauf
+E81D|Location|location ort standort
+E81E|MapLayers|ebenen karte layers map
+E81F|Accident|accident
+E821|Work|arbeit work
+E822|Construction|construction
+E823|Recent|recent
+E825|Bank|bank
+E826|DownloadMap|download herunterladen karte map
+E829|InkingToolFill2|fill2 inking tool werkzeug
+E82A|HighlightFill2|fill2 highlight
+E82B|EraseToolFill|erase fill tool werkzeug
+E82C|EraseToolFill2|erase fill2 tool werkzeug
+E82D|Dictionary|dictionary
+E82E|DictionaryAdd|add dictionary hinzufuegen neu plus
+E82F|ToolTip|tip tool werkzeug
+E830|ChromeBack|back chrome
+E835|ProvisioningPackage|package provisioning
+E836|AddRemoteDevice|add device geraet hinzufuegen neu plus remote
+E838|FolderOpen|folder oeffnen open ordner verzeichnis
+E839|Ethernet|ethernet
+E83A|ShareBroadband|broadband share teilen
+E83B|DirectAccess|access direct
+E83C|DialUp|dial up
+E83D|DefenderApp|app defender
+E83E|BatteryCharging9|akku batterie battery charging9
+E83F|Battery10|battery10
+E840|Pinned|pinned
+E841|PinFill|anheften fill pin
+E842|PinnedFill|fill pinned
+E843|PeriodKey|key passwort period schluessel
+E844|PuncKey|key passwort punc schluessel
+E845|RevToggleKey|key passwort rev schluessel toggle
+E846|RightArrowKeyTime1|arrow key passwort right schluessel time1
+E847|RightArrowKeyTime2|arrow key passwort right schluessel time2
+E848|LeftQuote|left quote
+E849|RightQuote|quote right
+E84A|DownShiftKey|down key passwort schluessel shift
+E84B|UpShiftKey|key passwort schluessel shift up
+E84C|PuncKey0|key0 punc
+E84D|PuncKeyLeftBottom|bottom key left passwort punc schluessel
+E84E|RightArrowKeyTime3|arrow key passwort right schluessel time3
+E84F|RightArrowKeyTime4|arrow key passwort right schluessel time4
+E850|Battery0|battery0
+E851|Battery1|battery1
+E852|Battery2|battery2
+E853|Battery3|battery3
+E854|Battery4|battery4
+E855|Battery5|battery5
+E856|Battery6|battery6
+E857|Battery7|battery7
+E858|Battery8|battery8
+E859|Battery9|battery9
+E85A|BatteryCharging0|akku batterie battery charging0
+E85B|BatteryCharging1|akku batterie battery charging1
+E85C|BatteryCharging2|akku batterie battery charging2
+E85D|BatteryCharging3|akku batterie battery charging3
+E85E|BatteryCharging4|akku batterie battery charging4
+E85F|BatteryCharging5|akku batterie battery charging5
+E860|BatteryCharging6|akku batterie battery charging6
+E861|BatteryCharging7|akku batterie battery charging7
+E862|BatteryCharging8|akku batterie battery charging8
+E863|BatterySaver0|akku batterie battery saver0
+E864|BatterySaver1|akku batterie battery saver1
+E865|BatterySaver2|akku batterie battery saver2
+E866|BatterySaver3|akku batterie battery saver3
+E867|BatterySaver4|akku batterie battery saver4
+E868|BatterySaver5|akku batterie battery saver5
+E869|BatterySaver6|akku batterie battery saver6
+E86A|BatterySaver7|akku batterie battery saver7
+E86B|BatterySaver8|akku batterie battery saver8
+E86C|SignalBars1|bars1 signal
+E86D|SignalBars2|bars2 signal
+E86E|SignalBars3|bars3 signal
+E86F|SignalBars4|bars4 signal
+E870|SignalBars5|bars5 signal
+E871|SignalNotConnected|connected not signal
+E872|Wifi1|wifi1
+E873|Wifi2|wifi2
+E874|Wifi3|wifi3
+E875|MobSIMLock|lock mob schloss sim sperren
+E876|MobSIMMissing|missing mob sim
+E877|Vibrate|vibrate
+E878|RoamingInternational|international roaming
+E879|RoamingDomestic|domestic roaming
+E87A|CallForwardInternational|call forward international weiterleiten
+E87B|CallForwardRoaming|call forward roaming weiterleiten
+E87C|JpnRomanji|jpn romanji
+E87D|JpnRomanjiLock|jpn lock romanji schloss sperren
+E87E|JpnRomanjiShift|jpn romanji shift
+E87F|JpnRomanjiShiftLock|jpn lock romanji schloss shift sperren
+E880|StatusDataTransfer|data daten status transfer
+E881|StatusDataTransferVPN|data daten status transfer vpn
+E882|StatusDualSIM2|2 dual sim status
+E883|StatusDualSIM2VPN|2 dual sim status vpn
+E884|StatusDualSIM1|1 dual sim status
+E885|StatusDualSIM1VPN|1 dual sim status vpn
+E886|StatusSGLTE|sglte status
+E887|StatusSGLTECell|cell handy mobil sglte status
+E888|StatusSGLTEDataVPN|data daten sglte status vpn
+E889|StatusVPN|status vpn
+E88A|WifiHotspot|funk hotspot wifi wlan
+E88B|LanguageKor|kor language sprache
+E88C|LanguageCht|cht language sprache
+E88D|LanguageChs|chs language sprache
+E88E|USB|usb
+E88F|InkingToolFill|fill inking tool werkzeug
+E890|View|ansehen ansicht view
+E891|HighlightFill|fill highlight
+E892|Previous|previous
+E893|Next|next
+E894|Clear|clear
+E895|Sync|sync synchronisieren
+E896|Download|download herunterladen
+E897|Help|help hilfe
+E898|Upload|hochladen upload
+E899|Emoji|emoji
+E89A|TwoPage|page seite two
+E89B|LeaveChat|chat leave
+E89C|MailForward|email forward mail post weiterleiten
+E89E|RotateCamera|camera kamera rotate
+E89F|ClosePane|close pane schliessen
+E8A0|OpenPane|oeffnen open pane
+E8A1|PreviewLink|link preview verknuepfung
+E8A2|AttachCamera|anhang anheften attach camera kamera
+E8A3|ZoomIn|in vergroessern zoom
+E8A4|Bookmarks|bookmarks
+E8A5|Document|document dokument
+E8A6|ProtectedDocument|document dokument protected
+E8A7|OpenInNewWindow|in neu new oeffnen open window
+E8A8|MailFill|email fill mail post
+E8A9|ViewAll|all ansehen ansicht view
+E8AA|VideoChat|chat film video
+E8AB|Switch|switch
+E8AC|Rename|rename
+E8AD|Go|go
+E8AE|SurfaceHub|hub surface
+E8AF|Remote|remote
+E8B0|Click|click
+E8B1|Shuffle|shuffle
+E8B2|Movies|movies
+E8B3|SelectAll|all select
+E8B4|Orientation|orientation
+E8B5|Import|import importieren
+E8B6|ImportAll|all import importieren
+E8B7|Folder|folder ordner verzeichnis
+E8B8|Webcam|webcam
+E8B9|Picture|bild picture
+E8BA|Caption|caption
+E8BB|ChromeClose|chrome close schliessen
+E8BC|ShowResults|results show
+E8BD|Message|message nachricht
+E8BE|Leaf|leaf
+E8BF|CalendarDay|calendar day kalender termin
+E8C0|CalendarWeek|calendar kalender termin week
+E8C1|Characters|characters
+E8C2|MailReplyAll|all antworten email mail post reply
+E8C3|Read|read
+E8C4|ShowBcc|bcc show
+E8C5|HideBcc|bcc hide
+E8C6|Cut|ausschneiden cut
+E8C7|PaymentCard|card karte payment
+E8C8|Copy|copy kopieren
+E8C9|Important|important
+E8CA|MailReply|antworten email mail post reply
+E8CB|Sort|sort sortieren
+E8CC|MobileTablet|mobile tablet
+E8CD|DisconnectDrive|disconnect drive
+E8CE|MapDrive|drive karte map
+E8CF|ContactPresence|contact kontakt presence
+E8D0|Priority|priority
+E8D1|GotoToday|goto today
+E8D2|Font|font schrift
+E8D3|FontColor|color farbe font schrift
+E8D4|Contact2|contact2
+E8D5|FolderFill|fill folder ordner verzeichnis
+E8D6|Audio|audio ton
+E8D7|Permissions|permissions
+E8D8|DisableUpdates|disable updates
+E8D9|Unfavorite|unfavorite
+E8DA|OpenLocal|local oeffnen open
+E8DB|Italic|italic
+E8DC|Underline|underline
+E8DD|Bold|bold
+E8DE|MoveToFolder|folder move ordner to verzeichnis
+E8DF|LikeDislike|dislike like
+E8E0|Dislike|dislike
+E8E1|Like|like
+E8E2|AlignRight|align right
+E8E3|AlignCenter|align center
+E8E4|AlignLeft|align left
+E8E5|OpenFile|datei file oeffnen open
+E8E6|ClearSelection|clear selection
+E8E7|FontDecrease|decrease font schrift
+E8E8|FontIncrease|font increase schrift
+E8E9|FontSize|font schrift size
+E8EA|CellPhone|cell handy mobil phone telefon
+E8EB|Reshare|reshare
+E8EC|Tag|etikett kategorie tag
+E8ED|RepeatOne|one repeat
+E8EE|RepeatAll|all repeat
+E8EF|Calculator|calculator kalkulation rechner
+E8F0|Directions|directions
+E8F1|Library|bibliothek library
+E8F2|ChatBubbles|bubbles chat
+E8F3|PostUpdate|aktualisierung post update
+E8F4|NewFolder|folder neu new ordner verzeichnis
+E8F5|CalendarReply|antworten calendar kalender reply termin
+E8F6|UnsyncFolder|folder ordner unsync verzeichnis
+E8F7|SyncFolder|folder ordner sync synchronisieren verzeichnis
+E8F8|BlockContact|block contact kontakt
+E8F9|SwitchApps|apps switch
+E8FA|AddFriend|add friend hinzufuegen neu plus
+E8FB|Accept|accept bestaetigen haken
+E8FC|GoToStart|go start to
+E8FD|BulletedList|bulleted list liste
+E8FE|Scan|scan scannen scanner
+E8FF|Preview|preview
+E902|Group|group gruppe
+E904|ZeroBars|bars zero
+E905|OneBar|bar one
+E906|TwoBars|bars two
+E907|ThreeBars|bars three
+E908|FourBars|bars four
+E909|World|global welt world
+E90A|Comment|comment kommentar
+E90B|MusicInfo|info information music musik
+E90C|DockLeft|dock left
+E90D|DockRight|dock right
+E90E|DockBottom|bottom dock
+E90F|Repair|repair reparatur werkzeug
+E910|Accounts|accounts
+E911|DullSound|dull klang sound ton
+E912|Manage|manage
+E913|Street|street
+E914|Printer3D|d printer3
+E915|RadioBullet|bullet radio
+E916|Stopwatch|stopwatch
+E917|Clock|clock uhr zeit
+E91B|Photo|bild foto photo
+E91C|ActionCenter|action center
+E91F|FullCircleMask|circle full mask
+E921|ChromeMinimize|chrome minimize
+E922|ChromeMaximize|chrome maximize
+E923|ChromeRestore|chrome restore
+E924|Annotation|annotation
+E925|BackSpaceQWERTYSm|back qwerty sm space
+E926|BackSpaceQWERTYMd|back md qwerty space
+E927|Swipe|swipe
+E928|Fingerprint|fingerprint
+E929|Handwriting|handwriting
+E92C|ChromeBackToWindow|back chrome to window
+E92D|ChromeFullScreen|bildschirm chrome full screen
+E92E|KeyboardStandard|keyboard standard tastatur
+E92F|KeyboardDismiss|dismiss keyboard tastatur
+E930|Completed|completed
+E931|ChromeAnnotate|annotate chrome
+E932|Label|label
+E933|IBeam|beam i
+E934|IBeamOutline|beam i outline
+E935|FlickDown|down flick
+E936|FlickUp|flick up
+E937|FlickLeft|flick left
+E938|FlickRight|flick right
+E939|FeedbackApp|app feedback
+E93A|MiniExpand|expand mini
+E93C|MusicAlbum|album music musik
+E93E|Streaming|streaming
+E943|Code|code programmieren
+E944|ReturnToWindow|return to window
+E945|LightningBolt|bolt lightning
+E946|Info|info information
+E947|CalculatorMultiply|calculator kalkulation multiply rechner
+E948|CalculatorAddition|addition calculator kalkulation rechner
+E949|CalculatorSubtract|calculator kalkulation rechner subtract
+E94A|CalculatorDivide|calculator divide kalkulation rechner
+E94B|CalculatorSquareroot|calculator kalkulation rechner squareroot
+E94C|CalculatorPercentage|calculator kalkulation percentage rechner
+E94D|CalculatorNegate|calculator kalkulation negate rechner
+E94E|CalculatorEqualTo|calculator equal kalkulation rechner to
+E94F|CalculatorBackspace|backspace calculator kalkulation rechner
+E950|Component|component
+E951|DMC|dmc
+E952|Dock|dock
+E953|MultimediaDMS|dms multimedia
+E954|MultimediaDVR|dvr multimedia
+E955|MultimediaPMP|multimedia pmp
+E956|PrintfaxPrinterFile|datei drucker file printer printfax
+E957|Sensor|sensor
+E958|StorageOptical|optical speicher storage
+E95A|Communications|communications
+E95B|Headset|headset
+E95D|Projector|projector
+E95E|Health|health
+E95F|Wire|wire
+E960|Webcam2|webcam2
+E961|Input|input
+E962|Mouse|maus mouse
+E963|Smartcard|smartcard
+E964|SmartcardVirtual|smartcard virtual
+E965|MediaStorageTower|media speicher storage tower
+E966|ReturnKeySm|key passwort return schluessel sm
+E967|GameConsole|console game spiel
+E968|Network|network netzwerk
+E969|StorageNetworkWireless|network netzwerk speicher storage wireless
+E96A|StorageTape|speicher storage tape
+E96D|ChevronUpSmall|chevron small up
+E96E|ChevronDownSmall|chevron down small
+E96F|ChevronLeftSmall|chevron left small
+E970|ChevronRightSmall|chevron right small
+E971|ChevronUpMed|chevron med up
+E972|ChevronDownMed|chevron down med
+E973|ChevronLeftMed|chevron left med
+E974|ChevronRightMed|chevron med right
+E975|Devices2|devices2
+E976|ExpandTile|expand tile
+E977|PC1|1 pc
+E978|PresenceChicklet|chicklet presence
+E979|PresenceChickletVideo|chicklet film presence video
+E97A|Reply|antworten reply
+E97B|SetTile|set tile
+E97C|Type|type
+E97D|Korean|korean
+E97E|HalfAlpha|alpha half
+E97F|FullAlpha|alpha full
+E980|Key12On|key12 on
+E981|ChineseChangjie|changjie chinese
+E982|QWERTYOn|on qwerty
+E983|QWERTYOff|off qwerty
+E984|ChineseQuick|chinese quick
+E985|Japanese|japanese
+E986|FullHiragana|full hiragana
+E987|FullKatakana|full katakana
+E988|HalfKatakana|half katakana
+E989|ChineseBoPoMoFo|bo chinese fo mo po
+E98A|ChinesePinyin|chinese pinyin
+E98F|ConstructionCone|cone construction
+E990|XboxOneConsole|console one xbox
+E992|Volume0|volume0
+E993|Volume1|volume1
+E994|Volume2|volume2
+E995|Volume3|volume3
+E996|BatteryUnknown|akku batterie battery unknown
+E998|WifiAttentionOverlay|attention funk overlay wifi wlan
+E99A|Robot|robot
+E9A1|TapAndSend|and send senden tap
+E9A3|TextBulletListSquareSparkle|bullet list liste sparkle square text
+E9A4|TextBulletListSquare|bullet list liste square text
+E9A6|FitPage|fit page seite
+E9A8|PasswordKeyShow|key password passwort schluessel show
+E9A9|PasswordKeyHide|hide key password passwort schluessel
+E9AA|BidiLtr|bidi ltr
+E9AB|BidiRtl|bidi rtl
+E9AC|ForwardSm|forward sm weiterleiten
+E9AD|CommaKey|comma key passwort schluessel
+E9AE|DashKey|dash key passwort schluessel
+E9AF|DullSoundKey|dull key klang passwort schluessel sound ton
+E9B0|HalfDullSound|dull half klang sound ton
+E9B1|RightDoubleQuote|double quote right
+E9B2|LeftDoubleQuote|double left quote
+E9B3|PuncKeyRightBottom|bottom key passwort punc right schluessel
+E9B4|PuncKey1|key1 punc
+E9B5|PuncKey2|key2 punc
+E9B6|PuncKey3|key3 punc
+E9B7|PuncKey4|key4 punc
+E9B8|PuncKey5|key5 punc
+E9B9|PuncKey6|key6 punc
+E9BA|PuncKey9|key9 punc
+E9BB|PuncKey7|key7 punc
+E9BC|PuncKey8|key8 punc
+E9CA|Frigid|frigid
+E9CE|Unknown|unknown
+E9D2|AreaChart|area chart diagramm grafik
+E9D5|CheckList|check erledigt haken list liste
+E9D9|Diagnostic|diagnostic
+E9E9|Equalizer|equalizer
+E9F3|Process|process
+E9F5|Processing|processing
+E9F9|ReportDocument|auswertung bericht document dokument report
+EA0C|VideoSolid|film solid video
+EA0D|MixedMediaBadge|badge media mixed
+EA14|DisconnectDisplay|disconnect display
+EA18|Shield|schild schutz shield
+EA1F|Info2|info2
+EA21|ActionCenterAsterisk|action asterisk center
+EA24|Beta|beta
+EA35|SaveCopy|copy kopieren save speichern
+EA37|List|list liste
+EA38|Asterisk|asterisk
+EA39|ErrorBadge|badge error fehler
+EA3A|CircleRing|circle ring
+EA3B|CircleFill|circle fill
+EA3C|MergeCall|call merge
+EA3D|PrivateCall|call private
+EA3F|Record2|record2
+EA40|AllAppsMirrored|all apps mirrored
+EA41|BookmarksMirrored|bookmarks mirrored
+EA42|BulletedListMirrored|bulleted list liste mirrored
+EA43|CallForwardInternationalMirrored|call forward international mirrored weiterleiten
+EA44|CallForwardRoamingMirrored|call forward mirrored roaming weiterleiten
+EA47|ChromeBackMirrored|back chrome mirrored
+EA48|ClearSelectionMirrored|clear mirrored selection
+EA49|ClosePaneMirrored|close mirrored pane schliessen
+EA4A|ContactInfoMirrored|contact info information kontakt mirrored
+EA4B|DockRightMirrored|dock mirrored right
+EA4C|DockLeftMirrored|dock left mirrored
+EA4E|ExpandTileMirrored|expand mirrored tile
+EA4F|GoMirrored|go mirrored
+EA50|GripperResizeMirrored|gripper mirrored resize
+EA51|HelpMirrored|help hilfe mirrored
+EA52|ImportMirrored|import importieren mirrored
+EA53|ImportAllMirrored|all import importieren mirrored
+EA54|LeaveChatMirrored|chat leave mirrored
+EA55|ListMirrored|list liste mirrored
+EA56|MailForwardMirrored|email forward mail mirrored post weiterleiten
+EA57|MailReplyMirrored|antworten email mail mirrored post reply
+EA58|MailReplyAllMirrored|all antworten email mail mirrored post reply
+EA5B|OpenPaneMirrored|mirrored oeffnen open pane
+EA5C|OpenWithMirrored|mirrored oeffnen open with
+EA5E|ParkingLocationMirrored|location mirrored ort parking standort
+EA5F|ResizeMouseMediumMirrored|maus medium mirrored mouse resize
+EA60|ResizeMouseSmallMirrored|maus mirrored mouse resize small
+EA61|ResizeMouseTallMirrored|maus mirrored mouse resize tall
+EA62|ResizeTouchNarrowerMirrored|mirrored narrower resize touch
+EA63|SendMirrored|mirrored send senden
+EA64|SendFillMirrored|fill mirrored send senden
+EA65|ShowResultsMirrored|mirrored results show
+EA69|Media|media
+EA6A|SyncError|error fehler sync synchronisieren
+EA6C|Devices3|devices3
+EA79|SlowMotionOn|motion on slow
+EA80|Lightbulb|gluehbirne idee lightbulb
+EA81|StatusCircle|circle status
+EA82|StatusTriangle|status triangle
+EA83|StatusError|error fehler status
+EA84|StatusWarning|achtung status warning warnung
+EA85|VolumeDisabled|disabled lautstaerke volume
+EA86|Puzzle|puzzle
+EA89|CalendarSolid|calendar kalender solid termin
+EA8A|HomeSolid|haus home solid start zuhause
+EA8B|ParkingLocationSolid|location ort parking solid standort
+EA8C|ContactSolid|contact kontakt solid
+EA8D|ConstructionSolid|construction solid
+EA8E|AccidentSolid|accident solid
+EA8F|Ringer|ringer
+EA90|PDF|pdf
+EA91|ThoughtBubble|bubble thought
+EA92|HeartBroken|broken heart herz
+EA93|BatteryCharging10|akku batterie battery charging10
+EA94|BatterySaver9|akku batterie battery saver9
+EA95|BatterySaver10|akku batterie battery saver10
+EA97|CallForwardingMirrored|call forwarding mirrored
+EA98|MultiSelectMirrored|mirrored multi select
+EA99|Broom|broom
+EAA1|SignalBarsAni1|ani1 bars signal
+EAA2|SignalBarsAni2|ani2 bars signal
+EAA3|SignalBarsAni3|ani3 bars signal
+EAA4|EthernetAni1|ani1 ethernet
+EAA5|WifiAni1|ani1 funk wifi wlan
+EAA8|WifiAni2|ani2 funk wifi wlan
+EAAA|EmojiEdit|bearbeiten edit emoji
+EAAE|SurfaceTypecover|surface typecover
+EAB7|ChatSparkle|chat sparkle
+EABB|CellFlowVertical|cell flow handy mobil vertical
+EABC|WindowsStudioEffects|effects studio windows
+EABE|PortraitBlur|blur portrait
+EAC2|ForwardCall|call forward weiterleiten
+EAC7|DesktopLeafTwo|desktop leaf schreibtisch two
+EAD4|Emojiplay|emojiplay
+EAD5|EmojiBrush|brush emoji pinsel
+EAD6|EyeTracking|eye tracking
+EAD7|EyeTrackingText|eye text tracking
+EAD8|LiveCaptionsSparkle|captions live sparkle
+EADF|Trackers|trackers
+EAFC|Market|market
+EB05|PieSingle|pie single
+EB0F|StockUp|stock up
+EB11|StockDown|down stock
+EB17|MobBatteryUnknownCharging|akku batterie battery charging mob unknown
+EB19|ClicktoDoOff|clickto do off
+EB1A|BatteryUnknownCharging|akku batterie battery charging unknown
+EB1D|ClicktoDo|clickto do
+EB25|Glasses2|glasses2
+EB33|StatusSquareOuter|outer square status
+EB34|StatusSquarePause|pause square status
+EB3B|GenericApp|app generic
+EB3C|Design|design gestaltung
+EB41|Website|website
+EB42|Drop|drop
+EB44|Radar|radar
+EB47|BusSolid|bus solid
+EB48|FerrySolid|ferry solid
+EB49|StartPointSolid|point solid start
+EB4A|StopPointSolid|point solid stop stopp
+EB4B|EndPointSolid|end point solid
+EB4C|AirplaneSolid|airplane flugzeug solid
+EB4D|TrainSolid|bahn solid train zug
+EB4E|WorkSolid|arbeit solid work
+EB4F|ReminderFill|fill reminder
+EB50|Reminder|reminder
+EB51|Heart|heart herz
+EB52|HeartFill|fill heart herz
+EB55|EthernetError|error ethernet fehler
+EB56|EthernetWarning|achtung ethernet warning warnung
+EB57|StatusConnecting1|connecting1 status
+EB58|StatusConnecting2|connecting2 status
+EB59|StatusUnsecure|status unsecure
+EB5A|WifiError0|error0 funk wifi wlan
+EB5B|WifiError1|error1 funk wifi wlan
+EB5C|WifiError2|error2 funk wifi wlan
+EB5D|WifiError3|error3 funk wifi wlan
+EB5E|WifiError4|error4 funk wifi wlan
+EB5F|WifiWarning0|funk warning0 wifi wlan
+EB60|WifiWarning1|funk warning1 wifi wlan
+EB61|WifiWarning2|funk warning2 wifi wlan
+EB62|WifiWarning3|funk warning3 wifi wlan
+EB63|WifiWarning4|funk warning4 wifi wlan
+EB66|Devices4|devices4
+EB67|NUIIris|iris nui
+EB68|NUIFace|face nui
+EB77|GatewayRouter|gateway router
+EB78|SummarizeSparkle|sparkle summarize
+EB7E|EditMirrored|bearbeiten edit mirrored
+EB82|NUIFPStartSlideHand|hand nuifp slide start
+EB83|NUIFPStartSlideAction|action nuifp slide start
+EB84|NUIFPContinueSlideHand|continue hand nuifp slide
+EB85|NUIFPContinueSlideAction|action continue nuifp slide
+EB86|NUIFPRollRightHand|hand nuifp right roll
+EB87|NUIFPRollRightHandAction|action hand nuifp right roll
+EB88|NUIFPRollLeftHand|hand left nuifp roll
+EB89|NUIFPRollLeftAction|action left nuifp roll
+EB8A|NUIFPPressHand|hand nuifp press
+EB8B|NUIFPPressAction|action nuifp press
+EB8C|NUIFPPressRepeatHand|hand nuifp press repeat
+EB8D|NUIFPPressRepeatAction|action nuifp press repeat
+EB90|StatusErrorFull|error fehler full status
+EB91|TaskViewExpanded|ansehen ansicht aufgabe expanded task view
+EB95|Certificate|certificate
+EB96|BackSpaceQWERTYLg|back lg qwerty space
+EB97|ReturnKeyLg|key lg passwort return schluessel
+EB9D|FastForward|fast forward weiterleiten
+EB9E|Rewind|rewind
+EB9F|Photo2|photo2
+EBA0|MobBattery0|battery0 mob
+EBA1|MobBattery1|battery1 mob
+EBA2|MobBattery2|battery2 mob
+EBA3|MobBattery3|battery3 mob
+EBA4|MobBattery4|battery4 mob
+EBA5|MobBattery5|battery5 mob
+EBA6|MobBattery6|battery6 mob
+EBA7|MobBattery7|battery7 mob
+EBA8|MobBattery8|battery8 mob
+EBA9|MobBattery9|battery9 mob
+EBAA|MobBattery10|battery10 mob
+EBAB|MobBatteryCharging0|akku batterie battery charging0 mob
+EBAC|MobBatteryCharging1|akku batterie battery charging1 mob
+EBAD|MobBatteryCharging2|akku batterie battery charging2 mob
+EBAE|MobBatteryCharging3|akku batterie battery charging3 mob
+EBAF|MobBatteryCharging4|akku batterie battery charging4 mob
+EBB0|MobBatteryCharging5|akku batterie battery charging5 mob
+EBB1|MobBatteryCharging6|akku batterie battery charging6 mob
+EBB2|MobBatteryCharging7|akku batterie battery charging7 mob
+EBB3|MobBatteryCharging8|akku batterie battery charging8 mob
+EBB4|MobBatteryCharging9|akku batterie battery charging9 mob
+EBB5|MobBatteryCharging10|akku batterie battery charging10 mob
+EBB6|MobBatterySaver0|akku batterie battery mob saver0
+EBB7|MobBatterySaver1|akku batterie battery mob saver1
+EBB8|MobBatterySaver2|akku batterie battery mob saver2
+EBB9|MobBatterySaver3|akku batterie battery mob saver3
+EBBA|MobBatterySaver4|akku batterie battery mob saver4
+EBBB|MobBatterySaver5|akku batterie battery mob saver5
+EBBC|MobBatterySaver6|akku batterie battery mob saver6
+EBBD|MobBatterySaver7|akku batterie battery mob saver7
+EBBE|MobBatterySaver8|akku batterie battery mob saver8
+EBBF|MobBatterySaver9|akku batterie battery mob saver9
+EBC0|MobBatterySaver10|akku batterie battery mob saver10
+EBC3|DictionaryCloud|cloud dictionary wolke
+EBC4|ResetDrive|drive reset
+EBC5|VolumeBars|bars lautstaerke volume
+EBC6|Project|project projekt
+EBC8|SystemInPrivate|in private system
+EBC9|SystemInPrivateFilled|filled in private system
+EBD2|AdjustHologram|adjust hologram
+EBD3|CloudDownload|cloud download herunterladen wolke
+EBD4|MobWifiCallBars|bars call funk mob wifi wlan
+EBD5|MobWifiCall0|call0 funk mob wifi wlan
+EBD6|MobWifiCall1|call1 funk mob wifi wlan
+EBD7|MobWifiCall2|call2 funk mob wifi wlan
+EBD8|MobWifiCall3|call3 funk mob wifi wlan
+EBD9|MobWifiCall4|call4 funk mob wifi wlan
+EBDA|Family|family
+EBDB|LockFeedback|feedback lock schloss sperren
+EBDE|DeviceDiscovery|device discovery geraet
+EBE6|WindDirection|direction wind
+EBE7|RightArrowKeyTime0|arrow key passwort right schluessel time0
+EBE8|Bug|bug fehler
+EBFC|TabletMode|mode tablet
+EBFD|StatusCircleLeft|circle left status
+EBFE|StatusTriangleLeft|left status triangle
+EBFF|StatusErrorLeft|error fehler left status
+EC00|StatusWarningLeft|achtung left status warning warnung
+EC02|MobBatteryUnknown|akku batterie battery mob unknown
+EC05|NetworkTower|network netzwerk tower
+EC06|CityNext|city next
+EC07|CityNext2|city next2
+EC08|Courthouse|courthouse
+EC09|Groceries|groceries
+EC0A|Sustainable|sustainable
+EC0B|BuildingEnergy|building energy
+EC11|ToggleFilled|filled toggle
+EC12|ToggleBorder|border toggle
+EC13|SliderThumb|slider thumb
+EC14|ToggleThumb|thumb toggle
+EC15|MiracastLogoSmall|logo miracast small
+EC16|MiracastLogoLarge|large logo miracast
+EC19|PLAP|plap
+EC1B|Badge|badge
+EC1E|SignalRoaming|roaming signal
+EC20|MobileLocked|locked mobile
+EC24|InsiderHubApp|app hub insider
+EC25|PersonalFolder|folder ordner personal verzeichnis
+EC26|HomeGroup|group gruppe haus home start zuhause
+EC27|MyNetwork|my network netzwerk
+EC31|KeyboardFull|full keyboard tastatur
+EC32|Cafe|cafe
+EC34|FormatText|format text
+EC37|MobSignal1|mob signal1
+EC38|MobSignal2|mob signal2
+EC39|MobSignal3|mob signal3
+EC3A|MobSignal4|mob signal4
+EC3B|MobSignal5|mob signal5
+EC3C|MobWifi1|mob wifi1
+EC3D|MobWifi2|mob wifi2
+EC3E|MobWifi3|mob wifi3
+EC3F|MobWifi4|mob wifi4
+EC40|MobAirplane|airplane flugzeug mob
+EC41|MobBluetooth|bluetooth mob
+EC42|MobActionCenter|action center mob
+EC43|MobLocation|location mob ort standort
+EC44|MobWifiHotspot|funk hotspot mob wifi wlan
+EC45|LanguageJpn|jpn language sprache
+EC46|MobQuietHours|hours mob quiet
+EC47|MobDrivingMode|driving mob mode
+EC48|SpeedOff|off speed
+EC49|SpeedMedium|medium speed
+EC4A|SpeedHigh|high speed
+EC4E|ThisPC|pc this
+EC4F|MusicNote|music musik note notiz
+EC50|FileExplorer|datei explorer file
+EC51|FileExplorerApp|app datei explorer file
+EC52|LeftArrowKeyTime0|arrow key left passwort schluessel time0
+EC54|MicOff|mic off
+EC55|MicSleep|mic sleep
+EC56|MicError|error fehler mic
+EC57|PlaybackRate1x|playback rate1x
+EC58|PlaybackRateOther|other playback rate
+EC59|CashDrawer|cash drawer
+EC5A|BarcodeScanner|barcode scanner
+EC5B|ReceiptPrinter|beleg drucker printer quittung receipt
+EC5C|MagStripeReader|mag reader stripe
+EC61|CompletedSolid|completed solid
+EC64|CompanionApp|app companion
+EC6C|Favicon2|favicon2
+EC6D|SwipeRevealArt|art reveal swipe
+EC71|MicOn|mic on
+EC72|MicClipping|clipping mic
+EC74|TabletSelected|selected tablet
+EC75|MobileSelected|mobile selected
+EC76|LaptopSelected|laptop notebook selected
+EC77|TVMonitorSelected|bildschirm monitor selected tv
+EC7A|DeveloperTools|developer tools
+EC7E|MobCallForwarding|call forwarding mob
+EC7F|MobCallForwardingMirrored|call forwarding mirrored mob
+EC80|BodyCam|body cam
+EC81|PoliceCar|auto car fahrzeug police
+EC83|UpdateStatusDot2|aktualisierung dot2 status update
+EC87|Draw|draw
+EC88|DrawSolid|draw solid
+EC8A|LowerBrightness|brightness lower
+EC8F|ScrollUpDown|down scroll up
+EC91|Uninstall|uninstall
+EC92|DateTime|date time zeit
+EC94|HoloLens|holo lens
+EC9C|CloudNotSynced|cloud not synced wolke
+ECA5|Tiles|tiles
+ECA7|PartyLeader|leader party
+ECAA|AppIconDefault|app default icon
+ECAD|Calories|calories
+ECAF|POI|poi
+ECB9|BandBattery0|band battery0
+ECBA|BandBattery1|band battery1
+ECBB|BandBattery2|band battery2
+ECBC|BandBattery3|band battery3
+ECBD|BandBattery4|band battery4
+ECBE|BandBattery5|band battery5
+ECBF|BandBattery6|band battery6
+ECC4|AddSurfaceHub|add hinzufuegen hub neu plus surface
+ECC5|DevUpdate|aktualisierung dev update
+ECC6|Unit|unit
+ECC8|AddTo|add hinzufuegen neu plus to
+ECC9|RemoveFrom|entfernen from remove
+ECCA|RadioBtnOff|btn off radio
+ECCB|RadioBtnOn|btn on radio
+ECCC|RadioBullet2|bullet2 radio
+ECCD|ExploreContent|content explore
+ECE4|Blocked2|blocked2
+ECE7|ScrollMode|mode scroll
+ECE8|ZoomMode|mode vergroessern zoom
+ECE9|PanMode|mode pan
+ECF0|WiredUSB|usb wired
+ECF1|WirelessUSB|usb wireless
+ECF3|USBSafeConnect|connect safe usb
+ED0C|ActionCenterNotificationMirrored|action center mirrored notification
+ED0D|ActionCenterMirrored|action center mirrored
+ED0E|SubscriptionAdd|add hinzufuegen neu plus subscription
+ED10|ResetDevice|device geraet reset
+ED11|SubscriptionAddMirrored|add hinzufuegen mirrored neu plus subscription
+ED14|QRCode|code programmieren qr
+ED15|Feedback|feedback
+ED1A|Hide|hide
+ED1E|Subtitles|subtitles
+ED1F|SubtitlesAudio|audio subtitles ton
+ED21|RestartUpdate2|restart update2
+ED25|OpenFolderHorizontal|folder horizontal oeffnen open ordner verzeichnis
+ED28|CalendarMirrored|calendar kalender mirrored termin
+ED2A|MobeSIM|mobe sim
+ED2B|MobeSIMNoProfile|mobe no profile sim
+ED2C|MobeSIMLocked|locked mobe sim
+ED2D|MobeSIMBusy|busy mobe sim
+ED2E|SignalError|error fehler signal
+ED2F|StreamingEnterprise|enterprise streaming
+ED30|Headphone0|headphone0
+ED31|Headphone1|headphone1
+ED32|Headphone2|headphone2
+ED33|Headphone3|headphone3
+ED35|Apps|apps
+ED37|SearchSparkle|lupe search sparkle suche suchen
+ED39|KeyboardBrightness|brightness keyboard tastatur
+ED3A|KeyboardLowerBrightness|brightness keyboard lower tastatur
+ED3C|SkipBack10|back10 skip
+ED3D|SkipForward30|forward30 skip
+ED41|TreeFolderFolder|folder ordner tree verzeichnis
+ED42|TreeFolderFolderFill|fill folder ordner tree verzeichnis
+ED43|TreeFolderFolderOpen|folder oeffnen open ordner tree verzeichnis
+ED44|TreeFolderFolderOpenFill|fill folder oeffnen open ordner tree verzeichnis
+ED47|MultimediaDMP|dmp multimedia
+ED4C|KeyboardOneHanded|handed keyboard one tastatur
+ED4D|Narrator|narrator
+ED53|EmojiTabPeople|emoji leute people personen tab
+ED54|EmojiTabSmilesAnimals|animals emoji smiles tab
+ED55|EmojiTabCelebrationObjects|celebration emoji objects tab
+ED56|EmojiTabFoodPlants|emoji food plants tab
+ED57|EmojiTabTransitPlaces|emoji places tab transit
+ED58|EmojiTabSymbols|emoji symbols tab
+ED59|EmojiTabTextSmiles|emoji smiles tab text
+ED5A|EmojiTabFavorites|emoji favorites tab
+ED5B|EmojiSwatch|emoji swatch
+ED5C|ConnectApp|app connect
+ED5D|CompanionDeviceFramework|companion device framework geraet
+ED5E|Ruler|ruler
+ED5F|FingerInking|finger inking
+ED60|StrokeErase|erase stroke
+ED61|PointErase|erase point
+ED62|ClearAllInk|all clear ink
+ED63|Pencil|pencil
+ED64|Marker|marker
+ED65|InkingCaret|caret inking
+ED66|InkingColorOutline|color farbe inking outline
+ED67|InkingColorFill|color farbe fill inking
+EDA2|HardDrive|drive hard
+EDA3|NetworkAdapter|adapter network netzwerk
+EDA4|Touchscreen|touchscreen
+EDA5|NetworkPrinter|drucker network netzwerk printer
+EDA6|CloudPrinter|cloud drucker printer wolke
+EDA7|KeyboardShortcut|keyboard shortcut tastatur
+EDA8|BrushSize|brush pinsel size
+EDA9|NarratorForward|forward narrator weiterleiten
+EDAA|NarratorForwardMirrored|forward mirrored narrator weiterleiten
+EDAB|SyncBadge12|badge12 sync synchronisieren
+EDAC|RingerBadge12|badge12 ringer
+EDAD|AsteriskBadge12|asterisk badge12
+EDAE|ErrorBadge12|badge12 error fehler
+EDAF|CircleRingBadge12|badge12 circle ring
+EDB0|CircleFillBadge12|badge12 circle fill
+EDB1|ImportantBadge12|badge12 important
+EDB3|MailBadge12|badge12 email mail post
+EDB4|PauseBadge12|badge12 pause
+EDB5|PlayBadge12|abspielen badge12 play start
+EDC6|PenWorkspace|pen workspace
+EDD5|CaretLeft8|caret left8
+EDD6|CaretRight8|caret right8
+EDD7|CaretUp8|caret up8
+EDD8|CaretDown8|caret down8
+EDD9|CaretLeftSolid8|caret left solid8
+EDDA|CaretRightSolid8|caret right solid8
+EDDB|CaretUpSolid8|caret solid8 up
+EDDC|CaretDownSolid8|caret down solid8
+EDE0|Strikethrough|strikethrough
+EDE1|Export|export exportieren
+EDE2|ExportMirrored|export exportieren mirrored
+EDE3|ButtonMenu|button menu
+EDE4|CloudSearch|cloud lupe search suche suchen wolke
+EDE5|PinyinIMELogo|ime logo pinyin
+EDFB|CalligraphyPen|calligraphy pen
+EE35|ReplyMirrored|antworten mirrored reply
+EE3F|LockscreenDesktop|desktop lockscreen schreibtisch
+EE40|TaskViewSettings|ansehen ansicht aufgabe einstellungen optionen settings task view
+EE41|FullHiraganaPrivateMode|full hiragana mode private
+EE42|FullKatakanaPrivateMode|full katakana mode private
+EE43|HalfAlphaPrivateMode|alpha half mode private
+EE44|HalfKatakanaPrivateMode|half katakana mode private
+EE45|FullAlphaPrivateMode|alpha full mode private
+EE47|MiniExpand2Mirrored|expand2 mini mirrored
+EE49|MiniContract2Mirrored|contract2 mini mirrored
+EE4A|Play36|play36
+EE56|PenPalette|farben palette pen
+EE57|GuestUser|benutzer guest user
+EE63|SettingsBattery|akku batterie battery einstellungen optionen settings
+EE64|TaskbarPhone|phone taskbar telefon
+EE65|LockScreenGlance|bildschirm glance lock schloss screen sperren
+EE6F|GenericScan|generic scan scannen scanner
+EE71|ImageExport|export exportieren image
+EE77|WifiEthernet|ethernet funk wifi wlan
+EE79|ActionCenterQuiet|action center quiet
+EE7A|ActionCenterQuietNotification|action center notification quiet
+EE7E|FIDOPasskey|fido passkey
+EE92|TrackersMirrored|mirrored trackers
+EE93|DateTimeMirrored|date mirrored time zeit
+EE94|Wheel|wheel
+EE95|StopSolid|solid stop stopp
+EEA0|RAM|ram
+EEA1|CPU|cpu
+EEA3|VirtualMachineGroup|group gruppe machine virtual
+EECA|ButtonView2|button view2
+EF15|PenWorkspaceMirrored|mirrored pen workspace
+EF16|PenPaletteMirrored|farben mirrored palette pen
+EF17|StrokeEraseMirrored|erase mirrored stroke
+EF18|PointEraseMirrored|erase mirrored point
+EF19|ClearAllInkMirrored|all clear ink mirrored
+EF1F|BackgroundToggle|background toggle
+EF20|Marquee|marquee
+EF2C|ChromeCloseContrast|chrome close contrast schliessen
+EF2D|ChromeMinimizeContrast|chrome contrast minimize
+EF2E|ChromeMaximizeContrast|chrome contrast maximize
+EF2F|ChromeRestoreContrast|chrome contrast restore
+EF31|TrafficLight|light traffic
+EF3B|Replay|replay
+EF3C|Eyedropper|eyedropper
+EF3D|LineDisplay|display line
+EF3E|PINPad|anheften pad pin
+EF3F|SignatureCapture|capture signature
+EF40|ChipCardCreditCardReader|card chip credit karte reader
+EF42|MarketDown|down market
+EF58|PlayerSettings|einstellungen optionen player settings
+EF60|TextEdit|bearbeiten edit text
+EF6B|LandscapeOrientation|landscape orientation
+EF90|Flow|flow
+EF91|PauseDurationVoice|duration pause voice
+EFA5|Touchpad|touchpad
+EFA9|Speech|speech
+EFDA|AppIconDefaultAdd|add app default hinzufuegen icon neu plus
+EFFF|CRMScheduleReports|crm reports schedule
+F000|KnowledgeArticle|article knowledge
+F003|Relationship|relationship
+F012|ZipFolder|folder ordner verzeichnis zip
+F034|Widget|widget
+F035|WidgetGear|gear widget
+F036|WidgetAdd|add hinzufuegen neu plus widget
+F03D|PasteSparkle|einfuegen paste sparkle
+F03E|AdvancedPaste|advanced einfuegen paste
+F06C|PortraitLight|light portrait
+F080|DefaultAPN|apn default
+F081|UserAPN|apn benutzer user
+F085|DoublePinyin|double pinyin
+F08C|BlueLight|blue light
+F08D|CaretSolidLeft|caret left solid
+F08E|CaretSolidDown|caret down solid
+F08F|CaretSolidRight|caret right solid
+F090|CaretSolidUp|caret solid up
+F093|ButtonA|a button
+F094|ButtonB|b button
+F095|ButtonY|button y
+F096|ButtonX|button x
+F0AD|ArrowUp8|arrow up8
+F0AE|ArrowDown8|arrow down8
+F0AF|ArrowRight8|arrow right8
+F0B0|ArrowLeft8|arrow left8
+F0B2|QuarentinedItems|items quarentined
+F0B3|QuarentinedItemsMirrored|items mirrored quarentined
+F0B4|Protractor|protractor
+F0B5|ChecklistMirrored|checklist mirrored
+F0B6|StatusCircle7|circle7 status
+F0B7|StatusCheckmark7|checkmark7 status
+F0B8|StatusErrorCircle7|circle7 error fehler status
+F0B9|Connected|connected
+F0C6|PencilFill|fill pencil
+F0C7|CalligraphyFill|calligraphy fill
+F0CA|QuarterStarLeft|favorit left quarter star stern
+F0CB|QuarterStarRight|favorit quarter right star stern
+F0CC|ThreeQuarterStarLeft|favorit left quarter star stern three
+F0CD|ThreeQuarterStarRight|favorit quarter right star stern three
+F0CE|QuietHoursBadge12|badge12 hours quiet
+F0D2|BackMirrored|back mirrored
+F0D3|ForwardMirrored|forward mirrored weiterleiten
+F0D5|ChromeBackContrast|back chrome contrast
+F0D6|ChromeBackContrastMirrored|back chrome contrast mirrored
+F0D7|ChromeBackToWindowContrast|back chrome contrast to window
+F0D8|ChromeFullScreenContrast|bildschirm chrome contrast full screen
+F0E2|GridView|ansehen ansicht grid kacheln raster view
+F0E3|ClipboardList|clipboard list liste
+F0E4|ClipboardListMirrored|clipboard list liste mirrored
+F0E5|OutlineQuarterStarLeft|favorit left outline quarter star stern
+F0E6|OutlineQuarterStarRight|favorit outline quarter right star stern
+F0E7|OutlineHalfStarLeft|favorit half left outline star stern
+F0E8|OutlineHalfStarRight|favorit half outline right star stern
+F0E9|OutlineThreeQuarterStarLeft|favorit left outline quarter star stern three
+F0EA|OutlineThreeQuarterStarRight|favorit outline quarter right star stern three
+F0EB|SpatialVolume0|spatial volume0
+F0EC|SpatialVolume1|spatial volume1
+F0ED|SpatialVolume2|spatial volume2
+F0EE|SpatialVolume3|spatial volume3
+F0EF|ApplicationGuard|application guard
+F0F7|OutlineStarLeftHalf|favorit half left outline star stern
+F0F8|OutlineStarRightHalf|favorit half outline right star stern
+F0F9|ChromeAnnotateContrast|annotate chrome contrast
+F0FB|DefenderBadge12|badge12 defender
+F103|DetachablePC|detachable pc
+F108|LeftStick|left stick
+F109|RightStick|right stick
+F10A|TriggerLeft|left trigger
+F10B|TriggerRight|right trigger
+F10C|BumperLeft|bumper left
+F10D|BumperRight|bumper right
+F10E|Dpad|dpad
+F110|EnglishPunctuation|english punctuation
+F111|ChinesePunctuation|chinese punctuation
+F112|ReadOutLoud|loud out read
+F117|ProjectToDevice|device geraet project projekt to
+F119|HMD|hmd
+F11B|CtrlSpatialRight|ctrl right spatial
+F120|TaskManagerApp|app aufgabe manager task
+F126|PaginationDotOutline10|dot outline10 pagination
+F127|PaginationDotSolid10|dot pagination solid10
+F128|StrokeErase2|erase2 stroke
+F129|SmallErase|erase small
+F12A|LargeErase|erase large
+F12B|FolderHorizontal|folder horizontal ordner verzeichnis
+F12E|MicrophoneListening|listening microphone
+F12F|StatusExclamationCircle7|circle7 exclamation status
+F131|Video360|video360
+F133|GiftboxOpen|giftbox oeffnen open
+F136|StatusCircleOuter|circle outer status
+F137|StatusCircleInner|circle inner status
+F138|StatusCircleRing|circle ring status
+F139|StatusTriangleOuter|outer status triangle
+F13A|StatusTriangleInner|inner status triangle
+F13B|StatusTriangleExclamation|exclamation status triangle
+F13C|StatusCircleExclamation|circle exclamation status
+F13D|StatusCircleErrorX|circle error fehler status x
+F13E|StatusCircleCheckmark|checkmark circle status
+F13F|StatusCircleInfo|circle info information status
+F140|StatusCircleBlock|block circle status
+F141|StatusCircleBlock2|block2 circle status
+F142|StatusCircleQuestionMark|circle frage mark question status
+F143|StatusCircleSync|circle status sync synchronisieren
+F146|Dial1|dial1
+F147|Dial2|dial2
+F148|Dial3|dial3
+F149|Dial4|dial4
+F14A|Dial5|dial5
+F14B|Dial6|dial6
+F14C|Dial7|dial7
+F14D|Dial8|dial8
+F14E|Dial9|dial9
+F14F|Dial10|dial10
+F150|Dial11|dial11
+F151|Dial12|dial12
+F152|Dial13|dial13
+F153|Dial14|dial14
+F154|Dial15|dial15
+F155|Dial16|dial16
+F156|DialShape1|dial shape1
+F157|DialShape2|dial shape2
+F158|DialShape3|dial shape3
+F159|DialShape4|dial shape4
+F15F|ClosedCaptionsInternational|captions closed international
+F161|TollSolid|solid toll
+F163|TrafficCongestionSolid|congestion solid traffic
+F164|ExploreContentSingle|content explore single
+F165|CollapseContent|collapse content
+F166|CollapseContentSingle|collapse content single
+F167|InfoSolid|info information solid
+F168|GroupList|group gruppe list liste
+F169|CaretBottomRightSolidCenter8|bottom caret center8 right solid
+F16A|ProgressRingDots|dots progress ring
+F16B|Checkbox14|checkbox14
+F16C|CheckboxComposite14|checkbox composite14
+F16D|CheckboxIndeterminateCombo14|checkbox combo14 indeterminate
+F16E|CheckboxIndeterminateCombo|checkbox combo indeterminate
+F175|StatusPause7|pause7 status
+F178|StatusDiamondOuter|diamond outer status
+F179|StatusDiamondInner|diamond inner status
+F17F|CharacterAppearance|appearance character
+F180|Lexicon|lexicon
+F182|ScreenTime|bildschirm screen time zeit
+F191|HeadlessDevice|device geraet headless
+F193|NetworkSharing|network netzwerk sharing
+F196|Beaker|beaker
+F19D|EyeGaze|eye gaze
+F19E|ToggleLeft|left toggle
+F19F|ToggleRight|right toggle
+F1AD|WindowsInsider|insider windows
+F1B1|PowerButtonUpdate2|button energie power strom update2
+F1B9|LassoSparkle|lasso sparkle
+F1BA|SquareSparkle|sparkle square
+F1BB|TextCursor2|cursor2 text
+F1BE|Lasso|lasso
+F1CB|ChromeSwitch|chrome switch
+F1CC|ChromeSwitchContast|chrome contast switch
+F1D4|TranslateSparkle|sparkle translate uebersetzen
+F1D5|RefineSparkle|refine sparkle
+F1D6|ReformatSparkle|reformat sparkle
+F1D8|StatusCheckmark|checkmark status
+F1D9|StatusCheckmarkLeft|checkmark left status
+F1E8|LeafTwo|leaf two
+F207|GridviewGroup|gridview group gruppe
+F20C|KeyboardLeftAligned|aligned keyboard left tastatur
+F20D|KeyboardRightAligned|aligned keyboard right tastatur
+F210|KeyboardSettings|einstellungen keyboard optionen settings tastatur
+F211|NetworkPhysical|network netzwerk physical
+F22C|IOT|iot
+F22E|UnknownMirrored|mirrored unknown
+F232|GridViewSmall|ansehen ansicht grid kacheln raster small view
+F246|ViewDashboard|ansehen ansicht dashboard view
+F259|ExploitProtectionSettings|einstellungen exploit optionen protection settings
+F260|KeyboardNarrow|keyboard narrow tastatur
+F261|Keyboard12Key|key keyboard12 passwort schluessel
+F26B|KeyboardDock|dock keyboard tastatur
+F26C|KeyboardUndock|keyboard tastatur undock
+F26D|KeyboardLeftDock|dock keyboard left tastatur
+F26E|KeyboardRightDock|dock keyboard right tastatur
+F270|Ear|ear
+F271|PointerHand|hand pointer
+F272|Bullseye|bullseye
+F277|ActionFramework|action framework
+F27C|Earbudsingle|earbudsingle
+F27F|HearingAid|aid hearing
+F285|MobSnooze|mob snooze
+F28B|DocumentApproval|approval document dokument
+F2A3|MobNotificationBell|bell mob notification
+F2A5|MobNotificationBellFilled|bell filled mob notification
+F2A8|MobSnoozeFilled|filled mob snooze
+F2B7|LocaleLanguage|language locale sprache
+F2C7|BulletedList2|bulleted list2
+F2C8|BulletedList2Mirrored|bulleted list2 mirrored
+F2D9|CirclePause|circle pause
+F305|Restart3|restart3
+F32A|PassiveAuthentication|authentication passive
+F353|Emoji4|emoji4
+F354|ColorSolid|color farbe solid
+F384|NetworkOffline|network netzwerk offline
+F385|NetworkConnected|connected network netzwerk
+F386|NetworkConnectedCheckmark|checkmark connected network netzwerk
+F39B|NFCBadge|badge nfc
+F3B1|SignOut|out sign
+F3BF|LikeSolid|like solid
+F3C0|DislikeSolid|dislike solid
+F3CC|StatusInfo|info information status
+F3CD|StatusInfoLeft|info information left status
+F3E2|NearbySharing|nearby sharing
+F3E7|CtrlSpatialLeft|ctrl left spatial
+F404|InteractiveDashboard|dashboard interactive
+F405|DeclineCall|call decline
+F406|ClippingTool|clipping tool werkzeug
+F407|RectangularClipping|clipping rectangular
+F408|FreeFormClipping|clipping form free
+F413|CopyTo|copy kopieren to
+F427|IDBadge|badge id
+F42F|SpeedHigh2|high2 speed
+F432|BatterySaver|akku batterie battery saver
+F439|DynamicLock|dynamic lock schloss sperren
+F45E|PenTips|pen tips
+F45F|PenTipsMirrored|mirrored pen tips
+F460|HWPJoin|hwp join
+F461|HWPInsert|hwp insert
+F462|HWPStrikeThrough|hwp strike through
+F463|HWPScratchOut|hwp out scratch
+F464|HWPSplit|hwp split
+F465|HWPNewLine|hwp line neu new
+F466|HWPOverwrite|hwp overwrite
+F470|PhoneResumeAlert|alert phone resume telefon
+F473|MobWifiWarning1|funk mob warning1 wifi wlan
+F474|MobWifiWarning2|funk mob warning2 wifi wlan
+F475|MobWifiWarning3|funk mob warning3 wifi wlan
+F476|MobWifiWarning4|funk mob warning4 wifi wlan
+F47F|MicLocationCombo|combo location mic ort standort
+F49A|Globe2|globe2
+F4A5|SpecialEffectSize|effect size special
+F4A9|GIF|gif
+F4AA|Sticker2|sticker2
+F4BD|Snooze|snooze
+F4BE|SurfaceHubSelected|hub selected surface
+F4BF|HoloLensSelected|holo lens selected
+F4C0|Earbud|earbud
+F4C3|MixVolumes|mix volumes
+F540|Safe|safe
+F552|LaptopSecure|laptop notebook secure
+F56D|PrintDefault|default drucken drucker print
+F56E|PageMirrored|mirrored page seite
+F56F|LandscapeOrientationMirrored|landscape mirrored orientation
+F570|ColorOff|color farbe off
+F571|PrintAllPages|all drucken drucker pages print seiten
+F572|PrintCustomRange|custom drucken drucker print range
+F573|PageMarginPortraitNarrow|margin narrow page portrait seite
+F574|PageMarginPortraitNormal|margin normal page portrait seite
+F575|PageMarginPortraitModerate|margin moderate page portrait seite
+F576|PageMarginPortraitWide|margin page portrait seite wide
+F577|PageMarginLandscapeNarrow|landscape margin narrow page seite
+F578|PageMarginLandscapeNormal|landscape margin normal page seite
+F579|PageMarginLandscapeModerate|landscape margin moderate page seite
+F57A|PageMarginLandscapeWide|landscape margin page seite wide
+F57B|CollateLandscape|collate landscape
+F57C|CollatePortrait|collate portrait
+F57D|CollatePortraitSeparated|collate portrait separated
+F57E|DuplexLandscapeOneSided|duplex landscape one sided
+F57F|DuplexLandscapeOneSidedMirrored|duplex landscape mirrored one sided
+F580|DuplexLandscapeTwoSidedLongEdge|duplex edge landscape long sided two
+F581|DuplexLandscapeTwoSidedLongEdgeMirrored|duplex edge landscape long mirrored sided two
+F582|DuplexLandscapeTwoSidedShortEdge|duplex edge landscape short sided two
+F583|DuplexLandscapeTwoSidedShortEdgeMirrored|duplex edge landscape mirrored short sided two
+F584|DuplexPortraitOneSided|duplex one portrait sided
+F585|DuplexPortraitOneSidedMirrored|duplex mirrored one portrait sided
+F586|DuplexPortraitTwoSidedLongEdge|duplex edge long portrait sided two
+F587|DuplexPortraitTwoSidedLongEdgeMirrored|duplex edge long mirrored portrait sided two
+F588|DuplexPortraitTwoSidedShortEdge|duplex edge portrait short sided two
+F589|DuplexPortraitTwoSidedShortEdgeMirrored|duplex edge mirrored portrait short sided two
+F58A|PPSOneLandscape|landscape one pps
+F58B|PPSTwoLandscape|landscape pps two
+F58C|PPSTwoPortrait|portrait pps two
+F58D|PPSFourLandscape|four landscape pps
+F58E|PPSFourPortrait|four portrait pps
+F58F|HolePunchOff|hole off punch
+F590|HolePunchPortraitLeft|hole left portrait punch
+F591|HolePunchPortraitRight|hole portrait punch right
+F592|HolePunchPortraitTop|hole portrait punch top
+F593|HolePunchPortraitBottom|bottom hole portrait punch
+F594|HolePunchLandscapeLeft|hole landscape left punch
+F595|HolePunchLandscapeRight|hole landscape punch right
+F596|HolePunchLandscapeTop|hole landscape punch top
+F597|HolePunchLandscapeBottom|bottom hole landscape punch
+F598|StaplingOff|off stapling
+F599|StaplingPortraitTopLeft|left portrait stapling top
+F59A|StaplingPortraitTopRight|portrait right stapling top
+F59B|StaplingPortraitBottomRight|bottom portrait right stapling
+F59C|StaplingPortraitTwoLeft|left portrait stapling two
+F59D|StaplingPortraitTwoRight|portrait right stapling two
+F59E|StaplingPortraitTwoTop|portrait stapling top two
+F59F|StaplingPortraitTwoBottom|bottom portrait stapling two
+F5A0|StaplingPortraitBookBinding|binding book buch portrait stapling
+F5A1|StaplingLandscapeTopLeft|landscape left stapling top
+F5A2|StaplingLandscapeTopRight|landscape right stapling top
+F5A3|StaplingLandscapeBottomLeft|bottom landscape left stapling
+F5A4|StaplingLandscapeBottomRight|bottom landscape right stapling
+F5A5|StaplingLandscapeTwoLeft|landscape left stapling two
+F5A6|StaplingLandscapeTwoRight|landscape right stapling two
+F5A7|StaplingLandscapeTwoTop|landscape stapling top two
+F5A8|StaplingLandscapeTwoBottom|bottom landscape stapling two
+F5A9|StaplingLandscapeBookBinding|binding book buch landscape stapling
+F5AA|StatusDataTransferRoaming|data daten roaming status transfer
+F5AB|MobSIMError|error fehler mob sim
+F5AC|CollateLandscapeSeparated|collate landscape separated
+F5AD|PPSOnePortrait|one portrait pps
+F5AE|StaplingPortraitBottomLeft|bottom left portrait stapling
+F5B0|PlaySolid|abspielen play solid start
+F5B4|ShieldLock|lock schild schloss schutz shield sperren
+F5B5|Chess|chess
+F5CA|POILocationFound|found location ort poi standort
+F5E7|RepeatOff|off repeat
+F5ED|Set|set
+F5EE|SetSolid|set solid
+F5EF|FuzzyReading|fuzzy reading
+F5F2|VerticalBattery0|battery0 vertical
+F5F3|VerticalBattery1|battery1 vertical
+F5F4|VerticalBattery2|battery2 vertical
+F5F5|VerticalBattery3|battery3 vertical
+F5F6|VerticalBattery4|battery4 vertical
+F5F7|VerticalBattery5|battery5 vertical
+F5F8|VerticalBattery6|battery6 vertical
+F5F9|VerticalBattery7|battery7 vertical
+F5FA|VerticalBattery8|battery8 vertical
+F5FB|VerticalBattery9|battery9 vertical
+F5FC|VerticalBattery10|battery10 vertical
+F5FD|VerticalBatteryCharging0|akku batterie battery charging0 vertical
+F5FE|VerticalBatteryCharging1|akku batterie battery charging1 vertical
+F5FF|VerticalBatteryCharging2|akku batterie battery charging2 vertical
+F600|VerticalBatteryCharging3|akku batterie battery charging3 vertical
+F601|VerticalBatteryCharging4|akku batterie battery charging4 vertical
+F602|VerticalBatteryCharging5|akku batterie battery charging5 vertical
+F603|VerticalBatteryCharging6|akku batterie battery charging6 vertical
+F604|VerticalBatteryCharging7|akku batterie battery charging7 vertical
+F605|VerticalBatteryCharging8|akku batterie battery charging8 vertical
+F606|VerticalBatteryCharging9|akku batterie battery charging9 vertical
+F607|VerticalBatteryCharging10|akku batterie battery charging10 vertical
+F608|VerticalBatteryUnknown|akku batterie battery unknown vertical
+F618|SIMError|error fehler sim
+F619|SIMMissing|missing sim
+F61A|SIMLock|lock schloss sim sperren
+F61B|eSIM|e sim
+F61C|eSIMNoProfile|e no profile sim
+F61D|eSIMLocked|e locked sim
+F61E|eSIMBusy|busy e sim
+F61F|NoiseCancelation|cancelation noise
+F620|NoiseCancelationOff|cancelation noise off
+F623|MusicSharing|music musik sharing
+F624|MusicSharingOff|music musik off sharing
+F63C|CircleShapeSolid|circle shape solid
+F657|WifiCallBars|bars call funk wifi wlan
+F658|WifiCall0|call0 funk wifi wlan
+F659|WifiCall1|call1 funk wifi wlan
+F65A|WifiCall2|call2 funk wifi wlan
+F65B|WifiCall3|call3 funk wifi wlan
+F65C|WifiCall4|call4 funk wifi wlan
+F67B|Pen|pen
+F683|TextSelect|select text
+F684|TextNavigate|navigate text
+F698|PinyinIMELogo2|ime logo2 pinyin
+F69B|UserRemove|benutzer entfernen remove user
+F69E|CHTLanguageBar|bar cht language sprache
+F6A9|ComposeMode|compose mode
+F6B8|ExpressiveInputEntry|entry expressive input
+F6BA|EmojiTabMoreSymbols|emoji mehr more symbols tab weitere
+F6C4|PhoneScreen|bildschirm phone screen telefon
+F6C5|AlertUrgent|alert urgent
+F6C6|PhoneDesktop|desktop phone schreibtisch telefon
+F6C7|PenSparkle|pen sparkle
+F6FA|WebSearch|lupe search suche suchen web
+F712|Kiosk|kiosk
+F714|RTTLogo|logo rtt
+F715|VoiceCall|call voice
+F716|GoToMessage|go message nachricht to
+F71A|ReturnToCall|call return to
+F71C|StartPresenting|presenting start
+F71D|StopPresenting|presenting stop stopp
+F71E|ProductivityMode|mode productivity
+F736|WarningSolid|achtung solid warning warnung
+F738|SetHistoryStatus|historie history set status verlauf
+F739|SetHistoryStatus2|historie history set status2 verlauf
+F73D|Keyboardsettings20|keyboardsettings20
+F73E|OneHandedRight20|handed one right20
+F73F|OneHandedLeft20|handed left20 one
+F740|Split20|split20
+F741|Full20|full20
+F742|Handwriting20|handwriting20
+F743|ChevronLeft20|chevron left20
+F744|ChevronLeft32|chevron left32
+F745|ChevronRight20|chevron right20
+F746|ChevronRight32|chevron right32
+F760|ShieldTask|aufgabe schild schutz shield task
+F763|Event12|event12
+F781|MicOff2|mic off2
+F785|DeliveryOptimization|delivery optimization
+F78A|CancelMedium|abbrechen cancel medium
+F78B|SearchMedium|lupe medium search suche suchen
+F78C|AcceptMedium|accept bestaetigen haken medium
+F78D|RevealPasswordMedium|medium password reveal
+F7AD|DeleteWord|delete loeschen word
+F7AE|DeleteWordFill|delete fill loeschen word
+F7AF|DeleteLines|delete lines loeschen
+F7B0|DeleteLinesFill|delete fill lines loeschen
+F7B1|InstertWords|instert words
+F7B2|InstertWordsFill|fill instert words
+F7B3|JoinWords|join words
+F7B4|JoinWordsFill|fill join words
+F7B5|OverwriteWords|overwrite words
+F7B6|OverwriteWordsFill|fill overwrite words
+F7B7|AddNewLine|add hinzufuegen line neu new plus
+F7B8|AddNewLineFill|add fill hinzufuegen line neu new plus
+F7B9|OverwriteWordsKorean|korean overwrite words
+F7BA|OverwriteWordsFillKorean|fill korean overwrite words
+F7BB|EducationIcon|education icon
+F7DB|LearningTools|learning tools
+F7EC|Task|aufgabe task
+F7ED|WindowSnipping|snipping window
+F7EE|VideoCapture|capture film video
+F809|StatusSecured|secured status
+F83B|NarratorApp|app narrator
+F83D|PowerButtonUpdate|aktualisierung button energie power strom update
+F83E|RestartUpdate|aktualisierung restart update
+F83F|UpdateStatusDot|aktualisierung dot status update
+F847|Eject|eject
+F87B|Spelling|spelling
+F87C|SpellingKorean|korean spelling
+F87D|SpellingSerbian|serbian spelling
+F87E|SpellingChinese|chinese spelling
+F89A|FolderSelect|folder ordner select verzeichnis
+F8A5|SmartScreen|bildschirm screen smart
+F8A6|ExploitProtection|exploit protection
+F8AA|AddBold|add bold hinzufuegen neu plus
+F8AB|SubtractBold|bold subtract
+F8AC|BackSolidBold|back bold solid
+F8AD|ForwardSolidBold|bold forward solid weiterleiten
+F8AE|PauseBold|bold pause
+F8AF|ClickSolid|click solid
+F8B0|SettingsSolid|einstellungen optionen settings solid
+F8B1|MicrophoneSolidBold|bold microphone solid
+F8B2|SpeechSolidBold|bold solid speech
+F8B3|ClickedOutLoudSolidBold|bold clicked loud out solid
+F8B4|CopilotVoice|copilot voice
+F8C0|VPNOverlay|overlay vpn
+F8C1|VPNRoamingOverly|overly roaming vpn
+F8C2|WifiVPN3|3 funk vpn wifi wlan
+F8C3|WifiVPN4|4 funk vpn wifi wlan
+F8C4|WifiVPN5|5 funk vpn wifi wlan
+F8C5|SignalBarsVPN2|2 bars signal vpn
+F8C6|SignalBarsVPN3|3 bars signal vpn
+F8C7|SignalBarsVPN4|4 bars signal vpn
+F8C8|SignalBarsVPN5|5 bars signal vpn
+F8C9|SignalBarsVPNRoaming3|bars roaming3 signal vpn
+F8CA|SignalBarsVPNRoaming4|bars roaming4 signal vpn
+F8CB|SignalBarsVPNRoaming5|bars roaming5 signal vpn
+F8CC|EthernetVPN|ethernet vpn
