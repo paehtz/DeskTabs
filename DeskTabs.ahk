@@ -38,8 +38,8 @@ global CONF := Map(
     "IniPath",        A_ScriptDir "\settings.ini",
     "FontName",       "Segoe UI",
     "FontSizePt",     10,
-    "PadX",           14,      ; Innenabstand links/rechts im Button (px @100%)
-    "Gap",            9,       ; Abstand zwischen Buttons (px @100%) - Platz fuer Trennstrich
+    "PadX",           18,      ; Innenabstand links/rechts im Tab (px @100%)
+    "Gap",            4,       ; Abstand zwischen den Tabs (px @100%), wie zwischen Taskleisten-Buttons
     "GripW",          16,      ; Breite des Ziehgriffs (px @100%)
     "SwitchMethod",   "native", ; "native" = Strg+Win+Pfeil nachbilden (Fenster bleiben stabil)
                                ; "dll" = GoToDesktopNumber (schneller, nimmt aber Fenster mit)
@@ -61,13 +61,13 @@ global CONF := Map(
     "ColGripBg",      0xE9E9E9,
     "ColGripTx",      0x909090,
     "WheelSwitch",    1,       ; 1 = Mausrad blaettert Desktops, 0 = aus
-    "ShowIndex",      1,       ; 1 = Nummer vor dem Namen ("3 · Wolf Automobile")
+    "ShowIndex",      1,       ; 1 = Nummer vor dem Namen ("3 · Acme Bakery")
     "ColorCoding",    1,       ; 1 = farbiger Akzentbalken pro Desktop unten am Button
     "AccentBarH",     3,       ; Hoehe des Farbbalkens (px @100%)
     "ActiveStyle",    "desktop", ; aktiver Tab: "desktop" = eigene Desktop-Farbe, getoent | "accent" = Windows-Akzentfarbe, getoent | "solid" = kraeftig gefuellt
     "TintPct",        22,      ; Deckkraft der Toenung (%) fuer desktop/accent (dunkles Theme automatisch staerker)
-    "CornerRadius",   6,       ; Eckenradius der Tabs (px @100%)
-    "TabMargin",      5,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
+    "CornerRadius",   4,       ; Eckenradius der Tabs (px @100%), wie Windows-11-Taskleisten-Buttons
+    "TabMargin",      4,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
     "ShowDividers",   0,       ; 1 = duenne Trennstriche zwischen den Tabs
     "ColHoverBg",     0xDCDCDC, ; Button-Hintergrund beim Drueberfahren (Hover)
     "ColHoverTx",     0x1F1F1F,
@@ -942,11 +942,11 @@ TruncName(name, maxLen) {
     return name
 }
 
-; Optionales Kuerzel pro Desktop aus settings.ini [Short] (z.B.  BauPunkt Hain=BPH )
+; Optionales Kuerzel pro Desktop aus settings.ini [Short] (z.B.  Acme Bakery=ACME )
 ShortNameFor(num) => IniRead(CONF["IniPath"], "Short", GetDesktopNameRaw(num), "")
 
 ; Anzeige-Label je nach Kompakt-Stufe (gCompact):
-;   full  -> "4 · BauPunkt Hain"     (MaxNameLen)
+;   full  -> "4 · Acme Bakery"     (MaxNameLen)
 ;   short -> "4 · BPH"  bzw. "4 · BauPunk…"   (Kuerzel, sonst ShortNameLen)
 ;   icon  -> "BPH"      bzw. "4"              (Kuerzel, sonst nur die Nummer)
 LabelFor(num) {
@@ -966,7 +966,7 @@ SmallerLevel(lv) => (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
 LargerLevel(lv)  => (lv = "icon") ? "short" : (lv = "short") ? "full" : ""
 
 ; Farbe fuer den Akzentbalken eines Desktops. Palette nach Index, optional per
-; settings.ini [Colors] mit Desktop-Name ueberschreibbar (z.B.  T&K Eisleben=E5471D )
+; settings.ini [Colors] mit Desktop-Name ueberschreibbar (z.B.  Miller & Sons=E5471D )
 DesktopColor(num) {
     raw := GetDesktopNameRaw(num)
     ov := IniRead(CONF["IniPath"], "Colors", raw, "")
@@ -1215,12 +1215,13 @@ RenderBar() {
                 FillRoundRect(g, x, y, w, h, r, ARGB(Mix(base, bg, tint)))
             }
         } else if (item["hover"]) {
-            FillRoundRect(g, x, y, w, h, r, ARGB(CONF["ColHoverBg"]))
+            ; dezent wie der Taskleisten-Hover: Textfarbe mit wenig Deckkraft ueber dem Grund
+            FillRoundRect(g, x, y, w, h, r, ARGB(Mix(CONF["ColInactiveTx"], bg, 7)))
         }
         DrawText(g, font, sf, item["label"], x, y, w, h, ARGB(tx))
         ; Farbbalken unten im Tab (abgerundet, eingerueckt)
         if (CONF["ColorCoding"]) {
-            inset := px(8), ah := L["accH"]
+            inset := px(10), ah := L["accH"]
             FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2, ARGB(col))
         }
         ; optionaler Trennstrich in der Luecke danach

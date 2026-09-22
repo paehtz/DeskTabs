@@ -137,7 +137,7 @@ Buchhaltung=1565C0
 [Short]
 ; Kürzel pro Desktop-Name für die Kompakt-Stufen
 ; (short: "4 · BPH", icon: "BPH" statt nur der Nummer):
-BauPunkt Hain=BPH
+Acme Bakery=ACME
 Buchhaltung=BH
 
 [View]
@@ -162,8 +162,8 @@ Mit `TimeLog=1` (Standard) schreibt DeskTabs pro Aufenthalt auf einem Desktop ei
 
 ```csv
 start,end,seconds,desktop_index,desktop_name
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"BauPunkt Hain"
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"T&K Eisleben"
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery"
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"Miller & Sons"
 ```
 
 - Ein Aufenthalt endet beim Desktop-Wechsel, beim Sperren des Bildschirms oder nach `TimeLogIdleMin` Minuten ohne Eingabe (dann wird er rückwirkend zum Beginn der Inaktivität geschlossen, Pausen zählen also nicht mit).
@@ -190,7 +190,7 @@ start,end,seconds,desktop_index,desktop_name
 
 - **25H2-Kompatibilität:** Die Ciantic-DLL ist mit „24H2" gelabelt, läuft aber auf 25H2 (26200) einwandfrei. Bei einem Windows-Feature-Update, das die Virtual-Desktop-COM-VTable ändert, kann die DLL brechen → dann neue Version von Ciantics Repo holen.
 - **`GoToDesktopNumber` nimmt Fenster mit:** Auf 24H2/25H2 nutzt die DLL intern `switch_desktop_and_move_foreground_view`. Deshalb `SwitchMethod=native` (Tastenkürzel-Nachbau).
-- **`&` im Desktop-Namen:** AHK-Text-Controls interpretieren `&` als Tastenkürzel-Markierung. Lösung: Style `SS_NOPREFIX` (`+0x80`) auf die Buttons, das zeigt `&` wörtlich (z.B. „T&K").
+- **`&` im Desktop-Namen:** AHK-Text-Controls interpretieren `&` als Tastenkürzel-Markierung. Lösung: Style `SS_NOPREFIX` (`+0x80`) auf die Buttons, das zeigt `&` wörtlich (z.B. „M&S").
 - **z-Order der Farbbalken/Trennstriche:** Überlappende Controls werden vom Button verdeckt. Deshalb liegen Trennstriche in den Lücken und Farbbalken **unter** dem Button (überlappungsfrei).
 - **AHK-Semikolon-Falle:** Ein `;` ohne Leerzeichen davor ist KEIN Kommentar, sondern wirft „Illegal character in expression". Inline-Kommentare immer mit Leerzeichen vor `;`.
 - **DockMode-Abwägung:** `on` (auf der Taskleiste) sieht integrierter aus, kämpft aber mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). `above` (knapp darüber) ist flackerfrei, überlagert aber die unterste Fensterkante.

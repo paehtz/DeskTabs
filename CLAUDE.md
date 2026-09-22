@@ -30,10 +30,10 @@ Everything a user can set in the UI also lives in plain text in `settings.ini` n
 
 ```ini
 [Short]                      ; abbreviation per desktop (compact levels)
-BauPunkt Hain=BPH
+Acme Bakery=ACME
 
 [Colors]                     ; accent colour per desktop, RRGGBB
-BauPunkt Hain=E5471D
+Acme Bakery=E5471D
 
 [View]                       ; what the right-click menu saves; each key overrides CONF
 CompactMode=auto             ; auto | full | short | icon
@@ -46,7 +46,7 @@ SnapToTaskbar=1              ; 0|1
 TimeLog=1                    ; 0|1
 
 [Icons]                      ; planned (issue #2): image path or website URL per desktop
-BauPunkt Hain=C:\Projects\BauPunkt\logo.png
+Acme Bakery=C:\Projects\Acme\logo.png
 ```
 
 Keys are the exact desktop names as shown in Windows Task View (read them with `VirtualDesktopAccessor\GetDesktopName` or from the bar's labels). Write real umlauts; the file is UTF-8.
@@ -57,7 +57,7 @@ If the user asks "how long did I work on client X this week/month", read `deskto
 
 ```csv
 start,end,seconds,desktop_index,desktop_name
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"BauPunkt Hain"
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery"
 ```
 
 - One row per stay on a desktop; a stay ends on desktop switch, lock screen, or after `TimeLogIdleMin` minutes of no input (closed at the start of the inactivity, so breaks are excluded).

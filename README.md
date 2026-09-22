@@ -137,7 +137,7 @@ Buchhaltung=1565C0
 [Short]
 ; Abbreviation per desktop name, used by the compact levels
 ; (short: "4 · BPH", icon: "BPH" instead of just the number):
-BauPunkt Hain=BPH
+Acme Bakery=ACME
 Buchhaltung=BH
 
 [View]
@@ -162,8 +162,8 @@ With `TimeLog=1` (default) DeskTabs writes one line per stay on a desktop into `
 
 ```csv
 start,end,seconds,desktop_index,desktop_name
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"BauPunkt Hain"
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"T&K Eisleben"
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery"
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"Miller & Sons"
 ```
 
 - A stay ends when you switch desktops, lock the screen, or stop giving input for `TimeLogIdleMin` minutes (the stay is then closed at the moment the inactivity began, so breaks are not counted).
@@ -190,7 +190,7 @@ start,end,seconds,desktop_index,desktop_name
 
 - **25H2 compatibility:** the Ciantic DLL is labelled "24H2" but runs fine on 25H2 (26200). A Windows feature update that changes the virtual-desktop COM vtable could break the DLL → then grab a fresh build from Ciantic's repo.
 - **`GoToDesktopNumber` drags windows along:** on 24H2/25H2 the DLL internally uses `switch_desktop_and_move_foreground_view`. Hence `SwitchMethod=native` (shortcut emulation).
-- **`&` in a desktop name:** AHK text controls interpret `&` as an accelerator marker. Fix: the `SS_NOPREFIX` style (`+0x80`) on the buttons, which shows `&` literally (e.g. "T&K").
+- **`&` in a desktop name:** AHK text controls interpret `&` as an accelerator marker. Fix: the `SS_NOPREFIX` style (`+0x80`) on the buttons, which shows `&` literally (e.g. "M&S").
 - **z-order of colour bars / separators:** overlapping controls get hidden by the button. So separators sit in the gaps and colour bars sit **below** the button (no overlap).
 - **AHK semicolon trap:** a `;` without a preceding space is NOT a comment but throws "Illegal character in expression". Always put a space before inline `;`.
 - **DockMode trade-off:** `on` (on the taskbar) looks more integrated but fights the taskbar over z-order (a brief flicker on window switch despite the WinEvent hook + burst). `above` (just above it) is flicker-free but overlaps the bottom edge of windows.
