@@ -256,10 +256,10 @@ global LANG_DE := Map(
     "tray.exit",       "Beenden",
     "view.tip",        "Ansicht: {1}",
     "view.auto",       "automatisch ({1})",
-    "level.full",      "Nummer + Name",
-    "level.short",     "Nummer + Kürzel",
-    "level.icon",      "nur Kürzel/Nummer",
-    "level.big",       "nur Symbol (groß)",
+    "level.full",      "Voller Name",
+    "level.short",     "Kurzname",
+    "level.icon",      "Kürzel oder Nummer",
+    "level.big",       "Nur Symbol (groß)",
     "level.bigtext",   "Symbol (groß) + Name",
     "menu.settings",   "Einstellungen…",
     "menu.tab.short",  "Kürzel setzen…",
@@ -328,12 +328,15 @@ global LANG_DE := Map(
     "prompt.color.title", "Farbe für „{1}“",
     "prompt.color.text", "Hex-Farbe RRGGBB, z.B. E5471D:",
     "err.color",       "Ungültige Farbe. Bitte sechs Hex-Zeichen, z.B. E5471D.",
+    "firstrun.title",  "DeskTabs läuft",
+    "firstrun.text",   "Klick auf einen Tab wechselt den Desktop.`nRechtsklick öffnet alle Einstellungen: Symbole, Farben, Ansicht, Sprache.",
     "menu.help",       "Hilfe",
     "menu.help.docs",  "Anleitung und Dokumentation…",
     "menu.help.changelog", "Was ist neu (Änderungsverlauf)…",
-    "menu.feedback.bug", "Fehler melden…",
-    "menu.feedback.idea", "Idee oder Wunsch einreichen…",
-    "menu.feedback.mail", "E-Mail an den Autor…",
+    "menu.feedback.bug", "Fehler melden (GitHub)…",
+    "menu.feedback.idea", "Idee einreichen (GitHub)…",
+    "menu.feedback.mailbug", "Fehler per E-Mail melden…",
+    "menu.feedback.mail", "Idee oder Frage per E-Mail…",
     "menu.update.check", "Nach Updates suchen…",
     "menu.update.auto", "Täglich automatisch nach Updates suchen",
     "menu.update.available", "Update {1} verfügbar…",
@@ -354,8 +357,10 @@ global LANG_DE := Map(
     "update.found",    "Version {1} ist verfügbar (installiert: {2}).`n`nDownload-Seite öffnen?",
     "update.error",    "Update-Prüfung nicht möglich (keine Verbindung zu GitHub).",
     "update.tip",      "DeskTabs {1} ist verfügbar. Rechtsklick auf die Leiste → Update…",
-    "feedback.mail.subject", "DeskTabs: Feedback",
-    "feedback.mail.body", "Hallo Henning,`n`n(Fehler, Idee oder Frage hier beschreiben)`n`n"
+    "feedback.mail.subject.bug", "DeskTabs {1}: Fehlermeldung",
+    "feedback.mail.subject.feedback", "DeskTabs {1}: Idee oder Frage",
+    "feedback.mail.body.bug", "Hallo Henning,`n`nin DeskTabs ist mir das hier aufgefallen:`n`nWas passiert ist:`n`nWas ich erwartet hatte:`n`nSo lässt es sich nachstellen:`n1.`n2.`n3.`n`nViele Grüße",
+    "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
     "err.dll_missing", "VirtualDesktopAccessor.dll not found:`n{1}",
@@ -365,11 +370,11 @@ global LANG_EN := Map(
     "tray.exit",       "Exit",
     "view.tip",        "View: {1}",
     "view.auto",       "automatic ({1})",
-    "level.full",      "number + name",
-    "level.short",     "number + abbreviation",
-    "level.icon",      "abbreviation/number only",
-    "level.big",       "icon only (large)",
-    "level.bigtext",   "large icon + name",
+    "level.full",      "Full name",
+    "level.short",     "Short name",
+    "level.icon",      "Abbreviation or number",
+    "level.big",       "Icon only (large)",
+    "level.bigtext",   "Large icon + name",
     "menu.settings",   "Settings…",
     "menu.tab.short",  "Set abbreviation…",
     "menu.tab.color",  "Colour",
@@ -437,12 +442,15 @@ global LANG_EN := Map(
     "prompt.color.title", "Colour for “{1}”",
     "prompt.color.text", "Hex colour RRGGBB, e.g. E5471D:",
     "err.color",       "Invalid colour. Please use six hex digits, e.g. E5471D.",
+    "firstrun.title",  "DeskTabs is running",
+    "firstrun.text",   "Click a tab to switch desktops.`nRight-click opens every setting: icons, colours, view, language.",
     "menu.help",       "Help",
     "menu.help.docs",  "Guide and documentation…",
     "menu.help.changelog", "What's new (changelog)…",
-    "menu.feedback.bug", "Report a bug…",
-    "menu.feedback.idea", "Suggest an idea or feature…",
-    "menu.feedback.mail", "E-mail the author…",
+    "menu.feedback.bug", "Report a bug (GitHub)…",
+    "menu.feedback.idea", "Suggest an idea (GitHub)…",
+    "menu.feedback.mailbug", "Report a bug by e-mail…",
+    "menu.feedback.mail", "Send an idea or question by e-mail…",
     "menu.update.check", "Check for updates…",
     "menu.update.auto", "Check for updates daily",
     "menu.update.available", "Update {1} available…",
@@ -463,8 +471,10 @@ global LANG_EN := Map(
     "update.found",    "Version {1} is available (installed: {2}).`n`nOpen the download page?",
     "update.error",    "Could not check for updates (no connection to GitHub).",
     "update.tip",      "DeskTabs {1} is available. Right-click the bar → Update…",
-    "feedback.mail.subject", "DeskTabs: feedback",
-    "feedback.mail.body", "Hello Henning,`n`n(describe the bug, idea or question here)`n`n"
+    "feedback.mail.subject.bug", "DeskTabs {1}: bug report",
+    "feedback.mail.subject.feedback", "DeskTabs {1}: idea or question",
+    "feedback.mail.body.bug", "Hello Henning,`n`nI ran into this in DeskTabs:`n`nWhat happened:`n`nWhat I expected:`n`nHow to reproduce it:`n1.`n2.`n3.`n`nBest regards",
+    "feedback.mail.body.feedback", "Hello Henning,`n`nhere is my idea or question about DeskTabs:`n`n`nBest regards"
 )
 global LANG := LANG_EN          ; aktive Texte (wird in InitLanguage gesetzt)
 global gLangCode := "en"
@@ -551,6 +561,17 @@ Main() {
     OnMessage(0x02B1, OnSessionChange)      ; WM_WTSSESSION_CHANGE
     BuildTray()
     SetTimer(AutoUpdateTick, -20000)         ; Update-Pruefung 20 s nach dem Start, hoechstens einmal pro Tag
+    SetTimer(FirstRunHint, -1500)            ; beim allerersten Start kurz erklaeren, wo die Einstellungen sind
+}
+
+; Beim allerersten Start (noch keine settings.ini) einmalig erklaeren, wie man
+; die Leiste bedient. Danach nie wieder - der Merker steht in der Datei selbst.
+FirstRunHint() {
+    if (IniRead(CONF["IniPath"], "State", "Welcomed", "") = "1")
+        return
+    IniSet("State", "Welcomed", 1)
+    TrayTip(T("firstrun.text"), T("firstrun.title"), 0x1)
+    SetTimer(() => TrayTip(), -12000)
 }
 
 ; ------------------------ Einstellungen (settings.ini [View]) ---------------
@@ -903,7 +924,7 @@ IsUrl(s) => (SubStr(s, 1, 7) = "http://" || SubStr(s, 1, 8) = "https://" || RegE
 ; Zu zeichnende Bilddatei fuer einen Desktop ("" = keine)
 IconPathFor(num) {
     raw := GetDesktopNameRaw(num)
-    spec := IniRead(CONF["IniPath"], "Icons", raw, "")
+    spec := IniLookup("Icons", raw)
     if (spec = "")
         return ""
     if (IsGlyphSpec(spec))
@@ -1203,7 +1224,7 @@ PromptUrlBox(title, prompt, default) {
 
 PromptIconUrl(num, *) {
     raw := GetDesktopNameRaw(num)
-    cur := IniRead(CONF["IniPath"], "Icons", raw, "")
+    cur := IniLookup("Icons", raw)
     start := IsUrl(cur) ? RegExReplace(cur, "i)^https?://") : ""
     res := PromptUrlBox(T("prompt.iconurl.title", raw), T("prompt.iconurl.text"), start)
     if (!res["ok"])
@@ -1237,7 +1258,7 @@ PromptIconFile(num, *) {
 
 ClearIcon(num, *) {
     raw := GetDesktopNameRaw(num)
-    IniDel("Icons", raw)
+    IniDelLoose("Icons", raw)
     try FileDelete(IconsDir() "\" SafeName(raw) ".png")
     RebuildAll()
 }
@@ -1301,7 +1322,7 @@ ShowContextMenu(num, *) {
         MenuGlyph(im, T("menu.icon.file"), "E8B9")
         im.Add()
         im.Add(T("menu.icon.clear"), ClearIcon.Bind(num))
-        if (IniRead(CONF["IniPath"], "Icons", raw, "") = "")
+        if (IniLookup("Icons", raw) = "")
             im.Disable(T("menu.icon.clear"))
         m.Add(T("menu.tab.icon"), im)
         MenuGlyph(m, T("menu.tab.icon"), "E91B")
@@ -1314,12 +1335,6 @@ ShowContextMenu(num, *) {
 ; Allgemeiner Teil des Einstellungsmenues; identisch im Rechtsklick auf die
 ; Leiste und im Tray-Menue (dort ohne Umweg ueber "Einstellungen…").
 FillSettingsMenu(m) {
-    m.Add(T("menu.showindex"), ToggleView.Bind("ShowIndex"))
-    if (CONF["ShowIndex"])
-        m.Check(T("menu.showindex"))
-    m.Add(T("menu.colorcoding"), ToggleView.Bind("ColorCoding"))
-    if (CONF["ColorCoding"])
-        m.Check(T("menu.colorcoding"))
     am := Menu()
     for val, label in Map("desktop", T("menu.active.desktop"), "accent", T("menu.active.accent"), "solid", T("menu.active.solid")) {
         am.Add(label, SetViewStr.Bind("ActiveStyle", val))
@@ -1328,12 +1343,8 @@ FillSettingsMenu(m) {
     }
     m.Add(T("menu.active"), am)
     MenuGlyph(m, T("menu.active"), "E7C4")
-    m.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
-    if (CONF["ShowDividers"])
-        m.Check(T("menu.dividers"))
-    m.Add(T("menu.showicons"), ToggleView.Bind("ShowIcons"))
-    if (CONF["ShowIcons"])
-        m.Check(T("menu.showicons"))
+    ; Ansicht: erst die Stufe (was im Tab steht), darunter die Schalter dazu.
+    ; Die Nummern sind bewusst ein eigener Schalter und nicht Teil der Stufe.
     vm := Menu()
     for val, label in Map("auto", T("menu.view.auto"), "bigtext", T("level.bigtext"), "full", T("level.full")
                         , "short", T("level.short"), "icon", T("level.icon"), "big", T("level.big")) {
@@ -1341,6 +1352,19 @@ FillSettingsMenu(m) {
         if (CONF["CompactMode"] = val)
             vm.Check(label)
     }
+    vm.Add()
+    vm.Add(T("menu.showindex"), ToggleView.Bind("ShowIndex"))
+    if (CONF["ShowIndex"])
+        vm.Check(T("menu.showindex"))
+    vm.Add(T("menu.showicons"), ToggleView.Bind("ShowIcons"))
+    if (CONF["ShowIcons"])
+        vm.Check(T("menu.showicons"))
+    vm.Add(T("menu.colorcoding"), ToggleView.Bind("ColorCoding"))
+    if (CONF["ColorCoding"])
+        vm.Check(T("menu.colorcoding"))
+    vm.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
+    if (CONF["ShowDividers"])
+        vm.Check(T("menu.dividers"))
     m.Add(T("menu.view"), vm)
     MenuGlyph(m, T("menu.view"), "E8FD")
     tm := Menu()
@@ -1400,8 +1424,13 @@ HelpMenu() {
     hm.Add(T("menu.help.changelog"), (*) => Run(APP_CHANGELOG_URL))
     hm.Add()
     hm.Add(T("menu.feedback.bug"), ReportBug)
+    MenuGlyph(hm, T("menu.feedback.bug"), "E7BA")
     hm.Add(T("menu.feedback.idea"), SuggestIdea)
-    hm.Add(T("menu.feedback.mail"), MailAuthor)
+    MenuGlyph(hm, T("menu.feedback.idea"), "EA80")
+    hm.Add(T("menu.feedback.mailbug"), MailAuthor.Bind("bug"))
+    MenuGlyph(hm, T("menu.feedback.mailbug"), "E715")
+    hm.Add(T("menu.feedback.mail"), MailAuthor.Bind("feedback"))
+    MenuGlyph(hm, T("menu.feedback.mail"), "E715")
     hm.Add()
     hm.Add(T("menu.update.check"), (*) => CheckUpdate(true))
     MenuGlyph(hm, T("menu.update.check"), "E896")
@@ -1472,7 +1501,7 @@ SetColor(num, col, *) {
 }
 
 ClearColor(num, *) {
-    IniDel("Colors", GetDesktopNameRaw(num))
+    IniDelLoose("Colors", GetDesktopNameRaw(num))
     RebuildAll()
 }
 
@@ -1518,10 +1547,11 @@ SuggestIdea(*) {
     Run(APP_URL "/issues/new?template=feature_request.yml")
 }
 
-MailAuthor(*) {
+MailAuthor(kind := "feedback", *) {
     global APP_MAIL, APP_VERSION
-    Run("mailto:" APP_MAIL "?subject=" UrlEncode(T("feedback.mail.subject") " (v" APP_VERSION ")")
-        . "&body=" UrlEncode(T("feedback.mail.body") "--`nDeskTabs " APP_VERSION ", Windows " A_OSVersion "`n" EnvSummary()))
+    subject := T("feedback.mail.subject." kind, APP_VERSION)
+    body := T("feedback.mail.body." kind) "`n`n--`nDeskTabs " APP_VERSION ", Windows " A_OSVersion "`n" EnvSummary()
+    Run("mailto:" APP_MAIL "?subject=" UrlEncode(subject) "&body=" UrlEncode(body))
 }
 
 ; --- Update-Pruefung: GitHub-Releases-API, nur die Versionsnummer wird gelesen ---
@@ -1710,7 +1740,7 @@ TruncName(name, maxLen) {
 }
 
 ; Optionales Kuerzel pro Desktop aus settings.ini [Short] (z.B.  Acme Bakery=ACME )
-ShortNameFor(num) => IniRead(CONF["IniPath"], "Short", GetDesktopNameRaw(num), "")
+ShortNameFor(num) => IniLookup("Short", GetDesktopNameRaw(num))
 
 ; Anzeige-Label je nach Kompakt-Stufe (gCompact):
 ;   full  -> "4 · Acme Bakery"     (MaxNameLen)
@@ -1760,7 +1790,7 @@ AutoSmaller(lv) => (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
 ; settings.ini [Colors] mit Desktop-Name ueberschreibbar (z.B.  Miller & Sons=E5471D )
 DesktopColor(num) {
     raw := GetDesktopNameRaw(num)
-    ov := IniRead(CONF["IniPath"], "Colors", raw, "")
+    ov := IniLookup("Colors", raw)
     if (ov != "")
         return Integer("0x" StrReplace(ov, "0x", ""))
     pal := CONF["Palette"]
@@ -2612,6 +2642,77 @@ ResetPos(*) {
 ; ------------------------------- Utils --------------------------------------
 Fmt(color) => Format("{:06X}", color)
 
+; ---------------------- Einstellungen je Desktop-Name -----------------------
+; Farbe, Kuerzel und Symbol haengen am NAMEN des Desktops, nicht an seiner Nummer.
+; Wird ein Desktop geloescht, bleibt sein Eintrag in der settings.ini stehen und
+; gilt wieder, sobald ein Desktop mit diesem Namen existiert - auch wenn der Name
+; spaeter etwas anders geschrieben wird: Gross-/Kleinschreibung, Leer- und
+; Sonderzeichen sowie Umlaut-Schreibweisen werden beim Vergleich ignoriert.
+NormName(s) {
+    s := StrLower(s)
+    for from, to in Map("ä", "ae", "ö", "oe", "ü", "ue", "ß", "ss", "à", "a", "á", "a", "â", "a"
+                      , "è", "e", "é", "e", "ê", "e", "í", "i", "ó", "o", "ô", "o", "ú", "u", "ç", "c")
+        s := StrReplace(s, from, to)
+    return RegExReplace(s, "[^a-z0-9]")        ; alles ausser Buchstaben und Ziffern faellt weg
+}
+
+; Abschnitt der settings.ini als Map (normalisierter Schluessel -> Wert),
+; zwischengespeichert bis die Datei sich aendert
+IniSectionMap(sec) {
+    static cache := Map()
+    stamp := ""
+    try stamp := FileGetTime(CONF["IniPath"], "M")
+    if (cache.Has(sec) && cache[sec]["stamp"] = stamp)
+        return cache[sec]["map"]
+    m := Map()
+    for key, val in ReadIniSection(sec)
+        m[NormName(key)] := val
+    cache[sec] := Map("stamp", stamp, "map", m)
+    return m
+}
+
+; Abschnitt selbst aus der Datei lesen. IniRead geht ueber die Windows-INI-
+; Schnittstelle und versteht kein UTF-8; Namen mit Umlauten kaemen dort verstuemmelt
+; an. Deshalb: erst als UTF-8 lesen, sonst in der Systemcodierung.
+ReadIniText() {
+    txt := ""
+    try txt := FileRead(CONF["IniPath"], "UTF-8")
+    if (txt = "" || InStr(txt, Chr(0xFFFD)))
+        try txt := FileRead(CONF["IniPath"])
+    return txt
+}
+
+; Map "Schluessel -> Wert" eines Abschnitts, Reihenfolge der Datei
+ReadIniSection(sec) {
+    out := Map()
+    inSec := false
+    Loop Parse, ReadIniText(), "`n", "`r" {
+        line := Trim(A_LoopField)
+        if (line = "" || SubStr(line, 1, 1) = ";")
+            continue
+        if (SubStr(line, 1, 1) = "[") {
+            inSec := (Trim(line, "[]") = sec)
+            continue
+        }
+        if (!inSec)
+            continue
+        eq := InStr(line, "=")
+        if (eq > 1)
+            out[Trim(SubStr(line, 1, eq - 1))] := Trim(SubStr(line, eq + 1))
+    }
+    return out
+}
+
+; Wert zu einem Desktop-Namen: erst genau, dann tolerant. "" = nichts hinterlegt.
+IniLookup(sec, name) {
+    v := IniRead(CONF["IniPath"], sec, name, "")
+    if (v != "")
+        return v
+    m := IniSectionMap(sec)
+    key := NormName(name)
+    return m.Has(key) ? m[key] : ""
+}
+
 IniGet(sec, key, default) {
     val := IniRead(CONF["IniPath"], sec, key, "")
     return (val = "") ? default : val + 0
@@ -2621,6 +2722,15 @@ IniSet(sec, key, val) {
     IniWrite(val, CONF["IniPath"], sec, key)
     try gIniStamp := FileGetTime(CONF["IniPath"], "M")   ; eigener Schreibzugriff, kein Live-Reload
 }
+; Eintrag entfernen, auch wenn er unter einer anderen Schreibweise steht
+IniDelLoose(sec, name) {
+    IniDel(sec, name)
+    key := NormName(name)
+    for k, v in ReadIniSection(sec)
+        if (NormName(k) = key)
+            IniDel(sec, k)
+}
+
 IniDel(sec, key) {
     global gIniStamp
     try IniDelete(CONF["IniPath"], sec, key)

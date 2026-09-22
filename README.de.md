@@ -63,14 +63,26 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 ### Variante A: sofort startklar (ohne AutoHotkey)
 
 1. Die neueste `DeskTabs-vX.Y.Z.zip` von der [Releases-Seite](https://github.com/paehtz/DeskTabs/releases/latest) herunterladen.
-2. Irgendwohin entpacken und `DeskTabs.exe` und `VirtualDesktopAccessor.dll` zusammen im selben Ordner lassen.
-3. Doppelklick auf `DeskTabs.exe`.
+2. Irgendwohin entpacken und den Ordner zusammenlassen: `DeskTabs.exe`, `VirtualDesktopAccessor.dll`, `lang\` und `data\`.
+3. Doppelklick auf `DeskTabs.exe`. Beim ersten Start meldet sich DeskTabs kurz und zeigt auf das Rechtsklick-Menü.
+
+**Windows SmartScreen** meldet beim ersten Start eventuell „Der Computer wurde durch Windows geschützt“, weil die Datei nicht signiert ist (ein Zertifikat kostet jährlich Geld, das Werkzeug ist kostenlos). Auf **Weitere Informationen → Trotzdem ausführen** klicken. Wer einer unsignierten Datei nicht vertrauen möchte, nimmt Variante B mit dem Skript oder kompiliert die exe mit Ahk2Exe selbst.
 
 Oder per Einzeiler installieren (und aktualisieren) in PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
 ```
+
+Das installiert nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Eintrag an und startet DeskTabs. Erneut ausführen aktualisiert; `settings.ini`, Symbol-Zwischenspeicher und Zeit-Logs bleiben erhalten. Schalter: `-NoAutostart`, `-NoLaunch`, `-Uninstall`.
+
+### Deinstallieren
+
+```powershell
+.\setup.ps1 -Uninstall
+```
+
+Stoppt DeskTabs, entfernt die Autostart-Verknüpfung und den Programmordner und fragt, ob Einstellungen, Symbole und Zeit-Logs erhalten bleiben sollen (sie wandern dann in einen Ordner unter `%TEMP%`). DeskTabs schreibt nichts in die Registry und legt nichts außerhalb seines Ordners ab — bei einer Installation von Hand genügt es also, den Ordner zu löschen.
 
 Das installiert DeskTabs nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Eintrag an und startet es. Erneut ausführen aktualisiert auf die neueste Version.
 

@@ -63,14 +63,26 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 ### Option A: ready to run (no AutoHotkey needed)
 
 1. Download the latest `DeskTabs-vX.Y.Z.zip` from the [Releases page](https://github.com/paehtz/DeskTabs/releases/latest).
-2. Extract it anywhere and keep `DeskTabs.exe` and `VirtualDesktopAccessor.dll` together in the same folder.
-3. Double-click `DeskTabs.exe`.
+2. Extract it anywhere and keep the folder together: `DeskTabs.exe`, `VirtualDesktopAccessor.dll`, `lang\` and `data\`.
+3. Double-click `DeskTabs.exe`. On the first start DeskTabs says hello and points at the right-click menu.
+
+**Windows SmartScreen** may show "Windows protected your PC" because the executable is not code-signed (a certificate costs money per year; this is a free tool). Click **More info → Run anyway**. If you prefer not to trust an unsigned binary, run the script instead (Option B) or build the executable yourself with Ahk2Exe.
 
 Or install (and update) in one line, from PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
 ```
+
+That installs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and starts DeskTabs. Run it again any time to update: your `settings.ini`, the icon cache and the time logs are kept. Options: `-NoAutostart`, `-NoLaunch`, `-Uninstall`.
+
+### Uninstall
+
+```powershell
+.\setup.ps1 -Uninstall
+```
+
+It stops DeskTabs, removes the autostart shortcut and the program folder, and asks whether to keep your settings, icons and time logs (they are moved to a folder in `%TEMP%` if you say yes). DeskTabs writes nothing to the registry and installs nothing outside its own folder, so removing that folder is enough if you installed manually.
 
 This installs DeskTabs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and launches it. Run it again any time to update.
 
