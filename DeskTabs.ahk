@@ -733,9 +733,11 @@ IsForegroundFullscreen() {
                     wl := NumGet(wr, 0, "Int"), wt := NumGet(wr, 4, "Int")
                     wri := NumGet(wr, 8, "Int"), wb := NumGet(wr, 12, "Int")
                     hMon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
-                    ; Kleine Always-on-top-Helferfenster (< 10 % der Flaeche) ueberspringen,
-                    ; sonst verdecken sie ein darunterliegendes Vollbildfenster
-                    if (hMon = hMonBar && (wri - wl) * (wb - wt) >= monArea * 0.10) {
+                    ; Erst ein Fenster mit >= 50 % der Monitorflaeche entscheidet. Alles
+                    ; Kleinere sind Toolbars/Overlays/Helfer und werden uebersprungen,
+                    ; sonst verdecken sie das darunterliegende Vollbildfenster (Lightroom
+                    ; legt im Vollbild sein "BezelWindow", ~11 %, ueber den AgWinMainFrame).
+                    if (hMon = hMonBar && (wri - wl) * (wb - wt) >= monArea * 0.50) {
                         ; "Umschliesst den ganzen Monitor" statt exakter Gleichheit:
                         ; rahmenlose Vollbildfenster (Lightroom Umschalt+F) ragen mit
                         ; unsichtbaren Raendern ueber den Monitorrand hinaus. Ein
