@@ -687,83 +687,91 @@ MenuGlyph(menu, item, code) {
 }
 
 ; Auswahlfenster: Suchfeld, Schnellfilter und ein rollbares Raster ueber die
-; gesamte Bibliothek. Sichtbar sind immer nur COLS x ROWS Zellen; beim Rollen
-; werden diese Zellen neu belegt (sonst waeren es tausend Steuerelemente).
+; gesamte Bibliothek. Eine Seite ist EIN gezeichnetes Bild (wie die Leiste), nicht
+; hundert Steuerelemente - sonst baut sich das Raster beim Rollen sichtbar auf.
+; Fertige Seiten bleiben im Zwischenspeicher, die Nachbarseiten werden vorbereitet.
 ShowIconLibrary(num, *) {
     static COLS := 12, ROWS := 8, CELL := 44
     glyphs := GlyphList()
     raw := GetDesktopNameRaw(num)
     col := DesktopColor(num)
     gridW := COLS * CELL, gridH := ROWS * CELL
-    filtered := [], offset := 0, cache := Map(), cells := []
+    filtered := [], offset := 0, pages := Map(), sig := "", hoverIdx := 0
 
     g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("iconlib.title", raw))
     g.SetFont("s10", "Segoe UI")
     g.MarginX := 14, g.MarginY := 12
-    g.Add("Text", "xm ym w" (gridW + 20), T("iconlib.hint"))
-    search := g.Add("Edit", "xm y+8 w" (gridW + 20) " h26")
+    g.Add("Text", "xm ym w" (gridW + 21), T("iconlib.hint"))
+    search := g.Add("Edit", "xm y+8 w" (gridW + 21) " h26")
     SendMessage(0x1501, 1, StrPtr(T("iconlib.search")), search)   ; EM_SETCUEBANNER
     g.SetFont("s9")
-    topics := []
-    first := true
+    firstBtn := 0
     for label, term in GlyphTopics() {
-        b := g.Add("Button", (first ? "xm y+8" : "x+4 yp") " h24 w" (Max(58, StrLen(label) * 8)), label)
+        b := g.Add("Button", (firstBtn ? "x+4 yp" : "xm y+8") " h24 w" Max(58, StrLen(label) * 8), label)
         b.OnEvent("Click", ((t, *) => (search.Value := t, ApplyFilter(t))).Bind(term))
-        topics.Push(b)
-        first := false
+        if (!firstBtn)
+            firstBtn := b
     }
     g.SetFont("s10")
-    gridX := 14, gridY := 0
-    topics[1].GetPos(, &ty, , &th)
-    gridY := ty + th + 10
+    ty := 0, th := 0
+    firstBtn.GetPos(, &ty, , &th)
+    gridX := 14, gridY := ty + th + 10
 
-    Loop COLS * ROWS {
-        i := A_Index
-        cx := gridX + Mod(i - 1, COLS) * CELL + 8
-        cy := gridY + ((i - 1) // COLS) * CELL + 6
-        pic := g.Add("Picture", Format("x{1} y{2} w28 h28 +0x100 Hidden", cx, cy))
-        pic.OnEvent("Click", CellClick.Bind(i))
-        cells.Push(Map("ctrl", pic, "code", ""))
-    }
-    empty := g.Add("Text", "x" gridX " y" (gridY + 8) " w" gridW " h24 Hidden", T("iconlib.none"))
-    ; echte Rollleiste rechts neben dem Raster (SBS_VERT)
+    sheet := g.Add("Picture", Format("x{1} y{2} w{3} h{4} +0x100", gridX, gridY, gridW, gridH))
     sb := g.Add("Custom", Format("ClassScrollBar x{1} y{2} w17 h{3} 0x1", gridX + gridW + 4, gridY, gridH))
-    count := g.Add("Text", "x" gridX " y" (gridY + gridH + 14) " w220 h24 +0x200", "")
+    count := g.Add("Text", "x" gridX " y" (gridY + gridH + 14) " w260 h24 +0x200", "")
     btnCancel := g.Add("Button", "x" (gridX + gridW - 104) " y" (gridY + gridH + 12) " w120 h28", T("dlg.cancel"))
     btnCancel.OnEvent("Click", (*) => Close())
 
-    ; --- Hilfsfunktionen (schliessen ueber die Variablen oben) ---
-    GlyphBmp(code) {
-        if (!cache.Has(code))
-            cache[code] := GlyphHBitmap("glyph:" code, 28, col, 0xF6F6F6)
-        return cache[code]
-    }
-    Paint() {
-        total := filtered.Length
-        maxOff := Max(0, Ceil(total / COLS) - ROWS)
-        offset := Min(Max(offset, 0), maxOff)
+    ; --- eine Seite als Bild zeichnen (und im Zwischenspeicher behalten) ---
+    PageBitmap(off, hover := 0) {
+        key := sig "|" off "|" hover
+        if (pages.Has(key))
+            return pages[key]
+        GdipStart()
+        bmp := 0, gr := 0
+        DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", gridW, "Int", gridH, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &bmp)
+        DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", bmp, "Ptr*", &gr)
+        DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", gr, "Int", 4)
+        DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", gr, "Int", 5)
+        DllCall("gdiplus\GdipGraphicsClear", "Ptr", gr, "UInt", ARGB(0xF6F6F6))
+        font := MakeIconFont(28)
+        sf := MakeFormat()
         Loop COLS * ROWS {
             i := A_Index
-            idx := offset * COLS + i
-            cell := cells[i]
-            if (idx <= total) {
-                item := glyphs[filtered[idx]]
-                cell["code"] := item["code"]
-                cell["ctrl"].Value := "HBITMAP:*" GlyphBmp(item["code"])
-                cell["ctrl"].Visible := true
-            } else {
-                cell["code"] := ""
-                cell["ctrl"].Visible := false
-            }
+            idx := off * COLS + i
+            if (idx > filtered.Length)
+                break
+            cx := Mod(i - 1, COLS) * CELL, cy := (i - 1) // CELL * 0 + ((i - 1) // COLS) * CELL
+            if (i = hover)
+                FillRoundRect(gr, cx + 2, cy + 2, CELL - 4, CELL - 4, 5, ARGB(Mix(0x000000, 0xF6F6F6, 7)))
+            DrawText(gr, font, sf, GlyphChar("glyph:" glyphs[filtered[idx]]["code"]), cx, cy, CELL, CELL, ARGB(col))
         }
-        empty.Visible := (total = 0)
-        count.Text := T("iconlib.count", total)
-        SetScroll(Ceil(total / COLS), ROWS, offset)
+        DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+        DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+        hbm := 0
+        DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", "Ptr", bmp, "Ptr*", &hbm, "UInt", ARGB(0xF6F6F6))
+        DllCall("gdiplus\GdipDeleteGraphics", "Ptr", gr)
+        DllCall("gdiplus\GdipDisposeImage", "Ptr", bmp)
+        pages[key] := hbm
+        return hbm
+    }
+    ShowPage() {
+        sheet.Value := "HBITMAP:*" PageBitmap(offset, hoverIdx)
+        SetScroll(Ceil(filtered.Length / COLS), ROWS, offset)
+        count.Text := T("iconlib.count", filtered.Length)
+        SetTimer(Preload, -60)          ; Nachbarseiten im Hintergrund vorbereiten
+    }
+    Preload() {
+        maxOff := Max(0, Ceil(filtered.Length / COLS) - ROWS)
+        for , off in [offset + 1, offset - 1, offset + ROWS, offset - ROWS]
+            if (off >= 0 && off <= maxOff)
+                PageBitmap(off, 0)
     }
     SetScroll(rows, page, pos) {
         si := Buffer(28, 0)
-        NumPut("UInt", 28, "UInt", 0x17, "Int", 0, "Int", Max(0, rows - 1), "UInt", page, "Int", pos, si)  ; RANGE|PAGE|POS|DISABLENOSCROLL
-        DllCall("SetScrollInfo", "Ptr", sb.Hwnd, "Int", 2, "Ptr", si, "Int", 1)   ; SB_CTL
+        NumPut("UInt", 28, "UInt", 0x17, "Int", 0, "Int", Max(0, rows - 1), "UInt", page, "Int", pos, si)
+        DllCall("SetScrollInfo", "Ptr", sb.Hwnd, "Int", 2, "Ptr", si, "Int", 1)
     }
     ApplyFilter(needle) {
         needle := Trim(StrLower(needle))
@@ -771,37 +779,67 @@ ShowIconLibrary(num, *) {
         for i, item in glyphs
             if (needle = "" || InStr(item["kw"], needle))
                 filtered.Push(i)
-        offset := 0
-        Paint()
+        sig := needle, offset := 0, hoverIdx := 0
+        ShowPage()
     }
     Scroll(deltaRows) {
-        offset += deltaRows
-        Paint()
+        maxOff := Max(0, Ceil(filtered.Length / COLS) - ROWS)
+        newOff := Min(Max(offset + deltaRows, 0), maxOff)
+        if (newOff = offset)
+            return
+        offset := newOff, hoverIdx := 0
+        ShowPage()
     }
-    CellClick(i, *) {
-        code := cells[i]["code"]
-        if (code != "")
-            SetGlyphIcon(num, code, g)
+    ; Zelle unter der Maus (1-basiert), 0 = daneben
+    CellAt(&idx) {
+        CoordMode("Mouse", "Screen")
+        MouseGetPos(&mx, &my)
+        sx := 0, sy := 0
+        ControlGetPos(&sx, &sy, , , sheet, g)
+        gx := 0, gy := 0
+        WinGetPos(&gx, &gy, , , g)
+        lx := mx - gx - sx, ly := my - gy - sy
+        if (lx < 0 || ly < 0 || lx >= gridW || ly >= gridH)
+            return false
+        cell := (ly // CELL) * COLS + (lx // CELL) + 1
+        idx := offset * COLS + cell
+        return (idx <= filtered.Length) ? cell : false
+    }
+    HoverTickLib() {
+        if (!WinExist("ahk_id " g.Hwnd))
+            return
+        idx := 0
+        cell := CellAt(&idx)
+        if (cell != hoverIdx) {
+            hoverIdx := cell ? cell : 0
+            sheet.Value := "HBITMAP:*" PageBitmap(offset, hoverIdx)
+            if (cell)
+                ToolTip(glyphs[idx]["name"])
+            else
+                ToolTip()
+        }
+    }
+    SheetClick(*) {
+        idx := 0
+        if (CellAt(&idx))
+            SetGlyphIcon(num, glyphs[filtered[idx]]["code"], g, Close)
     }
     OnVScroll(wParam, lParam, msg, hwnd) {
         if (lParam != sb.Hwnd)
             return
-        act := wParam & 0xFFFF
-        switch act {
-            case 0: Scroll(-1)                      ; SB_LINEUP
-            case 1: Scroll(1)                       ; SB_LINEDOWN
-            case 2: Scroll(-ROWS)                   ; SB_PAGEUP
-            case 3: Scroll(ROWS)                    ; SB_PAGEDOWN
-            case 4, 5:                              ; SB_THUMBPOSITION / SB_THUMBTRACK
-                offset := (wParam >> 16) & 0xFFFF
-                Paint()
-            case 6: offset := 0, Paint()
-            case 7: offset := 99999, Paint()
+        switch (wParam & 0xFFFF) {
+            case 0: Scroll(-1)
+            case 1: Scroll(1)
+            case 2: Scroll(-ROWS)
+            case 3: Scroll(ROWS)
+            case 4, 5: Scroll(((wParam >> 16) & 0xFFFF) - offset)
+            case 6: Scroll(-99999)
+            case 7: Scroll(99999)
         }
         return 0
     }
     OnPickerWheel(wParam, lParam, msg, hwnd) {
-        if (!WinExist("ahk_id " g.Hwnd) || !WinActive("ahk_id " g.Hwnd))
+        if (!WinActive("ahk_id " g.Hwnd))
             return
         d := (wParam >> 16) & 0xFFFF
         if (d > 0x7FFF)
@@ -810,27 +848,35 @@ ShowIconLibrary(num, *) {
         return 0
     }
     Close() {
+        SetTimer(HoverTickLib, 0)
+        SetTimer(Preload, 0)
+        ToolTip()
         OnMessage(0x0115, OnVScroll, 0)
         OnMessage(0x020A, OnPickerWheel, 0)
-        for , h in cache
+        for , h in pages
             DllCall("DeleteObject", "Ptr", h)
         g.Destroy()
     }
 
+    sheet.OnEvent("Click", SheetClick)
     search.OnEvent("Change", (ctrl, *) => ApplyFilter(ctrl.Value))
-    OnMessage(0x0115, OnVScroll)      ; WM_VSCROLL
-    OnMessage(0x020A, OnPickerWheel)  ; WM_MOUSEWHEEL
+    OnMessage(0x0115, OnVScroll)
+    OnMessage(0x020A, OnPickerWheel)
     g.OnEvent("Escape", (*) => Close())
     g.OnEvent("Close", (*) => Close())
     ApplyFilter("")
     SetGuiIcon(g)
     g.Show("AutoSize Center")
     search.Focus()
+    SetTimer(HoverTickLib, 70)
 }
 
-SetGlyphIcon(num, code, g, *) {
+SetGlyphIcon(num, code, g, closeFn := 0, *) {
     IniSet("Icons", GetDesktopNameRaw(num), "glyph:" code)
-    try g.Destroy()
+    if (closeFn)
+        closeFn()
+    else
+        try g.Destroy()
     RebuildAll()
 }
 
