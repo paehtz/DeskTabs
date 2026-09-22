@@ -21,7 +21,7 @@
 
 ; ------------------------------ Programm ------------------------------------
 ; Versionsnummer: bei jedem Release zusammen mit ;@Ahk2Exe-SetVersion oben anheben.
-global APP_VERSION := "1.1.0-dev"
+global APP_VERSION := "1.1.0"
 global APP_URL      := "https://github.com/paehtz/DeskTabs"
 global APP_DOCS_URL := Map("en", APP_URL "#readme", "de", APP_URL "/blob/main/README.de.md")  ; spaeter: paehtz.de/desktabs
 global APP_CHANGELOG_URL := APP_URL "/releases"
