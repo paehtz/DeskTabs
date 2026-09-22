@@ -259,6 +259,8 @@ global LANG_DE := Map(
     "level.full",      "Nummer + Name",
     "level.short",     "Nummer + Kürzel",
     "level.icon",      "nur Kürzel/Nummer",
+    "level.big",       "nur Symbol (groß)",
+    "level.bigtext",   "Symbol (groß) + Name",
     "menu.settings",   "Einstellungen…",
     "menu.tab.short",  "Kürzel setzen…",
     "menu.tab.color",  "Farbe",
@@ -366,6 +368,8 @@ global LANG_EN := Map(
     "level.full",      "number + name",
     "level.short",     "number + abbreviation",
     "level.icon",      "abbreviation/number only",
+    "level.big",       "icon only (large)",
+    "level.bigtext",   "large icon + name",
     "menu.settings",   "Settings…",
     "menu.tab.short",  "Set abbreviation…",
     "menu.tab.color",  "Colour",
@@ -553,7 +557,7 @@ Main() {
 ; Alles, was das Kontextmenue umschaltet, landet in settings.ini [View] und
 ; ueberschreibt beim Start bzw. beim Live-Reload die CONF-Standardwerte.
 ApplyIniOverrides() {
-    for key, allowed in Map("CompactMode", "auto,full,short,icon", "ThemeMode", "auto,light,dark"
+    for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
                           , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid"
                           , "SwitchMethod", "native,dll") {
         v := IniRead(CONF["IniPath"], "View", key, "")
@@ -1331,7 +1335,8 @@ FillSettingsMenu(m) {
     if (CONF["ShowIcons"])
         m.Check(T("menu.showicons"))
     vm := Menu()
-    for val, label in Map("auto", T("menu.view.auto"), "full", T("level.full"), "short", T("level.short"), "icon", T("level.icon")) {
+    for val, label in Map("auto", T("menu.view.auto"), "bigtext", T("level.bigtext"), "full", T("level.full")
+                        , "short", T("level.short"), "icon", T("level.icon"), "big", T("level.big")) {
         vm.Add(label, SetViewStr.Bind("CompactMode", val))
         if (CONF["CompactMode"] = val)
             vm.Check(label)
@@ -1714,6 +1719,10 @@ ShortNameFor(num) => IniRead(CONF["IniPath"], "Short", GetDesktopNameRaw(num), "
 LabelFor(num) {
     global gCompact
     sn := ShortNameFor(num)
+    if (gCompact = "big")                     ; nur Symbol; ohne Symbol bleibt das Kuerzel
+        return HasTabIcon(num) ? "" : ((sn != "") ? sn : String(num + 1))
+    if (gCompact = "bigtext")                 ; grosses Symbol und Name daneben
+        return (CONF["ShowIndex"] ? (num + 1) " · " : "") TruncName(GetDesktopNameRaw(num), CONF["MaxNameLen"])
     if (gCompact = "icon")
         return (sn != "") ? sn : String(num + 1)
     if (gCompact = "short")
@@ -1723,9 +1732,29 @@ LabelFor(num) {
     return (CONF["ShowIndex"] ? (num + 1) " · " : "") name
 }
 
+; Hat dieser Desktop ein Symbol (und sind Symbole eingeschaltet)?
+HasTabIcon(num) => (CONF["ShowIcons"] && IconPathFor(num) != "")
+
 ; Naechstkleinere / naechstgroessere Stufe ("" = keine)
-SmallerLevel(lv) => (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
-LargerLevel(lv)  => (lv = "icon") ? "short" : (lv = "short") ? "full" : ""
+; Reihenfolge von breit nach schmal; "big"/"bigtext" sind feste Wuensche und
+; werden vom Auto-Modus nicht angesteuert, im Strg+Mausrad-Durchlauf aber schon.
+LevelChain() => ["bigtext", "full", "short", "icon", "big"]
+SmallerLevel(lv) {
+    ch := LevelChain()
+    for i, v in ch
+        if (v = lv)
+            return (i < ch.Length) ? ch[i + 1] : ""
+    return ""
+}
+LargerLevel(lv) {
+    ch := LevelChain()
+    for i, v in ch
+        if (v = lv)
+            return (i > 1) ? ch[i - 1] : ""
+    return ""
+}
+; Der Auto-Modus schaltet nur zwischen den Textstufen herunter
+AutoSmaller(lv) => (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
 
 ; Farbe fuer den Akzentbalken eines Desktops. Palette nach Index, optional per
 ; settings.ini [Colors] mit Desktop-Name ueberschreibbar (z.B.  Miller & Sons=E5471D )
@@ -1757,7 +1786,7 @@ BuildBar() {
         if (mode != "auto" || !gTaskbarW)
             break
         budget := gTaskbarW * CONF["MaxBarWidthPct"] / 100
-        next := SmallerLevel(level)
+        next := AutoSmaller(level)
         if (GUIW <= budget || next = "")
             break
         level := next               ; zu breit -> eine Stufe kleiner, nochmal bauen
@@ -1815,13 +1844,13 @@ BuildBarAt() {
         num := A_Index - 1
         label := LabelFor(num)
         icon := CONF["ShowIcons"] ? IconPathFor(num) : ""
-        big := (icon != "" && gCompact = "icon")  ; kleinste Stufe mit Symbol: gross und ohne Text
-        if (big)
-            label := ""
+        big := (icon != "" && (gCompact = "big" || gCompact = "bigtext"))   ; Symbol in Taskleisten-Groesse
+        if (icon != "" && gCompact = "icon")
+            label := ""                          ; kleinste Stufe: nur das Symbol, klein
         iw := (icon != "") ? (big ? bigSize : iconSize) : 0
         tw := (label != "") ? MeasureText(mG, font, sf, label) : 0
         w := px(CONF["PadX"]) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
-        if (big)
+        if (iw && label = "")
             w := Max(btnH, iw + px(12) * 2)       ; quadratische Kachel wie die Taskleisten-Buttons
         BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false))
         x += w
