@@ -28,6 +28,13 @@ irm https://raw.githubusercontent.com/paehtz/DeskTabs/main/setup.ps1 | iex
 
 Alle Versionen samt Änderungsnotizen stehen auf der [Releases-Seite](https://github.com/paehtz/DeskTabs/releases). Windows SmartScreen warnt beim ersten Start eventuell, weil die Datei nicht signiert ist: **Weitere Informationen → Trotzdem ausführen**.
 
+### Wenn Windows die App blockiert
+
+DeskTabs ist noch nicht signiert (ein Zertifikat kostet jährlich Geld; die kostenlose Signatur für Open-Source-Projekte ist beantragt). Darauf reagieren zwei verschiedene Windows-Funktionen:
+
+- **SmartScreen** meldet „Der Computer wurde durch Windows geschützt". Auf **Weitere Informationen → Trotzdem ausführen** klicken. Das ist der Normalfall.
+- **Smart App Control** meldet „hat eine App blockiert, die möglicherweise unsicher ist" und bietet **keine Möglichkeit, sie trotzdem zuzulassen** — eine Ausnahme pro App gibt es dort nicht. Wer diese Funktion eingeschaltet hat, startet DeskTabs stattdessen aus dem Quelltext: [AutoHotkey v2](https://www.autohotkey.com/) installieren, das Repository herunterladen und `DeskTabs.ahk` doppelklicken. Bitte Smart App Control nicht wegen dieser App abschalten.
+
 ---
 
 ## Hintergrund
