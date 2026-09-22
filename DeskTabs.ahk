@@ -1,5 +1,10 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
+;@Ahk2Exe-SetMainIcon DeskTabs.ico
+;@Ahk2Exe-SetName DeskTabs
+;@Ahk2Exe-SetDescription DeskTabs - clickable taskbar buttons for Windows 11 virtual desktops
+;@Ahk2Exe-SetCopyright Henning Pähtz (MIT License)
+;@Ahk2Exe-SetVersion 1.1.0.0
 ; ============================================================================
 ;  DeskTabs  —  klickbare Buttons fuer virtuelle Desktops (Win 11)
 ;  Von Henning Pähtz (paehtz.de), baut auf Ciantic/VirtualDesktopAccessor.dll
@@ -13,6 +18,19 @@
 ;  - Ziehen am Griff (links)      -> Leiste verschieben (Position wird gemerkt)
 ;  - Liegt auf allen Desktops (an alle angepinnt), immer sichtbar
 ; ============================================================================
+
+; ------------------------------ Programm ------------------------------------
+; Versionsnummer: bei jedem Release zusammen mit ;@Ahk2Exe-SetVersion oben anheben.
+global APP_VERSION := "1.1.0-dev"
+global APP_URL      := "https://github.com/paehtz/DeskTabs"
+global APP_DOCS_URL := Map("en", APP_URL "#readme", "de", APP_URL "/blob/main/README.de.md")  ; spaeter: paehtz.de/desktabs
+global APP_CHANGELOG_URL := APP_URL "/releases"
+global APP_AUTHOR   := "Henning Pähtz"
+global APP_AUTHOR_URL := "https://www.paehtz.de"
+global APP_MAIL     := "henning@paehtz.de"
+global APP_API_LATEST := "https://api.github.com/repos/paehtz/DeskTabs/releases/latest"
+global gUpdateTag := ""      ; neuere Version laut GitHub ("v1.2.0"), leer = keine bekannt
+global gAbout := ""          ; offenes "Ueber"-Fenster (Gui) oder ""
 
 ; ---------------------------- Konfiguration ---------------------------------
 global CONF := Map(
@@ -57,7 +75,8 @@ global CONF := Map(
     "ShortNameLen",   8,       ; Stufe "short": Namen laenger als das werden gekuerzt
     "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (desktop-log_YYYY-MM.csv)
     "TimeLogIdleMin", 5,       ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
-    "Language",       "auto"   ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
+    "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
+    "UpdateCheck",    1        ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
 )
 
 ; ---- Theme-Farbsaetze (werden je nach Windows-Theme in CONF uebernommen) ----
@@ -217,8 +236,16 @@ global LANG_DE := Map(
     "menu.settings",   "Einstellungen…",
     "menu.tab.short",  "Kürzel setzen…",
     "menu.tab.color",  "Farbe",
-    "menu.color.custom", "Eigene Farbe (RRGGBB)…",
+    "menu.color.custom", "Eigene Farbe…",
     "menu.color.default", "Standardfarbe verwenden",
+    "color.E5471D",    "Rot",
+    "color.2E7D32",    "Grün",
+    "color.1565C0",    "Blau",
+    "color.6A1B9A",    "Violett",
+    "color.EF6C00",    "Orange",
+    "color.00838F",    "Petrol",
+    "color.C2185B",    "Pink",
+    "color.558B2F",    "Olivgrün",
     "menu.showindex",  "Nummern anzeigen",
     "menu.colorcoding", "Farbcodierung",
     "menu.view",       "Ansicht",
@@ -238,7 +265,35 @@ global LANG_DE := Map(
     "prompt.short.text", "Kurzname für die Kompakt-Ansicht (leer = keins):",
     "prompt.color.title", "Farbe für „{1}“",
     "prompt.color.text", "Hex-Farbe RRGGBB, z.B. E5471D:",
-    "err.color",       "Ungültige Farbe. Bitte sechs Hex-Zeichen, z.B. E5471D."
+    "err.color",       "Ungültige Farbe. Bitte sechs Hex-Zeichen, z.B. E5471D.",
+    "menu.help",       "Hilfe",
+    "menu.help.docs",  "Anleitung und Dokumentation…",
+    "menu.help.changelog", "Was ist neu (Änderungsverlauf)…",
+    "menu.feedback.bug", "Fehler melden…",
+    "menu.feedback.idea", "Idee oder Wunsch einreichen…",
+    "menu.feedback.mail", "E-Mail an den Autor…",
+    "menu.update.check", "Nach Updates suchen…",
+    "menu.update.auto", "Täglich automatisch nach Updates suchen",
+    "menu.update.available", "Update {1} verfügbar…",
+    "menu.about",      "Über DeskTabs…",
+    "about.title",     "Über DeskTabs",
+    "about.tagline",   "Klickbare Taskleisten-Buttons für virtuelle Desktops",
+    "about.version",   "Version {1}",
+    "about.author",    "von {1}",
+    "about.license",   "Lizenz: MIT (Quelltext frei verfügbar)",
+    "about.components", "Enthält VirtualDesktopAccessor (MIT, Jari Pennanen){1}",
+    "about.ahk",       "und AutoHotkey v2 (GPL-2.0)",
+    "about.website",   "Website",
+    "about.github",    "Projekt auf GitHub",
+    "about.feedback",  "Feedback geben",
+    "about.check",     "Nach Updates suchen",
+    "about.close",     "Schließen",
+    "update.none",     "DeskTabs {1} ist aktuell.",
+    "update.found",    "Version {1} ist verfügbar (installiert: {2}).`n`nDownload-Seite öffnen?",
+    "update.error",    "Update-Prüfung nicht möglich (keine Verbindung zu GitHub).",
+    "update.tip",      "DeskTabs {1} ist verfügbar. Rechtsklick auf die Leiste → Update…",
+    "feedback.mail.subject", "DeskTabs: Feedback",
+    "feedback.mail.body", "Hallo Henning,`n`n(Fehler, Idee oder Frage hier beschreiben)`n`n"
 )
 global LANG_EN := Map(
     "err.dll_missing", "VirtualDesktopAccessor.dll not found:`n{1}",
@@ -254,8 +309,16 @@ global LANG_EN := Map(
     "menu.settings",   "Settings…",
     "menu.tab.short",  "Set abbreviation…",
     "menu.tab.color",  "Colour",
-    "menu.color.custom", "Custom colour (RRGGBB)…",
+    "menu.color.custom", "Custom colour…",
     "menu.color.default", "Use default colour",
+    "color.E5471D",    "Red",
+    "color.2E7D32",    "Green",
+    "color.1565C0",    "Blue",
+    "color.6A1B9A",    "Purple",
+    "color.EF6C00",    "Orange",
+    "color.00838F",    "Teal",
+    "color.C2185B",    "Pink",
+    "color.558B2F",    "Olive",
     "menu.showindex",  "Show numbers",
     "menu.colorcoding", "Colour coding",
     "menu.view",       "View",
@@ -275,7 +338,35 @@ global LANG_EN := Map(
     "prompt.short.text", "Short name for the compact levels (empty = none):",
     "prompt.color.title", "Colour for “{1}”",
     "prompt.color.text", "Hex colour RRGGBB, e.g. E5471D:",
-    "err.color",       "Invalid colour. Please use six hex digits, e.g. E5471D."
+    "err.color",       "Invalid colour. Please use six hex digits, e.g. E5471D.",
+    "menu.help",       "Help",
+    "menu.help.docs",  "Guide and documentation…",
+    "menu.help.changelog", "What's new (changelog)…",
+    "menu.feedback.bug", "Report a bug…",
+    "menu.feedback.idea", "Suggest an idea or feature…",
+    "menu.feedback.mail", "E-mail the author…",
+    "menu.update.check", "Check for updates…",
+    "menu.update.auto", "Check for updates daily",
+    "menu.update.available", "Update {1} available…",
+    "menu.about",      "About DeskTabs…",
+    "about.title",     "About DeskTabs",
+    "about.tagline",   "Clickable taskbar buttons for virtual desktops",
+    "about.version",   "Version {1}",
+    "about.author",    "by {1}",
+    "about.license",   "License: MIT (source code freely available)",
+    "about.components", "Includes VirtualDesktopAccessor (MIT, Jari Pennanen){1}",
+    "about.ahk",       "and AutoHotkey v2 (GPL-2.0)",
+    "about.website",   "Website",
+    "about.github",    "Project on GitHub",
+    "about.feedback",  "Give feedback",
+    "about.check",     "Check for updates",
+    "about.close",     "Close",
+    "update.none",     "DeskTabs {1} is up to date.",
+    "update.found",    "Version {1} is available (installed: {2}).`n`nOpen the download page?",
+    "update.error",    "Could not check for updates (no connection to GitHub).",
+    "update.tip",      "DeskTabs {1} is available. Right-click the bar → Update…",
+    "feedback.mail.subject", "DeskTabs: feedback",
+    "feedback.mail.body", "Hello Henning,`n`n(describe the bug, idea or question here)`n`n"
 )
 global LANG := LANG_EN          ; aktive Texte (wird in InitLanguage gesetzt)
 global gLangCode := "en"
@@ -361,6 +452,7 @@ Main() {
     DllCall("Wtsapi32\WTSRegisterSessionNotification", "Ptr", A_ScriptHwnd, "UInt", 0)
     OnMessage(0x02B1, OnSessionChange)      ; WM_WTSSESSION_CHANGE
     BuildTray()
+    SetTimer(AutoUpdateTick, -20000)         ; Update-Pruefung 20 s nach dem Start, hoechstens einmal pro Tag
 }
 
 ; ------------------------ Einstellungen (settings.ini [View]) ---------------
@@ -373,7 +465,7 @@ ApplyIniOverrides() {
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
             CONF[key] := v
     }
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -437,21 +529,31 @@ ShowContextMenu(num, *) {
         cur := DesktopColor(num)
         hit := false
         for col in CONF["Palette"] {
-            label := Format("{:06X}", col)
+            label := ColorName(col)
             cm.Add(label, SetColor.Bind(num, col))
+            MenuSwatch(cm, label, col)
             if (col = cur && !hit) {
-                cm.Check(label)
+                cm.Default := label        ; aktuelle Farbe fett (ein Haken wuerde das Farbfeld verdecken)
                 hit := true
             }
         }
         cm.Add()
         cm.Add(T("menu.color.custom"), PromptColor.Bind(num))
-        if (!hit)
-            cm.Check(T("menu.color.custom"))
+        if (!hit) {
+            cm.Default := T("menu.color.custom")
+            MenuSwatch(cm, T("menu.color.custom"), cur)
+        }
         cm.Add(T("menu.color.default"), ClearColor.Bind(num))
         m.Add(T("menu.tab.color"), cm)
         m.Add()
     }
+    FillSettingsMenu(m)
+    m.Show()
+}
+
+; Allgemeiner Teil des Einstellungsmenues; identisch im Rechtsklick auf die
+; Leiste und im Tray-Menue (dort ohne Umweg ueber "Einstellungen…").
+FillSettingsMenu(m) {
     m.Add(T("menu.showindex"), ToggleView.Bind("ShowIndex"))
     if (CONF["ShowIndex"])
         m.Check(T("menu.showindex"))
@@ -493,11 +595,32 @@ ShowContextMenu(num, *) {
     }
     m.Add(T("menu.language"), lm)
     m.Add()
+    m.Add(T("menu.help"), HelpMenu())
+    if (gUpdateTag != "")
+        m.Add(T("menu.update.available", gUpdateTag), OpenReleasePage)
+    m.Add(T("menu.about"), ShowAbout)
+    m.Add()
     m.Add(T("tray.rebuild"), (*) => RebuildAll())
     m.Add(T("tray.resetpos"), ResetPos)
     m.Add()
     m.Add(T("tray.exit"), (*) => ExitApp())
-    m.Show()
+}
+
+; Untermenue "Hilfe": Doku, Changelog, Feedback-Wege, Update-Pruefung
+HelpMenu() {
+    hm := Menu()
+    hm.Add(T("menu.help.docs"), OpenDocs)
+    hm.Add(T("menu.help.changelog"), (*) => Run(APP_CHANGELOG_URL))
+    hm.Add()
+    hm.Add(T("menu.feedback.bug"), ReportBug)
+    hm.Add(T("menu.feedback.idea"), SuggestIdea)
+    hm.Add(T("menu.feedback.mail"), MailAuthor)
+    hm.Add()
+    hm.Add(T("menu.update.check"), (*) => CheckUpdate(true))
+    hm.Add(T("menu.update.auto"), ToggleView.Bind("UpdateCheck"))
+    if (CONF["UpdateCheck"])
+        hm.Check(T("menu.update.auto"))
+    return hm
 }
 
 PromptShort(num, *) {
@@ -508,6 +631,37 @@ PromptShort(num, *) {
     v := Trim(ib.Value)
     v = "" ? IniDel("Short", raw) : IniSet("Short", raw, v)
     RebuildAll()
+}
+
+; Lesbarer Name einer Palettenfarbe (Sprachschluessel "color.RRGGBB"), sonst "#RRGGBB".
+ColorName(col) {
+    global LANG, LANG_EN
+    hex := Format("{:06X}", col)
+    key := "color." hex
+    return (LANG.Has(key) || LANG_EN.Has(key)) ? T(key) : "#" hex
+}
+
+; Farbfeld als Menue-Icon: 16x16-Bitmap in der Farbe mit 1 px dunklerem Rand.
+; "HBITMAP:*" laesst AHK eine Kopie anlegen, das Original wird sofort freigegeben.
+MenuSwatch(menu, item, col) {
+    size := 16
+    r := (col >> 16) & 0xFF, g := (col >> 8) & 0xFF, b := col & 0xFF
+    fill := 0xFF000000 | (r << 16) | (g << 8) | b
+    edge := 0xFF000000 | ((r * 2 // 3) << 16) | ((g * 2 // 3) << 8) | (b * 2 // 3)
+    px := Buffer(size * size * 4)
+    Loop size {
+        y := A_Index - 1
+        Loop size {
+            x := A_Index - 1
+            onEdge := (x = 0 || y = 0 || x = size - 1 || y = size - 1)
+            NumPut("UInt", onEdge ? edge : fill, px, (y * size + x) * 4)
+        }
+    }
+    hbm := DllCall("CreateBitmap", "Int", size, "Int", size, "UInt", 1, "UInt", 32, "Ptr", px, "Ptr")
+    if (hbm) {
+        try menu.SetIcon(item, "HBITMAP:*" hbm, , size)
+        DllCall("DeleteObject", "Ptr", hbm)
+    }
 }
 
 PromptColor(num, *) {
@@ -532,6 +686,173 @@ SetColor(num, col, *) {
 ClearColor(num, *) {
     IniDel("Colors", GetDesktopNameRaw(num))
     RebuildAll()
+}
+
+; ------------------------ Hilfe, Feedback, Update, Über ---------------------
+; Alle Links zeigen auf das GitHub-Projekt (APP_*-Konstanten oben); eine spaetere
+; Doku-Seite auf paehtz.de braucht nur die URLs dort.
+AppIconPath() => A_IsCompiled ? A_ScriptFullPath : A_ScriptDir "\DeskTabs.ico"
+
+OpenDocs(*) {
+    global APP_DOCS_URL, gLangCode
+    Run(APP_DOCS_URL.Has(gLangCode) ? APP_DOCS_URL[gLangCode] : APP_DOCS_URL["en"])
+}
+
+UrlEncode(s) {
+    out := ""
+    buf := Buffer(StrPut(s, "UTF-8") - 1)
+    StrPut(s, buf, "UTF-8")
+    Loop buf.Size {
+        c := NumGet(buf, A_Index - 1, "UChar")
+        out .= (c >= 0x30 && c <= 0x39 || c >= 0x41 && c <= 0x5A || c >= 0x61 && c <= 0x7A || Chr(c) ~= "[\-_.~]")
+            ? Chr(c) : Format("%{:02X}", c)
+    }
+    return out
+}
+
+; Umgebungsangaben, die im Fehlerbericht vorausgefuellt werden
+EnvSummary() {
+    return "DockMode=" CONF["DockMode"] ", ThemeMode=" CONF["ThemeMode"] ", CompactMode=" CONF["CompactMode"]
+        . ", Desktops=" GetDesktopCount() ", Screen=" A_ScreenWidth "x" A_ScreenHeight ", DPI=" A_ScreenDPI
+}
+
+ReportBug(*) {
+    global APP_URL, APP_VERSION
+    Run(APP_URL "/issues/new?template=bug_report.yml"
+        . "&version=" UrlEncode(APP_VERSION)
+        . "&windows=" UrlEncode("Windows " A_OSVersion)
+        . "&run-mode=" UrlEncode(A_IsCompiled ? "Compiled DeskTabs.exe (from a release)" : "DeskTabs.ahk with AutoHotkey v2")
+        . "&config=" UrlEncode(EnvSummary()))
+}
+
+SuggestIdea(*) {
+    global APP_URL
+    Run(APP_URL "/issues/new?template=feature_request.yml")
+}
+
+MailAuthor(*) {
+    global APP_MAIL, APP_VERSION
+    Run("mailto:" APP_MAIL "?subject=" UrlEncode(T("feedback.mail.subject") " (v" APP_VERSION ")")
+        . "&body=" UrlEncode(T("feedback.mail.body") "--`nDeskTabs " APP_VERSION ", Windows " A_OSVersion "`n" EnvSummary()))
+}
+
+; --- Update-Pruefung: GitHub-Releases-API, nur die Versionsnummer wird gelesen ---
+HttpGetText(url, timeoutMs := 4000) {
+    global APP_VERSION
+    try {
+        req := ComObject("WinHttp.WinHttpRequest.5.1")
+        req.SetTimeouts(timeoutMs, timeoutMs, timeoutMs, timeoutMs)
+        req.Open("GET", url, false)
+        req.SetRequestHeader("User-Agent", "DeskTabs/" APP_VERSION)
+        req.SetRequestHeader("Accept", "application/vnd.github+json")
+        req.Send()
+        if (req.Status = 200)
+            return req.ResponseText
+    }
+    return ""
+}
+
+FetchLatestTag() {
+    global APP_API_LATEST
+    body := HttpGetText(APP_API_LATEST)
+    return RegExMatch(body, '"tag_name"\s*:\s*"([^"]+)"', &m) ? m[1] : ""
+}
+
+; Vergleich zweier Versionsangaben ("v1.2.0", "1.10.1-dev"): 1 wenn a > b, -1 wenn a < b, 0 gleich
+VersionCmp(a, b) {
+    pa := StrSplit(RegExReplace(a, "^[vV]|-.*$"), "."), pb := StrSplit(RegExReplace(b, "^[vV]|-.*$"), ".")
+    Loop Max(pa.Length, pb.Length) {
+        x := (A_Index <= pa.Length) ? Integer(pa[A_Index]) : 0
+        y := (A_Index <= pb.Length) ? Integer(pb[A_Index]) : 0
+        if (x != y)
+            return (x > y) ? 1 : -1
+    }
+    return 0
+}
+
+; manual=true: Ergebnis immer melden; sonst leise, Hinweis nur bei neuer Version
+CheckUpdate(manual := false, *) {
+    global APP_VERSION, APP_URL, gUpdateTag
+    tag := FetchLatestTag()
+    IniSet("State", "LastUpdateCheck", FormatTime(, "yyyyMMdd"))
+    if (tag = "") {
+        if (manual)
+            MsgBox(T("update.error"), "DeskTabs", 0x30)
+        return
+    }
+    if (VersionCmp(tag, APP_VERSION) > 0) {
+        gUpdateTag := tag
+        BuildTray()
+        if (manual) {
+            if (MsgBox(T("update.found", tag, APP_VERSION), "DeskTabs", 0x24) = "Yes")
+                Run(APP_URL "/releases/latest")
+        } else {
+            TrayTip(T("update.tip", tag), "DeskTabs", 0x1)
+        }
+    } else {
+        gUpdateTag := ""
+        if (manual)
+            MsgBox(T("update.none", APP_VERSION), "DeskTabs", 0x40)
+    }
+}
+
+; Beim Start (verzoegert): hoechstens einmal pro Tag, nur wenn eingeschaltet
+AutoUpdateTick() {
+    if (!CONF["UpdateCheck"])
+        return
+    if (IniRead(CONF["IniPath"], "State", "LastUpdateCheck", "") = FormatTime(, "yyyyMMdd"))
+        return
+    CheckUpdate(false)
+}
+
+OpenReleasePage(*) {
+    global APP_URL
+    Run(APP_URL "/releases/latest")
+}
+
+; --- "Ueber"-Dialog ---
+ShowAbout(*) {
+    global APP_VERSION, APP_AUTHOR, APP_AUTHOR_URL, APP_URL, gAbout
+    try gAbout.Destroy()
+    g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("about.title"))
+    g.SetFont("s10", "Segoe UI")
+    g.MarginX := 20, g.MarginY := 16
+    ico := AppIconPath()
+    if FileExist(ico)
+        g.Add("Picture", "x20 y18 w48 h48 Icon1", ico)
+    g.SetFont("s14 bold")
+    g.Add("Text", "x84 y16", "DeskTabs")
+    g.SetFont("s10 norm")
+    g.Add("Text", "x84 y+2", T("about.tagline"))
+    g.Add("Text", "x84 y+4", T("about.version", APP_VERSION) "  ·  " T("about.author", APP_AUTHOR))
+    g.Add("Text", "x20 y+18 w420", T("about.license"))
+    g.Add("Text", "x20 y+2 w420", T("about.components", A_IsCompiled ? " " T("about.ahk") : ""))
+    g.Add("Link", "x20 y+14", '<a href="' APP_AUTHOR_URL '">' T("about.website") '</a>    ·    '
+        . '<a href="' APP_URL '">' T("about.github") '</a>    ·    '
+        . '<a href="' APP_URL '/issues">' T("about.feedback") '</a>')
+    btnCheck := g.Add("Button", "x20 y+18 w170", T("about.check"))
+    btnCheck.OnEvent("Click", (*) => CheckUpdate(true))
+    btnClose := g.Add("Button", "x+10 w120 Default", T("about.close"))
+    btnClose.OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    g.OnEvent("Close", (*) => g.Destroy())
+    gAbout := g
+    SetGuiIcon(g)
+    g.Show("AutoSize Center")
+    btnClose.Focus()
+}
+
+; Fenstersymbol (Titelleiste) auf das DeskTabs-Icon setzen
+SetGuiIcon(g) {
+    ico := AppIconPath()
+    if (A_IsCompiled || !FileExist(ico))   ; kompiliert: Fenster nutzen automatisch das exe-Icon
+        return
+    ; LoadImage(IMAGE_ICON=1, LR_LOADFROMFILE=0x10), WM_SETICON=0x80 (ICON_SMALL=0, ICON_BIG=1)
+    for size, which in Map(16, 0, 32, 1) {
+        h := DllCall("LoadImage", "Ptr", 0, "Str", ico, "UInt", 1, "Int", size, "Int", size, "UInt", 0x10, "Ptr")
+        if (h)
+            SendMessage(0x80, which, h, g.Hwnd)
+    }
 }
 
 LogErr(err, mode) {
@@ -1130,13 +1451,12 @@ BuildTray() {
     A_TrayMenu.Add("DeskTabs", (*) => 0)
     A_TrayMenu.Disable("DeskTabs")
     A_TrayMenu.Add()
-    A_TrayMenu.Add(T("menu.settings"), (*) => ShowContextMenu(-1))
-    A_TrayMenu.Add(T("tray.rebuild"), (*) => RebuildAll())
-    A_TrayMenu.Add(T("tray.resetpos"), ResetPos)
-    A_TrayMenu.Add()
-    A_TrayMenu.Add(T("tray.exit"), (*) => ExitApp())
-    TraySetIcon("shell32.dll", 27)
-    A_IconTip := "DeskTabs"
+    FillSettingsMenu(A_TrayMenu)
+    A_TrayMenu.Default := T("menu.about")
+    ; kompiliert: die exe traegt das Icon bereits (Ahk2Exe-SetMainIcon)
+    if (!A_IsCompiled && FileExist(AppIconPath()))
+        TraySetIcon(AppIconPath(), 1)
+    A_IconTip := "DeskTabs " APP_VERSION
 }
 
 ResetPos(*) {

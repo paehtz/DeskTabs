@@ -26,6 +26,13 @@ body:
     validations:
       required: false
   - type: input
+    id: version
+    attributes:
+      label: DeskTabs version
+      description: See right-click menu → About DeskTabs (filled in automatically when you open this form from the app)
+    validations:
+      required: false
+  - type: input
     id: windows
     attributes:
       label: Windows version

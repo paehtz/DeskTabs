@@ -38,7 +38,9 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
-- **Right-click menu:** right-click a tab for its abbreviation and colour, plus all app settings (numbers, colour coding, view level, theme, docking, snapping, time log, language). No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same settings.
+- **Right-click menu:** right-click a tab for its abbreviation and colour, plus all app settings (numbers, colour coding, view level, theme, docking, snapping, time log, language). No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
+- **Help menu:** documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
+- **Update check:** once a day DeskTabs asks the GitHub releases API for the latest version number (nothing else is sent) and shows a tray notification if a newer release exists. Disable via the Help menu or `UpdateCheck = 0`.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
 - **Mouse wheel** over the bar pages through the desktops.
 - **Separators** between the buttons (subtle).
@@ -86,10 +88,7 @@ This installs DeskTabs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`)
 → target: `AutoHotkey64.exe`, with the path to `DeskTabs.ahk` as the argument.
 
-**Quit / control:** tray icon (screen symbol) → right-click:
-- Rebuild bar
-- Reset position
-- Exit
+**Quit / control:** tray icon (DeskTabs symbol) → right-click: the full settings menu, Help (docs, feedback, updates, About), Rebuild bar, Reset position, Exit.
 
 ---
 
@@ -119,6 +118,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
 | `TimeLog` | 1 | Write per-desktop stay times to `desktop-log_YYYY-MM.csv` next to the script. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
+| `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
 | `Language` | `auto` | UI language: `auto` follows the Windows display language (German → `de`, everything else → `en`), or `de` / `en` fixed. Any other code loads `lang\<code>.ini`. Can also be set in `settings.ini` `[View] Language=`. Takes effect on restart. |
 | Colours | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` are copied at startup from `THEME_LIGHT` / `THEME_DARK` (depending on `ThemeMode`) into `CONF`. To customise, edit the two `THEME_*` maps near the top of the script. |
 
