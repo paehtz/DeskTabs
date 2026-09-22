@@ -35,7 +35,10 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Farbcodierung:** dünner Farbbalken pro Desktop (Tab-Indikator-Stil, abschaltbar, pro Desktop überschreibbar).
 - **Hover-Effekt:** Button unter der Maus hellt auf.
 - **Klick auf aktiven Desktop:** öffnet die Task-Ansicht (Win+Tab).
-- **Vollbild-Auto-Hide:** blendet sich aus, wenn eine Vollbild-App im Vordergrund ist.
+- **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
+- **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
+- **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
+- **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
 - **Mausrad** über der Leiste blättert durch die Desktops.
 - **Trennstriche** zwischen den Buttons (dezent).
 - **Verschiebbar** am Griff `≡` links; Position wird in `settings.ini` gemerkt.
@@ -109,7 +112,12 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `WheelSwitch` | 1 | Mausrad blättert Desktops. |
 | `Palette` | 8 Farben | Farbpalette für die Farbcodierung (nach Index). |
 | `FontSizePt` | 10 | Schriftgröße. |
-| `MaxNameLen` | 22 | Namen länger als das werden gekürzt. |
+| `MaxNameLen` | 22 | Namen länger als das werden gekürzt (Stufe `full`). |
+| `CompactMode` | `auto` | Label-Stufe: `full` (Nummer + Name), `short` (Nummer + Kürzel bzw. gekürzter Name), `icon` (nur Kürzel bzw. Nummer). `auto` startet bei `full` und schaltet runter, bis die Leiste in `MaxBarWidthPct` der Taskleistenbreite passt, funktioniert so auch auf schmalen Laptop-Taskleisten. **Strg + Mausrad** über der Leiste schaltet manuell durch (nach oben über `full` hinaus wieder `auto`); die Wahl wird in `settings.ini` `[View]` gemerkt. |
+| `MaxBarWidthPct` | 40 | Nur `auto`: maximaler Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird. |
+| `ShortNameLen` | 8 | Stufe `short`: Namen länger als das werden gekürzt (wenn kein Kürzel hinterlegt ist). |
+| `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `desktop-log_YYYY-MM.csv` neben dem Skript schreiben. `0` = aus. |
+| `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
 | Farben | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` werden beim Start aus `THEME_LIGHT` / `THEME_DARK` (je nach `ThemeMode`) in die CONF übernommen. Anpassen → die beiden `THEME_*`-Maps oben im Skript. |
 
 ### settings.ini (wird automatisch angelegt)
@@ -123,7 +131,33 @@ Y=1392
 ; Farbcodierung pro Desktop-Name überschreiben (RRGGBB):
 Design=E5471D
 Buchhaltung=1565C0
+
+[Short]
+; Kürzel pro Desktop-Name für die Kompakt-Stufen
+; (short: "4 · BPH", icon: "BPH" statt nur der Nummer):
+BauPunkt Hain=BPH
+Buchhaltung=BH
+
+[View]
+; Wird automatisch geschrieben, wenn Du mit Strg + Mausrad die Stufe wechselst:
+CompactMode=short
 ```
+
+---
+
+## Zeit-Log
+
+Mit `TimeLog=1` (Standard) schreibt DeskTabs pro Aufenthalt auf einem Desktop eine Zeile in `desktop-log_YYYY-MM.csv` neben dem Skript:
+
+```csv
+start,end,seconds,desktop_index,desktop_name
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"BauPunkt Hain"
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"T&K Eisleben"
+```
+
+- Ein Aufenthalt endet beim Desktop-Wechsel, beim Sperren des Bildschirms oder nach `TimeLogIdleMin` Minuten ohne Eingabe (dann wird er rückwirkend zum Beginn der Inaktivität geschlossen, Pausen zählen also nicht mit).
+- Zeiten sind lokal, ISO 8601. `desktop_index` ist 1-basiert wie die Nummern in der Leiste; `desktop_name` ist der Name beim Start des Aufenthalts.
+- Die Datei ist reines UTF-8-CSV: in Excel öffnen, oder einen Coding-Agenten die Zeiten pro Kunde für die Rechnung aufsummieren lassen. Es sind persönliche Daten, die Datei ist git-ignoriert.
 
 ---
 

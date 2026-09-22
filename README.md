@@ -35,7 +35,10 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Colour coding:** a thin colour bar per desktop (tab-indicator style, can be disabled, overridable per desktop).
 - **Hover effect:** the button under the mouse lightens up.
 - **Click on the active desktop:** opens Task View (Win+Tab).
-- **Fullscreen auto-hide:** hides itself when a fullscreen app is in the foreground.
+- **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
+- **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
+- **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
+- **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
 - **Mouse wheel** over the bar pages through the desktops.
 - **Separators** between the buttons (subtle).
 - **Movable** by the handle `≡` on the left; the position is remembered in `settings.ini`.
@@ -109,7 +112,12 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `WheelSwitch` | 1 | Mouse wheel pages through desktops. |
 | `Palette` | 8 colours | Colour palette for the colour coding (by index). |
 | `FontSizePt` | 10 | Font size. |
-| `MaxNameLen` | 22 | Names longer than this are truncated. |
+| `MaxNameLen` | 22 | Names longer than this are truncated (level `full`). |
+| `CompactMode` | `auto` | Label level: `full` (number + name), `short` (number + shortened name), `icon` (number only). `auto` starts at `full` and steps down until the bar fits into `MaxBarWidthPct` of the taskbar width, so it also works on narrow laptop taskbars. **Ctrl + mouse wheel** over the bar switches levels manually (wheel up past `full` returns to `auto`); the choice is remembered in `settings.ini` `[View]`. |
+| `MaxBarWidthPct` | 40 | `auto` only: maximum share of the taskbar width before the bar steps down one level. |
+| `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
+| `TimeLog` | 1 | Write per-desktop stay times to `desktop-log_YYYY-MM.csv` next to the script. `0` = off. |
+| `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
 | Colours | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` are copied at startup from `THEME_LIGHT` / `THEME_DARK` (depending on `ThemeMode`) into `CONF`. To customise, edit the two `THEME_*` maps near the top of the script. |
 
 ### settings.ini (created automatically)
@@ -123,7 +131,33 @@ Y=1392
 ; Override the colour coding per desktop name (RRGGBB):
 Design=E5471D
 Buchhaltung=1565C0
+
+[Short]
+; Abbreviation per desktop name, used by the compact levels
+; (short: "4 · BPH", icon: "BPH" instead of just the number):
+BauPunkt Hain=BPH
+Buchhaltung=BH
+
+[View]
+; Written automatically when you switch levels with Ctrl + mouse wheel:
+CompactMode=short
 ```
+
+---
+
+## Time log
+
+With `TimeLog=1` (default) DeskTabs writes one line per stay on a desktop into `desktop-log_YYYY-MM.csv` next to the script:
+
+```csv
+start,end,seconds,desktop_index,desktop_name
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"BauPunkt Hain"
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"T&K Eisleben"
+```
+
+- A stay ends when you switch desktops, lock the screen, or stop giving input for `TimeLogIdleMin` minutes (the stay is then closed at the moment the inactivity began, so breaks are not counted).
+- Times are local, ISO 8601. `desktop_index` is 1-based like the bar's numbers; `desktop_name` is the name at the start of the stay.
+- The file is plain UTF-8 CSV: open it in Excel, or let a coding agent sum it up per client for your invoice. It is personal data and git-ignored.
 
 ---
 

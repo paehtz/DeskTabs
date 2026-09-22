@@ -51,7 +51,12 @@ global CONF := Map(
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
     "ClickActiveTaskView", 1,  ; 1 = Klick auf aktiven Desktop oeffnet Task-Ansicht (Win+Tab)
     "Palette",        [0xE5471D, 0x2E7D32, 0x1565C0, 0x6A1B9A, 0xEF6C00, 0x00838F, 0xC2185B, 0x558B2F],
-    "MaxNameLen",     22       ; Namen laenger als das werden gekuerzt
+    "MaxNameLen",     22,      ; Stufe "full": Namen laenger als das werden gekuerzt
+    "CompactMode",    "auto",  ; "auto" = Stufe nach Platz waehlen | "full" | "short" | "icon" (fest)
+    "MaxBarWidthPct", 40,      ; auto: max. Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird
+    "ShortNameLen",   8,       ; Stufe "short": Namen laenger als das werden gekuerzt
+    "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (desktop-log_YYYY-MM.csv)
+    "TimeLogIdleMin", 5        ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
 )
 
 ; ---- Theme-Farbsaetze (werden je nach Windows-Theme in CONF uebernommen) ----
@@ -81,6 +86,100 @@ global THEME_DARK := Map(
     "ColDivider",    0x3F3F3F
 )
 global gTheme := ""             ; aktuell angewandtes Theme ("light"/"dark")
+global gIniStamp := ""          ; letzte bekannte Aenderungszeit der settings.ini (Live-Reload)
+global gSegStart := ""          ; Zeit-Log: Beginn des laufenden Aufenthalts (YYYYMMDDHHMMSS), "" = keins offen
+global gSegDesk := -1           ; Zeit-Log: Desktop-Index des laufenden Aufenthalts
+global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
+global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
+
+; ------------------------------ Zeit-Log ------------------------------------
+; Schreibt pro Aufenthalt auf einem Desktop eine CSV-Zeile (Monatsdatei neben
+; settings.ini): start,end,seconds,desktop_index,desktop_name. Gedacht fuer
+; Nutzer ohne Time-Tracker und fuer Coding-Agenten, die daraus abrechnen.
+LogFile(ts) => A_ScriptDir "\desktop-log_" SubStr(ts, 1, 4) "-" SubStr(ts, 5, 2) ".csv"
+IsoTime(ts) => FormatTime(ts, "yyyy-MM-dd'T'HH:mm:ss")
+CsvQuote(s) => '"' StrReplace(s, '"', '""') '"'
+
+LogOpen(num) {
+    global gSegStart, gSegDesk, gSegName
+    if (!CONF["TimeLog"])
+        return
+    gSegStart := A_Now, gSegDesk := num, gSegName := GetDesktopNameRaw(num)
+}
+
+; Laufendes Segment abschliessen. endTime optional (z.B. Beginn einer Pause).
+LogClose(endTime := "") {
+    global gSegStart, gSegDesk, gSegName
+    if (!CONF["TimeLog"] || gSegStart = "")
+        return
+    end := (endTime = "") ? A_Now : endTime
+    secs := DateDiff(end, gSegStart, "Seconds")
+    if (secs >= 1) {
+        file := LogFile(gSegStart)
+        try {
+            if !FileExist(file)
+                FileAppend("start,end,seconds,desktop_index,desktop_name`n", file, "UTF-8")
+            FileAppend(Format("{1},{2},{3},{4},{5}`n", IsoTime(gSegStart), IsoTime(end), secs, gSegDesk + 1, CsvQuote(gSegName)), file, "UTF-8")
+        }
+    }
+    gSegStart := ""
+}
+
+; Desktop-Wechsel ins Log uebernehmen (aus UpdateHighlight)
+LogDesktop(num) {
+    global gSegDesk, gLogPaused
+    if (!CONF["TimeLog"] || gLogPaused || num = gSegDesk)
+        return
+    LogClose()
+    LogOpen(num)
+}
+
+; Inaktivitaet: laeuft im Refresh-Takt. Nach TimeLogIdleMin Minuten ohne Eingabe
+; wird das Segment rueckwirkend zum Beginn der Inaktivitaet geschlossen; bei
+; der naechsten Eingabe beginnt ein neues.
+LogIdleTick() {
+    global gLogPaused
+    if (!CONF["TimeLog"])
+        return
+    idleMs := A_TimeIdle
+    thr := CONF["TimeLogIdleMin"] * 60000
+    if (!gLogPaused && idleMs >= thr) {
+        LogClose(DateAdd(A_Now, -Round(idleMs / 1000), "Seconds"))
+        gLogPaused := true
+    } else if (gLogPaused && idleMs < thr) {
+        gLogPaused := false
+        LogOpen(GetCurrentDesktop())
+    }
+}
+
+; Bildschirm gesperrt/entsperrt (WM_WTSSESSION_CHANGE): Sperre = Pause
+OnSessionChange(wParam, lParam, msg, hwnd) {
+    global gLogPaused
+    if (wParam = 7) {                 ; WTS_SESSION_LOCK
+        LogClose()
+        gLogPaused := true
+    } else if (wParam = 8) {          ; WTS_SESSION_UNLOCK
+        gLogPaused := false
+        LogOpen(GetCurrentDesktop())
+    }
+}
+
+; Hat sich settings.ini seit dem letzten Blick geaendert? Erster Aufruf merkt
+; sich nur den Stand. Eigene Schreibzugriffe (IniSet) aktualisieren den Stempel
+; sofort, damit sie keinen Neuaufbau ausloesen.
+SettingsChanged() {
+    global gIniStamp
+    stamp := ""
+    try stamp := FileGetTime(CONF["IniPath"], "M")
+    if (gIniStamp = "") {
+        gIniStamp := stamp
+        return false
+    }
+    if (stamp = gIniStamp)
+        return false
+    gIniStamp := stamp
+    return true
+}
 
 global SCALE := A_ScreenDPI / 96
 global VDA := 0
@@ -96,6 +195,8 @@ global gWinEventCb := 0
 global gBurst := 0           ; Restzahl schneller Re-Asserts nach Fensterwechsel
 global gBuilding := false    ; Re-Entrancy-Schutz: laeuft gerade ein BuildBar?
 global gSwitching := false   ; laeuft gerade ein Desktop-Wechsel? (gegen Rebuild-Race)
+global gCompact := "full"    ; aktuell dargestellte Stufe: "full" | "short" | "icon"
+global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-Budget im auto-Modus)
 
 ; ------------------------------- Start --------------------------------------
 Main()
@@ -113,6 +214,10 @@ Main() {
         ExitApp
     }
     ApplyTheme()                             ; Farbsatz passend zum Windows-Theme
+    ; Gemerkte Kompakt-Stufe aus settings.ini [View] (per Strg+Mausrad gesetzt)
+    ov := IniRead(CONF["IniPath"], "View", "CompactMode", "")
+    if (ov = "auto" || ov = "full" || ov = "short" || ov = "icon")
+        CONF["CompactMode"] := ov
     BuildBar()
     ApplyWindowHooks()                       ; Pin auf alle Desktops + Change-Hook
     OnMessage(MSG_VD_CHANGED, OnDesktopChanged)
@@ -132,7 +237,12 @@ Main() {
     ; Vollbild-Erkennung (Leiste aus-/einblenden)
     if (CONF["AutoHideFullscreen"])
         SetTimer(FullscreenTick, 500)
-    UpdateHighlight()
+    UpdateHighlight()                        ; oeffnet auch das erste Zeit-Log-Segment
+    ; Zeit-Log: Sperren/Entsperren des Bildschirms als Pause erkennen
+    if (CONF["TimeLog"]) {
+        DllCall("Wtsapi32\WTSRegisterSessionNotification", "Ptr", A_ScriptHwnd, "UInt", 0)
+        OnMessage(0x02B1, OnSessionChange)  ; WM_WTSSESSION_CHANGE
+    }
     BuildTray()
 }
 
@@ -195,17 +305,35 @@ GetDesktopNameRaw(num) {
     return (name = "") ? "Desktop " (num + 1) : name
 }
 
-GetDesktopName(num) {
-    name := GetDesktopNameRaw(num)
-    if (StrLen(name) > CONF["MaxNameLen"])
-        name := SubStr(name, 1, CONF["MaxNameLen"] - 1) "…"
+; Name auf maxLen Zeichen kuerzen (mit "…")
+TruncName(name, maxLen) {
+    if (StrLen(name) > maxLen)
+        name := SubStr(name, 1, maxLen - 1) "…"
     return name
 }
 
-; Anzeige-Label inkl. optionalem Nummern-Praefix ("3 · Wolf Automobile")
+; Optionales Kuerzel pro Desktop aus settings.ini [Short] (z.B.  BauPunkt Hain=BPH )
+ShortNameFor(num) => IniRead(CONF["IniPath"], "Short", GetDesktopNameRaw(num), "")
+
+; Anzeige-Label je nach Kompakt-Stufe (gCompact):
+;   full  -> "4 · BauPunkt Hain"     (MaxNameLen)
+;   short -> "4 · BPH"  bzw. "4 · BauPunk…"   (Kuerzel, sonst ShortNameLen)
+;   icon  -> "BPH"      bzw. "4"              (Kuerzel, sonst nur die Nummer)
 LabelFor(num) {
-    return (CONF["ShowIndex"] ? (num + 1) " · " : "") GetDesktopName(num)
+    global gCompact
+    sn := ShortNameFor(num)
+    if (gCompact = "icon")
+        return (sn != "") ? sn : String(num + 1)
+    if (gCompact = "short")
+        name := (sn != "") ? sn : TruncName(GetDesktopNameRaw(num), CONF["ShortNameLen"])
+    else
+        name := TruncName(GetDesktopNameRaw(num), CONF["MaxNameLen"])
+    return (CONF["ShowIndex"] ? (num + 1) " · " : "") name
 }
+
+; Naechstkleinere / naechstgroessere Stufe ("" = keine)
+SmallerLevel(lv) => (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
+LargerLevel(lv)  => (lv = "icon") ? "short" : (lv = "short") ? "full" : ""
 
 ; Farbe fuer den Akzentbalken eines Desktops. Palette nach Index, optional per
 ; settings.ini [Colors] mit Desktop-Name ueberschreibbar (z.B.  T&K Eisleben=E5471D )
@@ -221,11 +349,32 @@ DesktopColor(num) {
 px(v) => Round(v * SCALE)     ; logische px -> physische px
 
 ; --------------------------- Leiste aufbauen --------------------------------
+; Waehlt die Kompakt-Stufe und baut die Leiste. Bei CompactMode=auto wird mit
+; "full" begonnen und so lange eine Stufe runtergeschaltet, bis die Leiste
+; ins Breiten-Budget (MaxBarWidthPct der Taskleistenbreite) passt.
 BuildBar() {
-    global MyGui, BTNS, GRIP, GUIW, GUIH, gBuilding
+    global gBuilding, gCompact, GUIW, gTaskbarW
     if (gBuilding)              ; verschachtelten Neuaufbau verhindern (Geometrie-Race)
         return
     gBuilding := true
+    mode := CONF["CompactMode"]
+    level := (mode = "auto") ? "full" : mode
+    Loop {
+        gCompact := level
+        BuildBarAt()
+        if (mode != "auto" || !gTaskbarW)
+            break
+        budget := gTaskbarW * CONF["MaxBarWidthPct"] / 100
+        next := SmallerLevel(level)
+        if (GUIW <= budget || next = "")
+            break
+        level := next               ; zu breit -> eine Stufe kleiner, nochmal bauen
+    }
+    gBuilding := false
+}
+
+BuildBarAt() {
+    global MyGui, BTNS, GRIP, GUIW, GUIH, gTaskbarW
     if (MyGui) {
         try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
         try MyGui.Destroy()
@@ -248,6 +397,7 @@ BuildBar() {
     } else {
         tbH := px(48), tbY := A_ScreenHeight - tbH
     }
+    gTaskbarW := tbW
 
     margin := px(3)
     accH := px(CONF["AccentBarH"])
@@ -325,7 +475,6 @@ BuildBar() {
 
     ; Ziehen am Griff
     OnMessage(0x0201, OnLButtonDown)  ; WM_LBUTTONDOWN
-    gBuilding := false
 }
 
 ClampX(x) {
@@ -392,12 +541,17 @@ OnWheel(wParam, lParam, msg, hwnd) {
         if !IsOverBar(mx, my)
             return
     }
-    ; Folgeticks ignorieren, solange ein Wechsel laeuft -> kein Stau, knackiger
-    if (gSwitching)
-        return 0
     delta := (wParam >> 16) & 0xFFFF
     if (delta > 0x7FFF)
         delta -= 0x10000
+    ; Strg + Mausrad ueber der Leiste: Kompakt-Stufe durchschalten statt Desktop wechseln
+    if (GetKeyState("Ctrl", "P")) {
+        CycleCompact(delta > 0 ? "up" : "down")
+        return 0
+    }
+    ; Folgeticks ignorieren, solange ein Wechsel laeuft -> kein Stau, knackiger
+    if (gSwitching)
+        return 0
     cur := GetCurrentDesktop()
     cnt := GetDesktopCount()
     if (delta > 0)
@@ -407,6 +561,30 @@ OnWheel(wParam, lParam, msg, hwnd) {
     if (target != cur)
         SwitchToDesktop(target)
     return 0
+}
+
+; Kompakt-Stufe manuell wechseln (Strg+Mausrad). "down" = kleiner, "up" = groesser;
+; ueber "full" hinaus nach oben -> zurueck auf "auto". Die Wahl wird in
+; settings.ini [View] gemerkt und beim Start wieder angewendet.
+CycleCompact(dir) {
+    global gCompact
+    mode := CONF["CompactMode"]
+    if (dir = "down") {
+        new := SmallerLevel(gCompact)
+    } else {
+        new := (mode != "auto" && gCompact = "full") ? "auto" : LargerLevel(gCompact)
+    }
+    if (new = "" || new = mode)
+        return
+    CONF["CompactMode"] := new
+    IniSet("View", "CompactMode", new)
+    BuildBar()
+    ApplyWindowHooks()
+    UpdateHighlight()
+    ; kurze Rueckmeldung, welche Stufe jetzt gilt
+    txt := (new = "auto") ? "Ansicht: automatisch (" gCompact ")" : "Ansicht: " new
+    ToolTip(txt)
+    SetTimer(() => ToolTip(), -900)
 }
 
 IsOverBar(mx, my) {
@@ -483,14 +661,15 @@ PaintButton(item) {
 UpdateHighlight() {
     global BTNS, gCurrent
     gCurrent := GetCurrentDesktop()
+    LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
     for item in BTNS
         PaintButton(item)
 }
 
 ; Hover: Button unter dem Mauszeiger leicht aufhellen
 HoverTick() {
-    global MyGui, BTNS, gHidden
-    if (gHidden)
+    global MyGui, BTNS, gHidden, gBuilding
+    if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
     MouseGetPos(, , &winId, &ctrlHwnd, 2)
     overOur := (winId = MyGui.Hwnd)
@@ -505,7 +684,9 @@ HoverTick() {
 
 ; Vollbild-App im Vordergrund -> Leiste ausblenden, sonst wieder zeigen
 FullscreenTick() {
-    global MyGui, gHidden
+    global MyGui, gHidden, gBuilding
+    if (gBuilding)                  ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
+        return
     fs := IsForegroundFullscreen()
     if (fs && !gHidden) {
         gHidden := true
@@ -518,31 +699,62 @@ FullscreenTick() {
     }
 }
 
+; Liegt auf dem Monitor der Leiste ein Vollbildfenster ganz oben?
+; Bewusst NICHT nur das Vordergrundfenster: Ist Lightroom auf dem Hauptmonitor
+; im Vollbild und der Fokus wandert auf einen Nebenmonitor, bleibt Lightroom
+; dort trotzdem das oberste Fenster -> die Leiste muss verborgen bleiben.
+; Vorgehen: z-Reihenfolge von oben durchgehen, das erste "echte" sichtbare
+; Fenster auf dem Leisten-Monitor nehmen und pruefen, ob es den Monitor fuellt.
 IsForegroundFullscreen() {
-    fg := DllCall("GetForegroundWindow", "Ptr")
-    if (!fg)
-        return false
-    cls := ""
-    try cls := WinGetClass("ahk_id " fg)
-    if (cls = "WorkerW" || cls = "Progman" || cls = "Shell_TrayWnd" || cls = "")
-        return false
-    wr := Buffer(16, 0)
-    DllCall("GetWindowRect", "Ptr", fg, "Ptr", wr)
-    wl := NumGet(wr, 0, "Int"), wt := NumGet(wr, 4, "Int")
-    wri := NumGet(wr, 8, "Int"), wb := NumGet(wr, 12, "Int")
-    hMon := DllCall("MonitorFromWindow", "Ptr", fg, "UInt", 2, "Ptr")  ; DEFAULTTONEAREST
+    global MyGui
+    hMonBar := DllCall("MonitorFromWindow", "Ptr", MyGui.Hwnd, "UInt", 2, "Ptr")   ; DEFAULTTONEAREST
     mi := Buffer(40, 0)
     NumPut("UInt", 40, mi, 0)
-    DllCall("GetMonitorInfo", "Ptr", hMon, "Ptr", mi)
+    DllCall("GetMonitorInfo", "Ptr", hMonBar, "Ptr", mi)
     ml := NumGet(mi, 4, "Int"), mt := NumGet(mi, 8, "Int")
     mr := NumGet(mi, 12, "Int"), mb := NumGet(mi, 16, "Int")
-    tol := 2
-    return (Abs(wl - ml) <= tol && Abs(wt - mt) <= tol && Abs(wri - mr) <= tol && Abs(wb - mb) <= tol)
+    monArea := (mr - ml) * (mb - mt)
+    h := DllCall("GetTopWindow", "Ptr", 0, "Ptr")
+    while (h) {
+        hNext := DllCall("GetWindow", "Ptr", h, "UInt", 2, "Ptr")   ; GW_HWNDNEXT
+        if (h != MyGui.Hwnd && DllCall("IsWindowVisible", "Ptr", h)) {
+            cls := ""
+            try cls := WinGetClass("ahk_id " h)
+            ; Desktop/Taskleiste ueberspringen: die fuellen den Monitor immer
+            if (cls != "" && cls != "WorkerW" && cls != "Progman" && cls != "Shell_TrayWnd" && cls != "Shell_SecondaryTrayWnd") {
+                ex := DllCall("GetWindowLongPtr", "Ptr", h, "Int", -20, "Ptr")   ; GWL_EXSTYLE
+                cloaked := 0
+                DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cloaked, "UInt", 4)  ; DWMWA_CLOAKED
+                ; Tool-Windows (Overlays, Tooltips) und gecloakte Fenster (andere
+                ; virtuelle Desktops, UWP-Hintergrund) zaehlen nicht
+                if (!(ex & 0x80) && !cloaked) {
+                    wr := Buffer(16, 0)
+                    DllCall("GetWindowRect", "Ptr", h, "Ptr", wr)
+                    wl := NumGet(wr, 0, "Int"), wt := NumGet(wr, 4, "Int")
+                    wri := NumGet(wr, 8, "Int"), wb := NumGet(wr, 12, "Int")
+                    hMon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
+                    ; Kleine Always-on-top-Helferfenster (< 10 % der Flaeche) ueberspringen,
+                    ; sonst verdecken sie ein darunterliegendes Vollbildfenster
+                    if (hMon = hMonBar && (wri - wl) * (wb - wt) >= monArea * 0.10) {
+                        ; "Umschliesst den ganzen Monitor" statt exakter Gleichheit:
+                        ; rahmenlose Vollbildfenster (Lightroom Umschalt+F) ragen mit
+                        ; unsichtbaren Raendern ueber den Monitorrand hinaus. Ein
+                        ; maximiertes Normalfenster endet an der Arbeitsflaeche ueber
+                        ; der Taskleiste (wb << mb) und zaehlt nicht als Vollbild.
+                        tol := 8
+                        return (wl <= ml + tol && wt <= mt + tol && wri >= mr - tol && wb >= mb - tol)
+                    }
+                }
+            }
+        }
+        h := hNext
+    }
+    return false
 }
 
 AssertTop() {
-    global MyGui, gHidden
-    if (gHidden)
+    global MyGui, gHidden, gBuilding
+    if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
     ; HWND_TOPMOST(-1), SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE = 0x0013
     DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
@@ -576,11 +788,23 @@ BurstTick() {
 Refresh() {
     ; Desktop-Anzahl oder Namen koennten sich geaendert haben -> ggf. neu bauen
     global BTNS, gTheme, gBuilding, gSwitching
+    LogIdleTick()                  ; Zeit-Log: Inaktivitaet erkennen (braucht keine GUI)
     if (gBuilding || gSwitching)   ; nicht mitten in Aufbau/Wechsel neu bauen (Geometrie-Race)
         return
     ; Windows-Theme gewechselt? -> Farbsatz neu anwenden und Leiste neu bauen
     if (ResolveTheme() != gTheme) {
         ApplyTheme()
+        BuildBar()
+        ApplyWindowHooks()
+        UpdateHighlight()
+        return
+    }
+    ; settings.ini von aussen geaendert (z.B. von einem KI-Agenten: Kuerzel,
+    ; Farben, Ansicht)? -> live uebernehmen, kein Neustart noetig
+    if (SettingsChanged()) {
+        ov := IniRead(CONF["IniPath"], "View", "CompactMode", "")
+        if (ov = "auto" || ov = "full" || ov = "short" || ov = "icon")
+            CONF["CompactMode"] := ov
         BuildBar()
         ApplyWindowHooks()
         UpdateHighlight()
@@ -646,11 +870,16 @@ IniGet(sec, key, default) {
     return (val = "") ? default : val + 0
 }
 IniSet(sec, key, val) {
+    global gIniStamp
     IniWrite(val, CONF["IniPath"], sec, key)
+    try gIniStamp := FileGetTime(CONF["IniPath"], "M")   ; eigener Schreibzugriff, kein Live-Reload
 }
 
 OnExitCleanup(*) {
     global VDA, gWinEventHook, gWinEventCb
+    LogClose()                                  ; Zeit-Log: letztes Segment abschliessen
+    if (CONF["TimeLog"])
+        try DllCall("Wtsapi32\WTSUnRegisterSessionNotification", "Ptr", A_ScriptHwnd)
     if (gWinEventHook)
         DllCall("UnhookWinEvent", "Ptr", gWinEventHook)
     if (gWinEventCb)

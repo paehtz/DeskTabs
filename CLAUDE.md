@@ -24,6 +24,39 @@ Requires AutoHotkey v2 (default `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe
 - `#SingleInstance Force` is set: launching again replaces the running instance.
 - There is no test suite; verify changes by running and looking at the bar.
 
+## Configure it for a user without touching the code (agent-friendly)
+
+Everything a user can set in the UI also lives in plain text in `settings.ini` next to the script, and the running bar **picks up changes live** (within ~1.2 s, no restart). So if a user asks you "give the desktop for client X the abbreviation BPH / this colour / that icon", you just edit the file:
+
+```ini
+[Short]                      ; abbreviation per desktop (compact levels)
+BauPunkt Hain=BPH
+
+[Colors]                     ; accent colour per desktop, RRGGBB
+BauPunkt Hain=E5471D
+
+[View]                       ; label level: auto | full | short | icon
+CompactMode=auto
+
+[Icons]                      ; planned (issue #2): image path or website URL per desktop
+BauPunkt Hain=C:\Projects\BauPunkt\logo.png
+```
+
+Keys are the exact desktop names as shown in Windows Task View (read them with `VirtualDesktopAccessor\GetDesktopName` or from the bar's labels). Write real umlauts; the file is UTF-8.
+
+## Read the time log (billing, reports)
+
+If the user asks "how long did I work on client X this week/month", read `desktop-log_YYYY-MM.csv` next to the script (one file per month, written by the bar itself):
+
+```csv
+start,end,seconds,desktop_index,desktop_name
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"BauPunkt Hain"
+```
+
+- One row per stay on a desktop; a stay ends on desktop switch, lock screen, or after `TimeLogIdleMin` minutes of no input (closed at the start of the inactivity, so breaks are excluded).
+- Sum `seconds` per `desktop_name` (or per day) and convert to hours. Times are local ISO 8601, `desktop_index` is 1-based.
+- Treat the contents as the user's personal data: summarise, do not copy it anywhere they did not ask for. The file is git-ignored; never commit it.
+
 ## Where to change things
 
 All user-facing options are in the `CONF := Map(...)` block at the very top of `DeskTabs.ahk`:
@@ -33,6 +66,9 @@ All user-facing options are in the `CONF := Map(...)` block at the very top of `
 - **Switching behaviour** → `SwitchMethod` (`native` keystrokes vs `dll`).
 - **Labels / look** → `ShowIndex`, `ColorCoding`, `AccentBarH`, `FontSizePt`, `MaxNameLen`, `WheelSwitch`, `AutoHideFullscreen`, `ClickActiveTaskView`.
 - **Per-desktop colour at runtime** → `settings.ini` section `[Colors]`, lines `Desktop name = RRGGBB`.
+- **Compact levels** → `CompactMode` (`auto` / `full` / `short` / `icon`), `MaxBarWidthPct` (auto budget), `ShortNameLen`. `BuildBar()` picks the level (auto steps down until the bar fits), `BuildBarAt()` does the actual build, `LabelFor()` renders the label for the current level (`gCompact`). Ctrl + mouse wheel calls `CycleCompact()` and persists the choice in `settings.ini [View]`.
+- **Per-desktop abbreviation** → `settings.ini` section `[Short]`, lines `Desktop name = ABBR` (used by `short`/`icon`).
+- **Fullscreen auto-hide** → `IsForegroundFullscreen()` walks the z-order and checks the top-most real window *on the bar's monitor*; don't switch it back to `GetForegroundWindow()` (breaks with multiple monitors).
 
 After editing: run `/validate`, then restart the script and look at the bar.
 

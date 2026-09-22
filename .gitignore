@@ -1,5 +1,7 @@
-# Benutzerspezifische Laufzeit-Datei (Position + Farb-Overrides)
+# Benutzerspezifische Laufzeit-Dateien (Position, Kuerzel, Farb-Overrides, Ansicht)
 settings.ini
+# Zeit-Log (persoenliche Nutzungsdaten, nie versionieren)
+desktop-log_*.csv
 
 # Debug-/Temp-Artefakte
 _debug.txt
