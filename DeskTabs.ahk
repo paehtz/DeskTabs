@@ -264,6 +264,8 @@ global LANG_DE := Map(
     "menu.icon.library", "Aus der Symbol-Bibliothek…",
     "iconlib.title",   "Symbol für „{1}“",
     "iconlib.hint",    "Ein Symbol anklicken. Es wird in der Farbe des Desktops angezeigt.",
+    "iconlib.search",  "Suchen, z.B. Kalender, Ordner, Zeit…",
+    "iconlib.none",    "Kein Symbol gefunden.",
     "menu.icon.url",   "Von einer Webseite holen…",
     "menu.icon.file",  "Eigene Bilddatei wählen…",
     "menu.icon.clear", "Symbol entfernen",
@@ -358,6 +360,8 @@ global LANG_EN := Map(
     "menu.icon.library", "From the icon library…",
     "iconlib.title",   "Icon for “{1}”",
     "iconlib.hint",    "Click an icon. It is drawn in the desktop's colour.",
+    "iconlib.search",  "Search, e.g. calendar, folder, time…",
+    "iconlib.none",    "No icon found.",
     "menu.icon.url",   "Fetch from a website…",
     "menu.icon.file",  "Choose an image file…",
     "menu.icon.clear", "Remove icon",
@@ -568,15 +572,122 @@ RebuildAll() {
 ; Symbole im System-Stil. Wir nutzen sie als eingebaute Bibliothek - nichts zu
 ; bundeln, keine Lizenzfrage, und die Symbole lassen sich einfaerben.
 GlyphList() {
-    static list := StrSplit("E713 E790 E91B E8AC E8EF E8FD E793 E7E8 E7C4 E8B9 E706 E708"
-        . " E946 E897 E72C E80F E71D E74E E8BD E81C E9D9 EB51 E734 E735"
-        . " E8A5 E7C3 E90F E9CE EA80 E8C8 ECAA E71B E8F1 E7EE E787 E823"
-        . " E8EC E81E E9D2 E9F5 EA35 E7C1 E7B8 E77B E7EF E774 E896 E8BB"
-        . " E961 E8C4 E759 E890 E8A9 E7B3 E8A7 E8C6 E71E E8FB E72D E715"
-    . " E8D7 E779 E8D4 E8A1 E8EA E7BA E9D5 E838 E8B7 E8DE E707 E8E5"
-        . " E7C0 E8F4 E8EB E7AD E912 E930 EC42 E8A0 E945 E9A9 EC05 E703"
-        . " ED5E E81D E8CE E7F4 E71C E8F3 E762 E8AE E8D6 F156 E9F9 EB44", " ")
+    static list := ParseGlyphs()
     return list
+}
+
+; Symbole der Bibliothek mit Suchbegriffen (deutsch und englisch), je Zeile "CODE|woerter"
+ParseGlyphs() {
+    raw := "
+(
+E713|einstellungen optionen konfiguration zahnrad settings options config gear
+E790|farbe palette design kunst grafik colour color paint art
+E91B|bild foto grafik galerie image photo picture
+E8AC|text schrift umbenennen texte word text rename font
+E8EF|rechner zahlen buchhaltung kalkulation calculator numbers accounting
+E8FD|liste aufgaben punkte list tasks items
+E793|kontrast hell dunkel design contrast theme
+E7E8|ein aus energie strom power on off
+E7C4|fenster tabs projekte windows tabs projects
+E8B9|bild galerie fotos gallery images photos
+E706|sonne hell tag licht sun light day
+E708|mond dunkel nacht moon dark night
+E946|info information hinweis info about
+E897|hilfe frage support help question
+E72C|aktualisieren neu laden sync refresh reload update
+E80F|start zuhause haus home start
+E71D|liste notizen aufgaben list notes tasks agenda
+E74E|speichern datei sicherung backup save file disk
+E8BD|chat nachricht kommunikation gespraech chat message comment
+E81C|verlauf historie zeit rueckblick history time recent
+E9D9|analyse monitoring puls leistung analytics monitoring performance pulse
+EB51|favorit herz gesundheit liebe heart favourite health
+E734|favorit stern bewertung star favourite rating
+E735|favorit stern wichtig star favourite important
+E8A5|dokument datei text unterlagen document file text
+E7C3|seite dokument blatt page document sheet
+E90F|werkzeug wartung technik reparatur tool wrench maintenance
+E9CE|hilfe frage unklar help question support
+EA80|idee konzept einfall gluehbirne idea concept lightbulb
+E8C8|kopieren duplikat vorlage copy duplicate
+ECAA|apps programme kacheln anwendungen apps programs tiles
+E71B|link verknuepfung url adresse link url
+E8F1|bibliothek wissen doku buecher lernen library books docs knowledge
+E7EE|kontakt kunde person visitenkarte contact customer person
+E787|kalender termin planung datum calendar appointment schedule date
+E823|uhr zeit zeiterfassung stunden clock time tracking hours
+E8EC|etikett tag kategorie label tag category
+E81E|ebenen stapel design layers stack
+E9D2|diagramm statistik analyse kurve chart statistics analytics graph
+E9F5|automatisierung prozesse technik zahnraeder automation process gears
+EA35|speichern archiv ablage save archive
+E7C1|markierung ziel flagge meilenstein flag goal milestone
+E7B8|eingang postfach ablage inbox tray
+E77B|person konto kunde benutzer person account user customer
+E7EF|sicherheit schutz datenschutz schild security shield privacy
+E774|web internet global sprache weltkugel web internet global language
+E896|download herunterladen download
+E8BB|schliessen abbrechen kreuz close cancel
+E961|tastatur eingabe tippen keyboard input typing
+E8C4|checkliste sortieren reihenfolge checklist sort order
+E759|verschieben bewegen position move position
+E890|ansehen vorschau auge view preview eye
+E8A9|uebersicht raster dashboard kacheln dashboard grid overview
+E7B3|ansehen beobachten auge watch view eye
+E8A7|teilen extern oeffnen link share external open
+E8C6|schneiden schere ausschneiden cut scissors
+E71E|suchen lupe finden search find magnifier
+E8FB|erledigt haken fertig done check complete
+E72D|teilen senden weiterleiten share send forward
+E715|mail email post nachricht mail email message
+E8D7|schluessel passwort zugang key password access
+E779|kontakte liste adressbuch contacts list addressbook
+E8D4|kontaktkarte profil kunde contact card profile
+E8A1|karte zahlung konto card payment account
+E8EA|telefon handy mobil phone mobile
+E7BA|warnung achtung fehler warning alert error
+E9D5|checkliste aufgaben abhaken checklist tasks todo
+E838|ordner dateien projekt folder files project
+E8B7|ordner offen dateien folder open files
+E8DE|ordner verschieben export folder move export
+E707|ort karte standort adresse location map place
+E8E5|datei teilen senden file share send
+E7C0|zug transport logistik train transport logistics
+E8F4|ordner neu anlegen folder new add
+E8EB|wiederholen schleife zyklus repeat loop cycle
+E7AD|scheibe daten speicher disc data storage
+E912|koffer werkzeugkasten arbeit briefcase toolbox work
+E930|erledigt bestaetigt haken done confirmed check
+EC42|kommentar sprechblase feedback comment bubble feedback
+E8A0|zurueck eingang box back inbox
+E945|energie blitz schnell power flash fast energy
+E9A9|einstellungen sonne helligkeit settings brightness
+EC05|funk netzwerk signal wlan signal network wifi
+E703|geraete bildschirme monitore devices screens monitors
+ED5E|notizen zettel liste notes list
+E81D|aufnahme punkt rekord record dot
+E8CE|netzwerk server rechner network server computer
+E7F4|bildschirm monitor computer screen monitor desktop
+E71C|filter sortieren auswahl filter sort
+E8F3|nachrichten news artikel zeitung news article press
+E762|checkliste plan aufgaben checklist plan tasks
+E8AE|praesentation vortrag schulung presentation training
+E8D6|musik audio ton music audio sound
+F156|ebenen sammlung stapel layers collection
+E9F9|balkendiagramm auswertung bericht bar chart report
+EB44|ziel zielscheibe fokus target goal focus
+EC50|archiv kiste ablage archive box storage
+F0E3|zwischenablage pruefen abnahme clipboard check review
+)"
+    out := []
+    Loop Parse, raw, "`n", "`r" {
+        line := Trim(A_LoopField)
+        if (line = "")
+            continue
+        parts := StrSplit(line, "|")
+        out.Push(Map("code", parts[1], "kw", parts.Length > 1 ? parts[2] : ""))
+    }
+    return out
 }
 
 IsGlyphSpec(s) => (SubStr(s, 1, 6) = "glyph:")
@@ -632,33 +743,58 @@ MenuGlyph(menu, item, code) {
     }
 }
 
-; Auswahlfenster mit den Symbolen der Bibliothek
+; Auswahlfenster mit Suchfeld: tippen filtert die Symbole nach Schlagwoertern
 ShowIconLibrary(num, *) {
     glyphs := GlyphList()
     raw := GetDesktopNameRaw(num)
     col := DesktopColor(num)
+    cols := 12, cell := 44, rows := Ceil(glyphs.Length / cols)
+    gridX := 14, gridY := 84, gridH := rows * cell
+
     g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("iconlib.title", raw))
     g.SetFont("s10", "Segoe UI")
     g.MarginX := 14, g.MarginY := 12
-    g.Add("Text", "xm ym w560", T("iconlib.hint"))
-    cols := 12, cell := 44
-    i := 0
-    for code in glyphs {
-        i++
-        cx := 14 + Mod(i - 1, cols) * cell
-        cy := 48 + ((i - 1) // cols) * cell
-        hbm := GlyphHBitmap("glyph:" code, 28, col, 0xF6F6F6)
-        picCtl := g.Add("Picture", Format("x{1} y{2} w28 h28 +0x100", cx + 8, cy + 6), "HBITMAP:*" hbm)
+    g.Add("Text", "xm ym w" (cols * cell) , T("iconlib.hint"))
+    search := g.Add("Edit", "xm y+8 w" (cols * cell) " h26")
+    try search.Opt("+0x0080")            ; ES_AUTOHSCROLL
+    SendMessage(0x1501, 1, StrPtr(T("iconlib.search")), search)   ; EM_SETCUEBANNER
+
+    ctrls := []
+    for item in glyphs {
+        hbm := GlyphHBitmap("glyph:" item["code"], 28, col, 0xF6F6F6)
+        pic := g.Add("Picture", "x0 y0 w28 h28 +0x100 Hidden", "HBITMAP:*" hbm)
         DllCall("DeleteObject", "Ptr", hbm)
-        picCtl.OnEvent("Click", SetGlyphIcon.Bind(num, code, g))
+        pic.OnEvent("Click", SetGlyphIcon.Bind(num, item["code"], g))
+        ctrls.Push(Map("ctrl", pic, "kw", item["kw"] " " item["code"]))
     }
-    rows := Ceil(glyphs.Length / cols)
-    btnY := 48 + rows * cell + 10
-    btnCancel := g.Add("Button", "x" (14 + (cols * cell) - 120) " y" btnY " w120", T("dlg.cancel"))
+    empty := g.Add("Text", "x" gridX " y" (gridY + 10) " w" (cols * cell) " h24 Hidden", T("iconlib.none"))
+    btnCancel := g.Add("Button", "x" (gridX + cols * cell - 120) " y" (gridY + gridH + 12) " w120", T("dlg.cancel"))
     btnCancel.OnEvent("Click", (*) => g.Destroy())
+
+    LayoutIcons(needle) {
+        needle := Trim(StrLower(needle))
+        shown := 0
+        for c in ctrls {
+            hit := (needle = "" || InStr(c["kw"], needle))
+            if (hit) {
+                cx := gridX + Mod(shown, cols) * cell + 8
+                cy := gridY + (shown // cols) * cell + 6
+                c["ctrl"].Move(cx, cy)
+                c["ctrl"].Visible := true
+                shown++
+            } else {
+                c["ctrl"].Visible := false
+            }
+        }
+        empty.Visible := (shown = 0)
+    }
+    LayoutIcons("")
+    search.OnEvent("Change", (ctrl, *) => LayoutIcons(ctrl.Value))
     g.OnEvent("Escape", (*) => g.Destroy())
+    g.OnEvent("Close", (*) => g.Destroy())
     SetGuiIcon(g)
     g.Show("AutoSize Center")
+    search.Focus()
 }
 
 SetGlyphIcon(num, code, g, *) {
