@@ -73,6 +73,7 @@ global CONF := Map(
     "ShowIcons",      1,       ; 1 = Symbole aus settings.ini [Icons] im Tab zeigen
     "IconSize",       16,      ; Kantenlaenge des Symbols (px @100%)
     "IconGap",        7,       ; Abstand zwischen Symbol und Text (px @100%)
+    "IconFont",       "Segoe Fluent Icons",  ; Symbolschrift von Windows 11 (Fallback: Segoe MDL2 Assets)
     "ColHoverBg",     0xFFFFFF, ; Hover-Farbe: wird mit HoverPct ueber den Leistengrund gelegt (Windows hellt auf)
     "ColHoverTx",     0x1F1F1F,
     "HoverPct",      58,      ; Deckkraft (%) der Hover-Aufhellung; je Theme ueberschrieben
@@ -260,12 +261,17 @@ global LANG_DE := Map(
     "menu.tab.short",  "Kürzel setzen…",
     "menu.tab.color",  "Farbe",
     "menu.tab.icon",   "Symbol",
+    "menu.icon.library", "Aus der Symbol-Bibliothek…",
+    "iconlib.title",   "Symbol für „{1}“",
+    "iconlib.hint",    "Ein Symbol anklicken. Es wird in der Farbe des Desktops angezeigt.",
     "menu.icon.url",   "Von einer Webseite holen…",
     "menu.icon.file",  "Eigene Bilddatei wählen…",
     "menu.icon.clear", "Symbol entfernen",
     "menu.showicons",  "Symbole anzeigen",
     "prompt.iconurl.title", "Symbol für „{1}“",
-    "prompt.iconurl.text", "Adresse der Webseite, z.B. beispiel.de`n(https://www. ist nicht nötig; leer = Symbol entfernen)",
+    "prompt.iconurl.text", "Adresse der Webseite (leer = Symbol entfernen):",
+    "dlg.ok",          "OK",
+    "dlg.cancel",      "Abbrechen",
     "prompt.iconfile.title", "Bilddatei für „{1}“ wählen",
     "icon.fetching",   "Symbol wird geholt…",
     "err.icon_fetch",  "Von dieser Adresse konnte kein Symbol geladen werden.",
@@ -349,12 +355,17 @@ global LANG_EN := Map(
     "menu.tab.short",  "Set abbreviation…",
     "menu.tab.color",  "Colour",
     "menu.tab.icon",   "Icon",
+    "menu.icon.library", "From the icon library…",
+    "iconlib.title",   "Icon for “{1}”",
+    "iconlib.hint",    "Click an icon. It is drawn in the desktop's colour.",
     "menu.icon.url",   "Fetch from a website…",
     "menu.icon.file",  "Choose an image file…",
     "menu.icon.clear", "Remove icon",
     "menu.showicons",  "Show icons",
     "prompt.iconurl.title", "Icon for “{1}”",
-    "prompt.iconurl.text", "Website address, e.g. example.com`n(no https://www. needed; empty = removes the icon)",
+    "prompt.iconurl.text", "Website address (empty = removes the icon):",
+    "dlg.ok",          "OK",
+    "dlg.cancel",      "Cancel",
     "prompt.iconfile.title", "Choose an image file for “{1}”",
     "icon.fetching",   "Fetching icon…",
     "err.icon_fetch",  "No icon could be loaded from that address.",
@@ -552,6 +563,110 @@ RebuildAll() {
     UpdateHighlight()
 }
 
+; --------------------------- Symbol-Bibliothek ------------------------------
+; Windows 11 bringt die Schrift "Segoe Fluent Icons" mit: ueber tausend saubere
+; Symbole im System-Stil. Wir nutzen sie als eingebaute Bibliothek - nichts zu
+; bundeln, keine Lizenzfrage, und die Symbole lassen sich einfaerben.
+GlyphList() {
+    static list := StrSplit("E713 E790 E91B E8AC E8EF E8FD E793 E7E8 E7C4 E8B9 E706 E708"
+        . " E946 E897 E72C E80F E71D E74E E8BD E81C E9D9 EB51 E734 E735"
+        . " E8A5 E7C3 E90F E9CE EA80 E8C8 ECAA E71B E8F1 E7EE E787 E823"
+        . " E8EC E81E E9D2 E9F5 EA35 E7C1 E7B8 E77B E7EF E774 E896 E8BB"
+        . " E961 E8C4 E759 E890 E8A9 E7B3 E8A7 E8C6 E71E E8FB E72D E715"
+    . " E8D7 E779 E8D4 E8A1 E8EA E7BA E9D5 E838 E8B7 E8DE E707 E8E5"
+        . " E7C0 E8F4 E8EB E7AD E912 E930 EC42 E8A0 E945 E9A9 EC05 E703"
+        . " ED5E E81D E8CE E7F4 E71C E8F3 E762 E8AE E8D6 F156 E9F9 EB44", " ")
+    return list
+}
+
+IsGlyphSpec(s) => (SubStr(s, 1, 6) = "glyph:")
+GlyphChar(spec) => Chr(Integer("0x" SubStr(spec, 7)))
+
+; Schriftobjekt der Symbolschrift (mit Fallback auf aeltere Windows-Versionen)
+MakeIconFont(sizePx) {
+    fam := 0
+    DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", CONF["IconFont"], "Ptr", 0, "Ptr*", &fam)
+    if (!fam)
+        DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", "Segoe MDL2 Assets", "Ptr", 0, "Ptr*", &fam)
+    if (!fam)
+        return 0
+    font := 0
+    DllCall("gdiplus\GdipCreateFont", "Ptr", fam, "Float", sizePx, "Int", 0, "Int", 2, "Ptr*", &font)
+    DllCall("gdiplus\GdipDeleteFontFamily", "Ptr", fam)
+    return font
+}
+
+; Symbol aus der Bibliothek direkt in eine Zeichenflaeche malen
+DrawGlyph(g, spec, x, y, size, rgb) {
+    font := MakeIconFont(size * 0.86)
+    if (!font)
+        return
+    sf := MakeFormat()
+    DrawText(g, font, sf, GlyphChar(spec), x, y, size, size, ARGB(rgb))
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+}
+
+; Symbol als HBITMAP (fuer Menue-Eintraege und das Auswahlfenster)
+GlyphHBitmap(spec, size, rgb, bgRgb) {
+    GdipStart()
+    bmp := 0, g := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", size, "Int", size, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &bmp)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", bmp, "Ptr*", &g)
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", ARGB(bgRgb))
+    DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 5)
+    DrawGlyph(g, spec, 0, 0, size, rgb)
+    hbm := 0
+    DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", "Ptr", bmp, "Ptr*", &hbm, "UInt", ARGB(bgRgb))
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", bmp)
+    return hbm
+}
+
+; Symbol vor einem Menue-Eintrag
+MenuGlyph(menu, item, code) {
+    hbm := GlyphHBitmap("glyph:" code, 16, 0x1F1F1F, 0xF0F0F0)
+    if (hbm) {
+        try menu.SetIcon(item, "HBITMAP:*" hbm, , 16)
+        DllCall("DeleteObject", "Ptr", hbm)
+    }
+}
+
+; Auswahlfenster mit den Symbolen der Bibliothek
+ShowIconLibrary(num, *) {
+    glyphs := GlyphList()
+    raw := GetDesktopNameRaw(num)
+    col := DesktopColor(num)
+    g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("iconlib.title", raw))
+    g.SetFont("s10", "Segoe UI")
+    g.MarginX := 14, g.MarginY := 12
+    g.Add("Text", "xm ym w560", T("iconlib.hint"))
+    cols := 12, cell := 44
+    i := 0
+    for code in glyphs {
+        i++
+        cx := 14 + Mod(i - 1, cols) * cell
+        cy := 48 + ((i - 1) // cols) * cell
+        hbm := GlyphHBitmap("glyph:" code, 28, col, 0xF6F6F6)
+        picCtl := g.Add("Picture", Format("x{1} y{2} w28 h28 +0x100", cx + 8, cy + 6), "HBITMAP:*" hbm)
+        DllCall("DeleteObject", "Ptr", hbm)
+        picCtl.OnEvent("Click", SetGlyphIcon.Bind(num, code, g))
+    }
+    rows := Ceil(glyphs.Length / cols)
+    btnY := 48 + rows * cell + 10
+    btnCancel := g.Add("Button", "x" (14 + (cols * cell) - 120) " y" btnY " w120", T("dlg.cancel"))
+    btnCancel.OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    SetGuiIcon(g)
+    g.Show("AutoSize Center")
+}
+
+SetGlyphIcon(num, code, g, *) {
+    IniSet("Icons", GetDesktopNameRaw(num), "glyph:" code)
+    try g.Destroy()
+    RebuildAll()
+}
+
 ; ------------------------------- Symbole ------------------------------------
 ; settings.ini [Icons] "Desktopname = Pfad ODER URL". Eine URL wird einmal geholt
 ; (hochaufgeloestes Seiten-Symbol) und in icons\<Desktopname>.png zwischengespeichert.
@@ -572,6 +687,8 @@ IconPathFor(num) {
     spec := IniRead(CONF["IniPath"], "Icons", raw, "")
     if (spec = "")
         return ""
+    if (IsGlyphSpec(spec))
+        return spec                      ; Bibliotheks-Symbol, wird direkt gezeichnet
     if (!IsUrl(spec)) {
         path := (InStr(spec, ":") || SubStr(spec, 1, 1) = "\") ? spec : A_ScriptDir "\" spec
         return FileExist(path) ? path : ""
@@ -754,13 +871,38 @@ LoadIconBitmap(path) {
 }
 
 ; --- Menuebefehle ---
+; Eingabefeld mit festem, grauem "https://" davor - so ist sichtbar, dass die
+; blosse Domain genuegt. Rueckgabe: Map("ok", true/false, "value", Text ohne Schema).
+PromptUrlBox(title, prompt, default) {
+    res := Map("ok", false, "value", "")
+    g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", title)
+    g.SetFont("s10", "Segoe UI")
+    g.MarginX := 16, g.MarginY := 14
+    g.Add("Text", "xm ym w420", prompt)
+    pre := g.Add("Text", "xm y+14 h26 +0x200 c808080", "https://")
+    pw := 0
+    pre.GetPos(, , &pw)
+    ed := g.Add("Edit", "x+4 yp w" (420 - pw - 4) " h26", default)
+    btnOk := g.Add("Button", "xm+196 y+16 w110 Default", T("dlg.ok"))
+    btnCancel := g.Add("Button", "x+8 w110", T("dlg.cancel"))
+    btnOk.OnEvent("Click", (*) => (res["ok"] := true, res["value"] := Trim(ed.Value), g.Destroy()))
+    btnCancel.OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    g.OnEvent("Close", (*) => g.Destroy())
+    g.Show("AutoSize Center")
+    ed.Focus()
+    WinWaitClose("ahk_id " g.Hwnd)
+    return res
+}
+
 PromptIconUrl(num, *) {
     raw := GetDesktopNameRaw(num)
     cur := IniRead(CONF["IniPath"], "Icons", raw, "")
-    ib := InputBox(T("prompt.iconurl.text"), T("prompt.iconurl.title", raw), "w440 h150", IsUrl(cur) ? cur : "")
-    if (ib.Result != "OK")
+    start := IsUrl(cur) ? RegExReplace(cur, "i)^https?://") : ""
+    res := PromptUrlBox(T("prompt.iconurl.title", raw), T("prompt.iconurl.text"), start)
+    if (!res["ok"])
         return
-    url := Trim(ib.Value)
+    url := RegExReplace(Trim(res["value"]), "i)^https?://")   ; falls jemand das Schema doch mittippt
     if (url = "") {
         ClearIcon(num)
         return
@@ -817,6 +959,7 @@ ShowContextMenu(num, *) {
         m.Add(head, (*) => 0)
         m.Disable(head)
         m.Add(T("menu.tab.short"), PromptShort.Bind(num))
+        MenuGlyph(m, T("menu.tab.short"), "E8AC")
         cm := Menu()
         cur := DesktopColor(num)
         hit := false
@@ -837,13 +980,20 @@ ShowContextMenu(num, *) {
         }
         cm.Add(T("menu.color.default"), ClearColor.Bind(num))
         m.Add(T("menu.tab.color"), cm)
+        MenuGlyph(m, T("menu.tab.color"), "E790")
         im := Menu()
+        im.Add(T("menu.icon.library"), ShowIconLibrary.Bind(num))
+        MenuGlyph(im, T("menu.icon.library"), "ECAA")
         im.Add(T("menu.icon.url"), PromptIconUrl.Bind(num))
+        MenuGlyph(im, T("menu.icon.url"), "E774")
         im.Add(T("menu.icon.file"), PromptIconFile.Bind(num))
+        MenuGlyph(im, T("menu.icon.file"), "E8B9")
+        im.Add()
         im.Add(T("menu.icon.clear"), ClearIcon.Bind(num))
         if (IniRead(CONF["IniPath"], "Icons", raw, "") = "")
             im.Disable(T("menu.icon.clear"))
         m.Add(T("menu.tab.icon"), im)
+        MenuGlyph(m, T("menu.tab.icon"), "E91B")
         m.Add()
     }
     FillSettingsMenu(m)
@@ -866,6 +1016,7 @@ FillSettingsMenu(m) {
             am.Check(label)
     }
     m.Add(T("menu.active"), am)
+    MenuGlyph(m, T("menu.active"), "E7C4")
     m.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
     if (CONF["ShowDividers"])
         m.Check(T("menu.dividers"))
@@ -879,6 +1030,7 @@ FillSettingsMenu(m) {
             vm.Check(label)
     }
     m.Add(T("menu.view"), vm)
+    MenuGlyph(m, T("menu.view"), "E8FD")
     tm := Menu()
     for val, label in Map("auto", T("menu.theme.auto"), "light", T("menu.theme.light"), "dark", T("menu.theme.dark")) {
         tm.Add(label, SetViewStr.Bind("ThemeMode", val))
@@ -886,6 +1038,7 @@ FillSettingsMenu(m) {
             tm.Check(label)
     }
     m.Add(T("menu.theme"), tm)
+    MenuGlyph(m, T("menu.theme"), "E793")
     dm := Menu()
     for val, label in Map("on", T("menu.dock.on"), "above", T("menu.dock.above")) {
         dm.Add(label, SetViewStr.Bind("DockMode", val))
@@ -893,6 +1046,7 @@ FillSettingsMenu(m) {
             dm.Check(label)
     }
     m.Add(T("menu.dock"), dm)
+    MenuGlyph(m, T("menu.dock"), "ECAA")
     m.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
     if (CONF["SwitchMethod"] = "dll")
         m.Check(T("menu.directjump"))
@@ -909,22 +1063,28 @@ FillSettingsMenu(m) {
             lm.Check(label)
     }
     m.Add(T("menu.language"), lm)
+    MenuGlyph(m, T("menu.language"), "E774")
     m.Add()
     m.Add(T("menu.help"), HelpMenu())
+    MenuGlyph(m, T("menu.help"), "E897")
     if (gUpdateTag != "")
         m.Add(T("menu.update.available", gUpdateTag), OpenReleasePage)
     m.Add(T("menu.about"), ShowAbout)
+    MenuGlyph(m, T("menu.about"), "E946")
     m.Add()
     m.Add(T("tray.rebuild"), (*) => RebuildAll())
+    MenuGlyph(m, T("tray.rebuild"), "E72C")
     m.Add(T("tray.resetpos"), ResetPos)
     m.Add()
     m.Add(T("tray.exit"), (*) => ExitApp())
+    MenuGlyph(m, T("tray.exit"), "E7E8")
 }
 
 ; Untermenue "Hilfe": Doku, Changelog, Feedback-Wege, Update-Pruefung
 HelpMenu() {
     hm := Menu()
     hm.Add(T("menu.help.docs"), OpenDocs)
+    MenuGlyph(hm, T("menu.help.docs"), "E8F1")
     hm.Add(T("menu.help.changelog"), (*) => Run(APP_CHANGELOG_URL))
     hm.Add()
     hm.Add(T("menu.feedback.bug"), ReportBug)
@@ -932,6 +1092,7 @@ HelpMenu() {
     hm.Add(T("menu.feedback.mail"), MailAuthor)
     hm.Add()
     hm.Add(T("menu.update.check"), (*) => CheckUpdate(true))
+    MenuGlyph(hm, T("menu.update.check"), "E896")
     hm.Add(T("menu.update.auto"), ToggleView.Bind("UpdateCheck"))
     if (CONF["UpdateCheck"])
         hm.Check(T("menu.update.auto"))
@@ -1608,12 +1769,17 @@ RenderBar(force := false) {
         iw := (item["icon"] != "") ? L["iconSize"] : 0
         tx0 := x + px(CONF["PadX"]), tw := w - 2 * px(CONF["PadX"])
         if (iw) {
-            img := LoadIconBitmap(item["icon"])
-            if (img)
-                DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", img, "Int", tx0
-                    , "Int", y + (h - iw) // 2 - px(1), "Int", iw, "Int", iw)
-            else
-                iw := 0
+            iy := y + (h - iw) // 2 - px(1)
+            if (IsGlyphSpec(item["icon"])) {
+                DrawGlyph(g, item["icon"], tx0, iy, iw, col)
+            } else {
+                img := LoadIconBitmap(item["icon"])
+                if (img)
+                    DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", img, "Int", tx0
+                        , "Int", iy, "Int", iw, "Int", iw)
+                else
+                    iw := 0
+            }
             tx0 += iw ? iw + L["iconGap"] : 0
             tw -= iw ? iw + L["iconGap"] : 0
         }
