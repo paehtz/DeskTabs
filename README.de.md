@@ -28,12 +28,13 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 
 - **Live-Namen aus Windows:** die Button-Beschriftung kommt direkt aus den in Windows benannten Desktops (Task-Ansicht). Nichts wird doppelt gepflegt.
 - **Dynamisch:** Desktop hinzufügen/entfernen in Windows → die Leiste passt sich innerhalb ~1,2 s automatisch an (oder Tray → „Leiste neu aufbauen").
-- **Nativer Wechsel:** Klick bildet `Win+Strg+Pfeil` nach. Fenster bleiben stabil auf ihren Desktops (anders als `GoToDesktopNumber`, das auf 24H2/25H2 das Fokusfenster mitnimmt).
+- **Direktsprung:** Ein Klick springt in einem Schritt zum Ziel-Desktop (~100 ms), ohne die Desktops dazwischen durchzuschalten. Auf 25H2 (26200) gemessen: Das fokussierte Fenster bleibt liegen; nimmt ein Build es doch mit, schiebt DeskTabs es sofort zurück. Der schrittweise Wechsel (`Win+Strg+Pfeil`) bleibt über den Menüpunkt „Direkt springen“ verfügbar.
 - **Auf allen Desktops sichtbar:** das Fenster ist an alle Desktops gepinnt.
 - **Hell/Dunkel automatisch:** folgt dem Windows-Theme (Taskleisten-Helligkeit), umschaltbar oder fest einstellbar.
 - **Index-Präfix:** „3 · Projektname" (abschaltbar).
 - **Farbcodierung:** dünner Farbbalken pro Desktop (Tab-Indikator-Stil, abschaltbar, pro Desktop überschreibbar).
-- **Hover-Effekt:** Button unter der Maus hellt auf.
+- **Symbole pro Tab:** Symbol von einer Webseite holen (DeskTabs sucht das Seiten-Symbol in der bestmöglichen Auflösung und legt es im Zwischenspeicher ab) oder eigene Bilddatei wählen. Rechtsklick auf den Tab → *Symbol*, oder in der `settings.ini`: `[Icons] Desktopname = URL oder Pfad`. Die Domain genügt, `https://www.` ist nicht nötig.
+- **Fluent-Optik:** abgerundete Tabs, aktiver Desktop getönt in seiner eigenen Farbe (Farbton bleibt, Helligkeit kommt vom Farbschema), dezente senkrechte Verläufe, Hover hellt auf wie bei den Windows-Taskleisten-Buttons. Der aktive Stil ist umschaltbar: eigene Desktop-Farbe, einheitliche Akzentfarbe oder kräftige Füllung.
 - **Klick auf aktiven Desktop:** öffnet die Task-Ansicht (Win+Tab).
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
@@ -43,7 +44,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Update-Prüfung:** einmal täglich fragt DeskTabs die GitHub-Releases-API nach der aktuellen Versionsnummer (mehr wird nicht übertragen) und zeigt bei einer neueren Version einen Tray-Hinweis. Abschaltbar im Hilfe-Menü oder per `UpdateCheck = 0`.
 - **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
 - **Mausrad** über der Leiste blättert durch die Desktops.
-- **Trennstriche** zwischen den Buttons (dezent).
+- **Trennstriche** zwischen den Tabs (standardmäßig aus, umschaltbar).
 - **Verschiebbar** am Griff `≡` links; Position wird in `settings.ini` gemerkt.
 
 ---
@@ -103,7 +104,6 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `DockMode` | `on` | `on` = auf der Taskleiste (optisch integriert, kann beim Fensterwechsel minimal flackern). `above` = knapp über der Taskleiste (flackerfrei, überlagert aber die unterste Fensterkante). |
 | `ThemeMode` | `auto` | `auto` = folgt dem Windows-Theme (Taskleisten-Helligkeit via Registry `SystemUsesLightTheme`). `light` / `dark` = fest. Wechsel zur Laufzeit wird automatisch erkannt (~1,2 s) und die Leiste neu gebaut. |
 | `OffsetX` | 10 | Abstand vom linken Bildschirmrand (px). |
-| `SwitchMethod` | `native` | `native` = Win+Strg+Pfeil nachbilden (Fenster bleiben stabil). `dll` = `GoToDesktopNumber` (schneller, nimmt aber Fenster mit). |
 | `ShowIndex` | 1 | Nummern-Präfix („3 · …"). |
 | `ColorCoding` | 1 | Farbbalken pro Desktop. |
 | `AccentBarH` | 3 | Höhe des Farbbalkens (px). |
@@ -119,6 +119,15 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `desktop-log_YYYY-MM.csv` neben dem Skript schreiben. `0` = aus. |
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
 | `UpdateCheck` | 1 | 1 = einmal täglich die GitHub-Releases-API nach einer neueren Version fragen (nur die Versionsnummer wird gelesen). Auch im Hilfe-Menü schaltbar; landet in `[View] UpdateCheck`. |
+| `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `solid` = kräftige Füllung. |
+| `TintL` / `TintS` | 88 / 100 (hell), 30 / 70 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
+| `GradientPct` | 14 | Stärke des senkrechten Verlaufs in gefüllten Tabs, `0` = flach. |
+| `HoverPct` | 58 (hell), 12 (dunkel) | Wie stark ein Tab beim Drüberfahren aufhellt. |
+| `CornerRadius` | 4 | Eckenradius der Tabs (wie die Windows-11-Taskleisten-Buttons). |
+| `ShowIcons` | 1 | Symbole aus `[Icons]` in den Tabs anzeigen. |
+| `IconSize` / `IconGap` | 16 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
+| `ShowDividers` | 0 | Dünne Trennstriche zwischen den Tabs. |
+| `SwitchMethod` | `dll` | `dll` = direkt zum Desktop springen, `native` = `Win+Strg+Pfeil` schrittweise nachbilden. |
 | `Language` | `auto` | Oberflächensprache: `auto` folgt der Windows-Anzeigesprache (Deutsch → `de`, alles andere → `en`), oder `de` / `en` fest. Jeder andere Code lädt `lang\<code>.ini`. Auch in `settings.ini` `[View] Language=` setzbar. Wirkt nach Neustart. |
 | Farben | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` werden beim Start aus `THEME_LIGHT` / `THEME_DARK` (je nach `ThemeMode`) in die CONF übernommen. Anpassen → die beiden `THEME_*`-Maps oben im Skript. |
 
@@ -175,7 +184,7 @@ start,end,seconds,desktop_index,desktop_name
 ## Wie es funktioniert (Architektur)
 
 - **Lesen der Desktops** über `VirtualDesktopAccessor.dll` (in-process, schnell): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
-- **Wechseln** über simulierte Tastenkürzel (`SwitchMethod=native`), nicht über die DLL, das verhindert das Mitwandern von Fenstern.
+- **Wechseln** über die DLL in einem Schritt (`SwitchMethod=dll`), mit Sicherheitsnetz: Nimmt ein Windows-Build das Vordergrundfenster mit, schiebt DeskTabs es zurück; `native` bildet stattdessen die Tastenkürzel nach.
 - **Live-Update der Hervorhebung** via `RegisterPostMessageHook` (Desktop-Wechsel-Benachrichtigung) + 1,2-s-Fallback-Timer (`Refresh`), der auch Desktop-Anzahl/Namen aktualisiert und die Leiste bei Bedarf neu baut.
 - **Immer im Vordergrund** (`DockMode=on`): Kombination aus
   - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → bei jedem Fensterwechsel sofort `AssertTop()`,
@@ -189,7 +198,7 @@ start,end,seconds,desktop_index,desktop_name
 ## Erkenntnisse / Stolpersteine (für künftige Wartung)
 
 - **25H2-Kompatibilität:** Die Ciantic-DLL ist mit „24H2" gelabelt, läuft aber auf 25H2 (26200) einwandfrei. Bei einem Windows-Feature-Update, das die Virtual-Desktop-COM-VTable ändert, kann die DLL brechen → dann neue Version von Ciantics Repo holen.
-- **`GoToDesktopNumber` nimmt Fenster mit:** Auf 24H2/25H2 nutzt die DLL intern `switch_desktop_and_move_foreground_view`. Deshalb `SwitchMethod=native` (Tastenkürzel-Nachbau).
+- **`GoToDesktopNumber` und das Vordergrundfenster:** Auf 24H2 nutzt die DLL intern `switch_desktop_and_move_foreground_view` und nahm das fokussierte Fenster mit auf den Ziel-Desktop. Auf 25H2 (26200) mit einem Vordergrundfenster aus einem fremden Prozess nachgemessen: passiert nicht mehr, deshalb ist der Direktsprung Standard. DeskTabs prüft trotzdem nach jedem Sprung und schiebt das Fenster notfalls zurück. `SwitchMethod=native` stellt den alten Tastenkürzel-Nachbau wieder her.
 - **`&` im Desktop-Namen:** AHK-Text-Controls interpretieren `&` als Tastenkürzel-Markierung. Lösung: Style `SS_NOPREFIX` (`+0x80`) auf die Buttons, das zeigt `&` wörtlich (z.B. „M&S").
 - **z-Order der Farbbalken/Trennstriche:** Überlappende Controls werden vom Button verdeckt. Deshalb liegen Trennstriche in den Lücken und Farbbalken **unter** dem Button (überlappungsfrei).
 - **AHK-Semikolon-Falle:** Ein `;` ohne Leerzeichen davor ist KEIN Kommentar, sondern wirft „Illegal character in expression". Inline-Kommentare immer mit Leerzeichen vor `;`.

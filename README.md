@@ -28,12 +28,13 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 
 - **Live names from Windows:** the button labels come straight from the desktops you named in Windows (Task View). Nothing is maintained twice.
 - **Dynamic:** add or remove a desktop in Windows → the bar adapts automatically within ~1.2 s (or via Tray → "Rebuild bar").
-- **Native switching:** a click emulates `Win+Ctrl+Arrow`. Windows stay put on their desktops (unlike `GoToDesktopNumber`, which drags the focused window along on 24H2/25H2).
+- **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via the menu entry “Jump directly”.
 - **Visible on all desktops:** the window is pinned to every desktop.
 - **Light/Dark automatic:** follows the Windows theme (taskbar brightness), switchable or fixed.
 - **Index prefix:** "3 · ProjectName" (can be disabled).
 - **Colour coding:** a thin colour bar per desktop (tab-indicator style, can be disabled, overridable per desktop).
-- **Hover effect:** the button under the mouse lightens up.
+- **Tab icons:** give a desktop an icon from a website (DeskTabs fetches the site icon in the best resolution it can find and caches it) or from your own image file. Right-click a tab → *Icon*, or set `[Icons] Desktop name = URL or path` in `settings.ini`. The bare domain is enough, no `https://www.` needed.
+- **Fluent look:** rounded tabs, the active desktop tinted in its own colour (hue kept, lightness from the theme), subtle vertical gradients, hover lightens the tab like the Windows taskbar buttons. The active style is switchable: own desktop colour, uniform accent colour, or a solid fill.
 - **Click on the active desktop:** opens Task View (Win+Tab).
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
@@ -43,7 +44,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Update check:** once a day DeskTabs asks the GitHub releases API for the latest version number (nothing else is sent) and shows a tray notification if a newer release exists. Disable via the Help menu or `UpdateCheck = 0`.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
 - **Mouse wheel** over the bar pages through the desktops.
-- **Separators** between the buttons (subtle).
+- **Separators** between the tabs (off by default, switchable).
 - **Movable** by the handle `≡` on the left; the position is remembered in `settings.ini`.
 
 ---
@@ -103,7 +104,6 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `DockMode` | `on` | `on` = on the taskbar (visually integrated, may flicker slightly when switching windows). `above` = just above the taskbar (flicker-free, but overlaps the bottom edge of windows). |
 | `ThemeMode` | `auto` | `auto` = follow the Windows theme (taskbar brightness via registry `SystemUsesLightTheme`). `light` / `dark` = fixed. A change at runtime is detected automatically (~1.2 s) and the bar is rebuilt. |
 | `OffsetX` | 10 | Distance from the left screen edge (px). |
-| `SwitchMethod` | `native` | `native` = emulate Win+Ctrl+Arrow (windows stay stable). `dll` = `GoToDesktopNumber` (faster, but drags windows along). |
 | `ShowIndex` | 1 | Number prefix ("3 · …"). |
 | `ColorCoding` | 1 | Colour bar per desktop. |
 | `AccentBarH` | 3 | Height of the colour bar (px). |
@@ -119,6 +119,15 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `TimeLog` | 1 | Write per-desktop stay times to `desktop-log_YYYY-MM.csv` next to the script. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
+| `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `solid` = a strong fill. |
+| `TintL` / `TintS` | 88 / 100 (light), 30 / 70 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
+| `GradientPct` | 14 | Strength of the vertical gradient inside filled tabs, `0` = flat. |
+| `HoverPct` | 58 (light), 12 (dark) | How far a hovered tab is lightened. |
+| `CornerRadius` | 4 | Corner radius of the tabs (like Windows 11 taskbar buttons). |
+| `ShowIcons` | 1 | Show the icons from `[Icons]` in the tabs. |
+| `IconSize` / `IconGap` | 16 / 7 | Icon size and the gap between icon and text. |
+| `ShowDividers` | 0 | Thin separators between the tabs. |
+| `SwitchMethod` | `dll` | `dll` = jump straight to the desktop, `native` = emulate `Win+Ctrl+Arrow` step by step. |
 | `Language` | `auto` | UI language: `auto` follows the Windows display language (German → `de`, everything else → `en`), or `de` / `en` fixed. Any other code loads `lang\<code>.ini`. Can also be set in `settings.ini` `[View] Language=`. Takes effect on restart. |
 | Colours | auto | `ColBarBg`, `ColInactiveBg/Tx`, `ColActiveBg/Tx`, `ColHoverBg/Tx`, `ColDivider` are copied at startup from `THEME_LIGHT` / `THEME_DARK` (depending on `ThemeMode`) into `CONF`. To customise, edit the two `THEME_*` maps near the top of the script. |
 
@@ -175,7 +184,7 @@ start,end,seconds,desktop_index,desktop_name
 ## How it works (architecture)
 
 - **Reading the desktops** via `VirtualDesktopAccessor.dll` (in-process, fast): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
-- **Switching** via simulated keyboard shortcuts (`SwitchMethod=native`), not via the DLL, which prevents windows from being dragged along.
+- **Switching** via the DLL in one step (`SwitchMethod=dll`), with a safety net that moves the foreground window back if a Windows build drags it along; `native` emulates the keyboard shortcuts instead.
 - **Live highlight update** through `RegisterPostMessageHook` (desktop-change notification) plus a 1.2 s fallback timer (`Refresh`), which also refreshes the desktop count and names and rebuilds the bar when needed.
 - **Always on top** (`DockMode=on`): a combination of
   - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → an immediate `AssertTop()` on every window switch,
@@ -189,7 +198,7 @@ start,end,seconds,desktop_index,desktop_name
 ## Lessons learned / pitfalls (for future maintenance)
 
 - **25H2 compatibility:** the Ciantic DLL is labelled "24H2" but runs fine on 25H2 (26200). A Windows feature update that changes the virtual-desktop COM vtable could break the DLL → then grab a fresh build from Ciantic's repo.
-- **`GoToDesktopNumber` drags windows along:** on 24H2/25H2 the DLL internally uses `switch_desktop_and_move_foreground_view`. Hence `SwitchMethod=native` (shortcut emulation).
+- **`GoToDesktopNumber` and the foreground window:** on 24H2 the DLL internally uses `switch_desktop_and_move_foreground_view`, which used to drag the focused window to the target desktop. Measured again on 25H2 (26200) with a foreground window from another process, it no longer does, so the direct jump is the default; DeskTabs still checks after every jump and moves the window back if needed. `SwitchMethod=native` restores the old shortcut emulation.
 - **`&` in a desktop name:** AHK text controls interpret `&` as an accelerator marker. Fix: the `SS_NOPREFIX` style (`+0x80`) on the buttons, which shows `&` literally (e.g. "M&S").
 - **z-order of colour bars / separators:** overlapping controls get hidden by the button. So separators sit in the gaps and colour bars sit **below** the button (no overlap).
 - **AHK semicolon trap:** a `;` without a preceding space is NOT a comment but throws "Illegal character in expression". Always put a space before inline `;`.

@@ -265,7 +265,7 @@ global LANG_DE := Map(
     "menu.icon.clear", "Symbol entfernen",
     "menu.showicons",  "Symbole anzeigen",
     "prompt.iconurl.title", "Symbol für „{1}“",
-    "prompt.iconurl.text", "Adresse der Webseite (leer = Symbol entfernen):",
+    "prompt.iconurl.text", "Adresse der Webseite, z.B. beispiel.de`n(https://www. ist nicht nötig; leer = Symbol entfernen)",
     "prompt.iconfile.title", "Bilddatei für „{1}“ wählen",
     "icon.fetching",   "Symbol wird geholt…",
     "err.icon_fetch",  "Von dieser Adresse konnte kein Symbol geladen werden.",
@@ -354,7 +354,7 @@ global LANG_EN := Map(
     "menu.icon.clear", "Remove icon",
     "menu.showicons",  "Show icons",
     "prompt.iconurl.title", "Icon for “{1}”",
-    "prompt.iconurl.text", "Website address (empty = remove the icon):",
+    "prompt.iconurl.text", "Website address, e.g. example.com`n(no https://www. needed; empty = removes the icon)",
     "prompt.iconfile.title", "Choose an image file for “{1}”",
     "icon.fetching",   "Fetching icon…",
     "err.icon_fetch",  "No icon could be loaded from that address.",
@@ -757,7 +757,7 @@ LoadIconBitmap(path) {
 PromptIconUrl(num, *) {
     raw := GetDesktopNameRaw(num)
     cur := IniRead(CONF["IniPath"], "Icons", raw, "")
-    ib := InputBox(T("prompt.iconurl.text"), T("prompt.iconurl.title", raw), "w420 h130", IsUrl(cur) ? cur : "")
+    ib := InputBox(T("prompt.iconurl.text"), T("prompt.iconurl.title", raw), "w440 h150", IsUrl(cur) ? cur : "")
     if (ib.Result != "OK")
         return
     url := Trim(ib.Value)
