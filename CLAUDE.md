@@ -38,7 +38,6 @@ Acme Bakery=E5471D
 [View]                       ; what the right-click menu saves; each key overrides CONF
 CompactMode=auto             ; auto | full | short | icon
 ThemeMode=auto               ; auto | light | dark
-DockMode=on                  ; on | above
 Language=auto                ; auto | de | en | <code of lang\<code>.ini>
 ShowIndex=1                  ; 0|1  numbers in front of names
 ColorCoding=1                ; 0|1  colour bar under each tab
@@ -69,7 +68,7 @@ start,end,seconds,desktop_index,desktop_name
 All user-facing options are in the `CONF := Map(...)` block at the very top of `DeskTabs.ahk`:
 
 - **Colours / dark mode** → the `THEME_LIGHT` / `THEME_DARK` maps (just below `CONF`) and `ThemeMode` (`auto` / `light` / `dark`).
-- **Position** → `DockMode` (`on` the taskbar / `above` it), `OffsetX` (distance from the left edge).
+- **Position** → the bar sits on the taskbar; `OffsetX` sets the distance from the left edge.
 - **Switching behaviour** → `SwitchMethod` (`native` keystrokes vs `dll`).
 - **Labels / look** → `ShowIndex`, `ColorCoding`, `AccentBarH`, `FontSizePt`, `MaxNameLen`, `WheelSwitch`, `AutoHideFullscreen`, `ClickActiveTaskView`.
 - **Per-desktop colour at runtime** → `settings.ini` section `[Colors]`, lines `Desktop name = RRGGBB`.

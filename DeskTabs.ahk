@@ -45,8 +45,6 @@ global CONF := Map(
                                ; "native" = Strg+Win+Pfeil nachbilden, Desktop fuer Desktop (Fallback; Menue "Direkt springen")
     "ColDivider",     0xCFCFCF, ; Trennstrich-Farbe (sanft, Material)
     "DividerInsetY",  9,       ; vertikaler Abstand des Trennstrichs oben/unten (px @100%)
-    "DockMode",       "on",    ; "on"    = auf der Taskleiste (optisch integriert, kann minimal flackern)
-                               ; "above" = direkt ueber der Taskleiste (flackerfrei)
     "OffsetX",        10,      ; Abstand vom linken Bildschirmrand (px @100%)
     "SnapToTaskbar",  1,       ; 1 = beim Ziehen vertikal auf die Taskleiste einrasten (X bleibt frei)
     "SnapDistance",   40,      ; zusaetzl. Fang-Abstand (px @100%) ueber der Taskleiste; auf der Taskleiste haelt es ohnehin (Ueberlappung)
@@ -323,9 +321,6 @@ global LANG_DE := Map(
     "menu.theme.auto", "Automatisch (Windows)",
     "menu.theme.light", "Hell",
     "menu.theme.dark", "Dunkel",
-    "menu.dock",       "Andocken",
-    "menu.dock.on",    "Auf der Taskleiste",
-    "menu.dock.above", "Über der Taskleiste",
     "menu.hotkeys",    "Tastenkürzel",
     "menu.hotkeys.on", "Direktsprung per Zifferntaste",
     "menu.hotkeys.off", "aus",
@@ -447,9 +442,6 @@ global LANG_EN := Map(
     "menu.theme.auto", "Automatic (Windows)",
     "menu.theme.light", "Light",
     "menu.theme.dark", "Dark",
-    "menu.dock",       "Docking",
-    "menu.dock.on",    "On the taskbar",
-    "menu.dock.above", "Above the taskbar",
     "menu.hotkeys",    "Keyboard shortcuts",
     "menu.hotkeys.on", "Jump to a desktop with a number key",
     "menu.hotkeys.off", "off",
@@ -606,8 +598,15 @@ FirstRunHint() {
 ; Alles, was das Kontextmenue umschaltet, landet in settings.ini [View] und
 ; ueberschreibt beim Start bzw. beim Live-Reload die CONF-Standardwerte.
 ApplyIniOverrides() {
+    ; Frueher gab es "ueber der Taskleiste" (DockMode=above). Die Leiste lag dann ueber
+    ; der Unterkante jedes Fensters - entfernt in 1.1.5. Alte Eintraege zurueck auf die
+    ; Taskleiste holen: Schalter und die dazu passende Hoehe vergessen, X bleibt.
+    if (IniRead(CONF["IniPath"], "View", "DockMode", "") != "") {
+        IniDel("View", "DockMode")
+        IniDel("Position", "Y")
+    }
     for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
-                          , "DockMode", "on,above", "Language", "*", "ActiveStyle", "desktop,accent,solid"
+                          , "Language", "*", "ActiveStyle", "desktop,accent,solid"
                           , "SwitchMethod", "native,dll") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
@@ -636,8 +635,6 @@ SetView(key, val) {
         InitLanguage()
         BuildTray()
     }
-    if (key = "DockMode")
-        IniDel("Position", "Y")     ; Y neu aus dem Andock-Modus ableiten, X bleibt
     ApplyTheme()
     RebuildAll()
 }
@@ -1523,14 +1520,6 @@ FillSettingsMenu(m) {
     }
     m.Add(T("menu.theme"), tm)
     MenuGlyph(m, T("menu.theme"), "E793")
-    dm := Menu()
-    for val, label in Map("on", T("menu.dock.on"), "above", T("menu.dock.above")) {
-        dm.Add(label, SetViewStr.Bind("DockMode", val))
-        if (CONF["DockMode"] = val)
-            dm.Check(label)
-    }
-    m.Add(T("menu.dock"), dm)
-    MenuGlyph(m, T("menu.dock"), "ECAA")
     ; Der Hauptmenue-Eintrag zeigt gleich, ob die Kuerzel an sind und welche gelten -
     ; sonst sucht man den Schalter im Untermenue und haelt die Funktion fuer kaputt.
     km := Menu()
@@ -1694,7 +1683,7 @@ UrlEncode(s) {
 
 ; Umgebungsangaben, die im Fehlerbericht vorausgefuellt werden
 EnvSummary() {
-    return "DockMode=" CONF["DockMode"] ", ThemeMode=" CONF["ThemeMode"] ", CompactMode=" CONF["CompactMode"]
+    return "ThemeMode=" CONF["ThemeMode"] ", CompactMode=" CONF["CompactMode"]
         . ", Desktops=" GetDesktopCount() ", Screen=" A_ScreenWidth "x" A_ScreenHeight ", DPI=" A_ScreenDPI
 }
 
@@ -2064,17 +2053,15 @@ BuildBarAt() {
         , "radius", px(CONF["CornerRadius"]), "accH", px(CONF["AccentBarH"])
         , "iconSize", iconSize, "iconGap", iconGap)
 
-    ; Position: aus settings.ini, sonst Standard = unten links.
-    ; "above" => direkt ueber der Taskleiste (sicher sichtbar)
-    ; "on"    => auf der Taskleiste
+    ; Position: aus settings.ini, sonst Standard = unten links auf der Taskleiste.
     defX := tbX + px(CONF["OffsetX"])
-    defY := (CONF["DockMode"] = "above") ? (tbY - GUIH) : tbY
+    defY := tbY
     posX := IniGet("Position", "X", defX)
     posY := IniGet("Position", "Y", defY)
     posX := ClampX(posX), posY := ClampY(posY, GUIH)
     ; Startposition vertikal auf die Taskleiste einrasten (wie beim Ziehen)
     if (CONF["SnapToTaskbar"]) {
-        snapY := (CONF["DockMode"] = "above") ? (tbY - GUIH) : (tbY + (tbH - GUIH) // 2)
+        snapY := tbY + (tbH - GUIH) // 2
         if (((posY < tbY + tbH) && (posY + GUIH > tbY)) || (Abs(posY - snapY) <= px(CONF["SnapDistance"])))
             posY := snapY
     }
@@ -2565,7 +2552,7 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
             rc := Buffer(16, 0)
             DllCall("GetWindowRect", "Ptr", hTray, "Ptr", rc)
             tbY := NumGet(rc, 4, "Int"), tbBottom := NumGet(rc, 12, "Int")
-            targetY := (CONF["DockMode"] = "above") ? (tbY - GUIH) : (tbY + ((tbBottom - tbY) - GUIH) // 2)
+            targetY := tbY + ((tbBottom - tbY) - GUIH) // 2
             overlaps := (ny < tbBottom) && (ny + GUIH > tbY)
             near := Abs(ny - targetY) <= px(CONF["SnapDistance"])
             if (overlaps || near)
@@ -2901,7 +2888,7 @@ ResetPos(*) {
         tbX := NumGet(rc, 0, "Int"), tbY := NumGet(rc, 4, "Int")
     }
     x := tbX + px(CONF["OffsetX"])
-    y := (CONF["DockMode"] = "above") ? (tbY - GUIH) : tbY
+    y := tbY
     MyGui.Move(x, y)
     IniSet("Position", "X", x)
     IniSet("Position", "Y", y)

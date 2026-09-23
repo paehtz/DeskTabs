@@ -63,7 +63,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
 - **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
-- **Rechtsklick-Menü:** Rechtsklick auf einen Tab für Kürzel und Farbe, dazu alle App-Einstellungen (Nummern, Farbcodierung, Ansichtsstufe, Farbschema, Andocken, Einrasten, Zeit-Log, Sprache). Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
+- **Rechtsklick-Menü:** Rechtsklick auf einen Tab für Kürzel und Farbe, dazu alle App-Einstellungen (Nummern, Farbcodierung, Ansichtsstufe, Farbschema, Einrasten, Zeit-Log, Sprache). Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
 - **Hilfe-Menü:** Dokumentation, Änderungsverlauf, Fehler melden und Wunsch einreichen (öffnet ein vorausgefülltes GitHub-Issue), E-Mail an den Autor, Update-Prüfung und *Über DeskTabs* (Version, Lizenz, Links).
 - **Update-Prüfung:** einmal täglich fragt DeskTabs die GitHub-Releases-API nach der aktuellen Versionsnummer (mehr wird nicht übertragen) und zeigt bei einer neueren Version einen Tray-Hinweis. Abschaltbar im Hilfe-Menü oder per `UpdateCheck = 0`.
 - **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
@@ -138,7 +138,6 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 
 | Option | Default | Bedeutung |
 |---|---|---|
-| `DockMode` | `on` | `on` = auf der Taskleiste (optisch integriert, kann beim Fensterwechsel minimal flackern). `above` = knapp über der Taskleiste (flackerfrei, überlagert aber die unterste Fensterkante). |
 | `ThemeMode` | `auto` | `auto` = folgt dem Windows-Theme (Taskleisten-Helligkeit via Registry `SystemUsesLightTheme`). `light` / `dark` = fest. Wechsel zur Laufzeit wird automatisch erkannt (~1,2 s) und die Leiste neu gebaut. |
 | `OffsetX` | 10 | Abstand vom linken Bildschirmrand (px). |
 | `ShowIndex` | 0 | 1 stellt die Desktop-Nummer vor den Namen. |
@@ -193,7 +192,7 @@ Buchhaltung=BH
 
 [View]
 ; Wird vom Rechtsklick-Menü (und Strg + Mausrad) geschrieben; jeder Schlüssel
-; überschreibt den CONF-Standard: CompactMode, ThemeMode, DockMode, Language,
+; überschreibt den CONF-Standard: CompactMode, ThemeMode, Language,
 ; ShowIndex, ColorCoding, SnapToTaskbar, TimeLog
 CompactMode=short
 ShowIndex=1
@@ -228,7 +227,7 @@ start,end,seconds,desktop_index,desktop_name
 - **Lesen der Desktops** über `VirtualDesktopAccessor.dll` (in-process, schnell): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
 - **Wechseln** über die DLL in einem Schritt (`SwitchMethod=dll`), mit Sicherheitsnetz: Nimmt ein Windows-Build das Vordergrundfenster mit, schiebt DeskTabs es zurück; `native` bildet stattdessen die Tastenkürzel nach.
 - **Live-Update der Hervorhebung** via `RegisterPostMessageHook` (Desktop-Wechsel-Benachrichtigung) + 1,2-s-Fallback-Timer (`Refresh`), der auch Desktop-Anzahl/Namen aktualisiert und die Leiste bei Bedarf neu baut.
-- **Immer im Vordergrund** (`DockMode=on`): Kombination aus
+- **Immer im Vordergrund** (auf der Taskleiste): Kombination aus
   - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → bei jedem Fensterwechsel sofort `AssertTop()`,
   - kurzer **Burst** (10× alle 25 ms) zum Abdecken von Maximier-Animationen,
   - 250-ms-Backstop-Timer.
@@ -244,7 +243,7 @@ start,end,seconds,desktop_index,desktop_name
 - **`&` im Desktop-Namen:** AHK-Text-Controls interpretieren `&` als Tastenkürzel-Markierung. Lösung: Style `SS_NOPREFIX` (`+0x80`) auf die Buttons, das zeigt `&` wörtlich (z.B. „M&S").
 - **z-Order der Farbbalken/Trennstriche:** Überlappende Controls werden vom Button verdeckt. Deshalb liegen Trennstriche in den Lücken und Farbbalken **unter** dem Button (überlappungsfrei).
 - **AHK-Semikolon-Falle:** Ein `;` ohne Leerzeichen davor ist KEIN Kommentar, sondern wirft „Illegal character in expression". Inline-Kommentare immer mit Leerzeichen vor `;`.
-- **DockMode-Abwägung:** `on` (auf der Taskleiste) sieht integrierter aus, kämpft aber mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). `above` (knapp darüber) ist flackerfrei, überlagert aber die unterste Fensterkante.
+- **Platz auf der Taskleiste:** Die Leiste kämpft mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). Bis v1.1.4 gab es `DockMode=above`, das die Leiste knapp über der Taskleiste parkte: flackerfrei, lag aber über der Unterkante jedes Fensters (Statuszeilen, Bildlaufleisten, Eingabefelder) und war damit im Alltag unbrauchbar; in v1.1.5 entfernt. Ein altes `DockMode=above` in der `settings.ini` wird beim Start gelöscht, die Leiste kehrt auf die Taskleiste zurück.
 - **Multi-Monitor:** Die Leiste sitzt immer auf der **Primär-Taskleiste** (`Shell_TrayWnd`) und folgt automatisch, wenn sich der Primärmonitor in Windows ändert. Sekundäre Taskleisten (`Shell_SecondaryTrayWnd`) werden nicht bespielt.
 - **DLL-Funktionsumfang:** `VirtualDesktopAccessor.dll` bietet KEINE Funktion zum Umsortieren von Desktops (geprüfte Exports u.a. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook`, aber kein `MoveDesktop`). Fürs Umsortieren müsste [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop) her.
 
@@ -252,7 +251,7 @@ start,end,seconds,desktop_index,desktop_name
 
 ## Ideen für die Zukunft
 
-- **Rest-Flackern in `DockMode=on` final lösen:** dauerhaft auf der Taskleiste ohne Zucken beim Fensterwechsel. Ansätze: zusätzliche WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), dichterer Burst, oder die Leiste als Kind der Taskleiste (`SetParent`). Aktueller Standard-Workaround: `DockMode=above` (flackerfrei).
+- **Rest-Flackern auf der Taskleiste final lösen:** dauerhaft auf der Taskleiste ohne Zucken beim Fensterwechsel. Ansätze: zusätzliche WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), dichterer Burst, oder die Leiste als Kind der Taskleiste (`SetParent`).
 - **Drag-to-Reorder** der Buttons mit echter Windows-Umsortierung über [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
 ---

@@ -63,7 +63,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
-- **Right-click menu:** right-click a tab for its abbreviation and colour, plus all app settings (numbers, colour coding, view level, theme, docking, snapping, time log, language). No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
+- **Right-click menu:** right-click a tab for its abbreviation and colour, plus all app settings (numbers, colour coding, view level, theme, snapping, time log, language). No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
 - **Help menu:** documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
 - **Update check:** once a day DeskTabs asks the GitHub releases API for the latest version number (nothing else is sent) and shows a tray notification if a newer release exists. Disable via the Help menu or `UpdateCheck = 0`.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
@@ -138,7 +138,6 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 
 | Option | Default | Meaning |
 |---|---|---|
-| `DockMode` | `on` | `on` = on the taskbar (visually integrated, may flicker slightly when switching windows). `above` = just above the taskbar (flicker-free, but overlaps the bottom edge of windows). |
 | `ThemeMode` | `auto` | `auto` = follow the Windows theme (taskbar brightness via registry `SystemUsesLightTheme`). `light` / `dark` = fixed. A change at runtime is detected automatically (~1.2 s) and the bar is rebuilt. |
 | `OffsetX` | 10 | Distance from the left screen edge (px). |
 | `ShowIndex` | 0 | 1 puts the desktop number in front of the name. |
@@ -193,7 +192,7 @@ Buchhaltung=BH
 
 [View]
 ; Written by the right-click menu (and Ctrl + mouse wheel); each key
-; overrides the CONF default: CompactMode, ThemeMode, DockMode, Language,
+; overrides the CONF default: CompactMode, ThemeMode, Language,
 ; ShowIndex, ColorCoding, SnapToTaskbar, TimeLog
 CompactMode=short
 ShowIndex=1
@@ -228,7 +227,7 @@ start,end,seconds,desktop_index,desktop_name
 - **Reading the desktops** via `VirtualDesktopAccessor.dll` (in-process, fast): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
 - **Switching** via the DLL in one step (`SwitchMethod=dll`), with a safety net that moves the foreground window back if a Windows build drags it along; `native` emulates the keyboard shortcuts instead.
 - **Live highlight update** through `RegisterPostMessageHook` (desktop-change notification) plus a 1.2 s fallback timer (`Refresh`), which also refreshes the desktop count and names and rebuilds the bar when needed.
-- **Always on top** (`DockMode=on`): a combination of
+- **Always on top** (on the taskbar): a combination of
   - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → an immediate `AssertTop()` on every window switch,
   - a short **burst** (10× every 25 ms) to cover maximise animations,
   - a 250 ms backstop timer.
@@ -244,7 +243,7 @@ start,end,seconds,desktop_index,desktop_name
 - **`&` in a desktop name:** AHK text controls interpret `&` as an accelerator marker. Fix: the `SS_NOPREFIX` style (`+0x80`) on the buttons, which shows `&` literally (e.g. "M&S").
 - **z-order of colour bars / separators:** overlapping controls get hidden by the button. So separators sit in the gaps and colour bars sit **below** the button (no overlap).
 - **AHK semicolon trap:** a `;` without a preceding space is NOT a comment but throws "Illegal character in expression". Always put a space before inline `;`.
-- **DockMode trade-off:** `on` (on the taskbar) looks more integrated but fights the taskbar over z-order (a brief flicker on window switch despite the WinEvent hook + burst). `above` (just above it) is flicker-free but overlaps the bottom edge of windows.
+- **Sitting on the taskbar:** the bar fights the taskbar over z-order (a brief flicker on window switch despite the WinEvent hook + burst). Up to v1.1.4 there was a `DockMode=above` that parked the bar just above the taskbar instead: flicker-free, but it covered the bottom edge of every window (status bars, scroll bars, input fields), so it was useless in daily work and was removed in v1.1.5. An old `DockMode=above` in `settings.ini` is cleared on start and the bar returns to the taskbar.
 - **Multi-monitor:** the bar always sits on the **primary taskbar** (`Shell_TrayWnd`) and follows automatically when the primary monitor changes in Windows. Secondary taskbars (`Shell_SecondaryTrayWnd`) are not served.
 - **DLL feature scope:** `VirtualDesktopAccessor.dll` offers NO function to reorder desktops (exports checked, incl. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook`, but no `MoveDesktop`). Reordering would require [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
@@ -252,7 +251,7 @@ start,end,seconds,desktop_index,desktop_name
 
 ## Ideas for the future
 
-- **Finally solve the residual flicker in `DockMode=on`:** stay permanently on the taskbar without the twitch on window switch. Approaches: additional WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), a denser burst, or making the bar a child of the taskbar (`SetParent`). Current default workaround: `DockMode=above` (flicker-free).
+- **Finally solve the residual flicker on the taskbar:** stay permanently on the taskbar without the twitch on window switch. Approaches: additional WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), a denser burst, or making the bar a child of the taskbar (`SetParent`).
 - **Drag-to-reorder** the buttons with real Windows reordering via [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
 ---
