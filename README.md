@@ -141,7 +141,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `DockMode` | `on` | `on` = on the taskbar (visually integrated, may flicker slightly when switching windows). `above` = just above the taskbar (flicker-free, but overlaps the bottom edge of windows). |
 | `ThemeMode` | `auto` | `auto` = follow the Windows theme (taskbar brightness via registry `SystemUsesLightTheme`). `light` / `dark` = fixed. A change at runtime is detected automatically (~1.2 s) and the bar is rebuilt. |
 | `OffsetX` | 10 | Distance from the left screen edge (px). |
-| `ShowIndex` | 1 | Number prefix ("3 · …"). |
+| `ShowIndex` | 0 | 1 puts the desktop number in front of the name. |
 | `ColorCoding` | 1 | Colour bar per desktop. |
 | `AccentBarH` | 3 | Height of the colour bar (px). |
 | `AutoHideFullscreen` | 1 | Hide when a fullscreen app is in front. |
@@ -150,7 +150,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `Palette` | 8 colours | Colour palette for the colour coding (by index). |
 | `FontSizePt` | 10 | Font size. |
 | `MaxNameLen` | 22 | Names longer than this are truncated (level `full`). |
-| `CompactMode` | `auto` | Label level: `full` (number + name), `short` (number + shortened name), `icon` (number only). `auto` starts at `full` and steps down until the bar fits into `MaxBarWidthPct` of the taskbar width, so it also works on narrow laptop taskbars. **Ctrl + mouse wheel** over the bar switches levels manually (wheel up past `full` returns to `auto`); the choice is remembered in `settings.ini` `[View]`. |
+| `CompactMode` | `auto` | What a tab shows: `bigtext` (large icon + name), `full` (name), `short` (short name), `icon` (abbreviation or number), `big` (large icon only). `auto` starts at `bigtext` and steps down until the bar fits the width budget. |
 | `MaxBarWidthPct` | 40 | `auto` only: maximum share of the taskbar width before the bar steps down one level. |
 | `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
 | `TimeLog` | 1 | Write per-desktop stay times to `desktop-log_YYYY-MM.csv` next to the script. `0` = off. |
@@ -164,6 +164,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `HoverPct` | 58 (light), 12 (dark) | How far a hovered tab is lightened. |
 | `CornerRadius` | 4 | Corner radius of the tabs (like Windows 11 taskbar buttons). |
 | `ShowIcons` | 1 | Show the icons from `[Icons]` in the tabs. |
+| `DefaultIcons` | 1 | Desktops without an icon of their own get one from a suggested set, so the bar looks finished from the first start. Nothing is written to the file; assigning your own icon, or *Remove icon*, overrides it. |
 | `IconSize` / `IconGap` | 16 / 7 | Icon size and the gap between icon and text. |
 | `ShowDividers` | 0 | Thin separators between the tabs. |
 | `Hotkeys` | 0 | 1 = register the number-key shortcuts for jumping to a desktop. |

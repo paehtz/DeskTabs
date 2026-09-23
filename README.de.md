@@ -141,7 +141,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `DockMode` | `on` | `on` = auf der Taskleiste (optisch integriert, kann beim Fensterwechsel minimal flackern). `above` = knapp über der Taskleiste (flackerfrei, überlagert aber die unterste Fensterkante). |
 | `ThemeMode` | `auto` | `auto` = folgt dem Windows-Theme (Taskleisten-Helligkeit via Registry `SystemUsesLightTheme`). `light` / `dark` = fest. Wechsel zur Laufzeit wird automatisch erkannt (~1,2 s) und die Leiste neu gebaut. |
 | `OffsetX` | 10 | Abstand vom linken Bildschirmrand (px). |
-| `ShowIndex` | 1 | Nummern-Präfix („3 · …"). |
+| `ShowIndex` | 0 | 1 stellt die Desktop-Nummer vor den Namen. |
 | `ColorCoding` | 1 | Farbbalken pro Desktop. |
 | `AccentBarH` | 3 | Höhe des Farbbalkens (px). |
 | `AutoHideFullscreen` | 1 | Bei Vollbild-App ausblenden. |
@@ -150,7 +150,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `Palette` | 8 Farben | Farbpalette für die Farbcodierung (nach Index). |
 | `FontSizePt` | 10 | Schriftgröße. |
 | `MaxNameLen` | 22 | Namen länger als das werden gekürzt (Stufe `full`). |
-| `CompactMode` | `auto` | Label-Stufe: `full` (Nummer + Name), `short` (Nummer + Kürzel bzw. gekürzter Name), `icon` (nur Kürzel bzw. Nummer). `auto` startet bei `full` und schaltet runter, bis die Leiste in `MaxBarWidthPct` der Taskleistenbreite passt, funktioniert so auch auf schmalen Laptop-Taskleisten. **Strg + Mausrad** über der Leiste schaltet manuell durch (nach oben über `full` hinaus wieder `auto`); die Wahl wird in `settings.ini` `[View]` gemerkt. |
+| `CompactMode` | `auto` | Was ein Tab zeigt: `bigtext` (großes Symbol + Name), `full` (Name), `short` (Kurzname), `icon` (Kürzel oder Nummer), `big` (nur großes Symbol). `auto` beginnt bei `bigtext` und schaltet herunter, bis die Leiste ins Breiten-Budget passt. |
 | `MaxBarWidthPct` | 40 | Nur `auto`: maximaler Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird. |
 | `ShortNameLen` | 8 | Stufe `short`: Namen länger als das werden gekürzt (wenn kein Kürzel hinterlegt ist). |
 | `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `desktop-log_YYYY-MM.csv` neben dem Skript schreiben. `0` = aus. |
@@ -164,6 +164,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `HoverPct` | 58 (hell), 12 (dunkel) | Wie stark ein Tab beim Drüberfahren aufhellt. |
 | `CornerRadius` | 4 | Eckenradius der Tabs (wie die Windows-11-Taskleisten-Buttons). |
 | `ShowIcons` | 1 | Symbole aus `[Icons]` in den Tabs anzeigen. |
+| `DefaultIcons` | 1 | Desktops ohne eigenes Symbol bekommen eines aus einem Vorschlagssatz, damit die Leiste vom ersten Start an fertig aussieht. In die Datei wird nichts geschrieben; ein eigenes Symbol oder *Symbol entfernen* sticht den Vorschlag. |
 | `IconSize` / `IconGap` | 16 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
 | `ShowDividers` | 0 | Dünne Trennstriche zwischen den Tabs. |
 | `Hotkeys` | 0 | 1 = Tastenkürzel für den Direktsprung auf einen Desktop registrieren. |

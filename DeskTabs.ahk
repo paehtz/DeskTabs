@@ -61,7 +61,7 @@ global CONF := Map(
     "ColGripBg",      0xE9E9E9,
     "ColGripTx",      0x909090,
     "WheelSwitch",    1,       ; 1 = Mausrad blaettert Desktops, 0 = aus
-    "ShowIndex",      1,       ; 1 = Nummer vor dem Namen ("3 · Acme Bakery")
+    "ShowIndex",      0,       ; 1 = Nummer vor dem Namen ("3 · Acme Bakery")
     "ColorCoding",    1,       ; 1 = farbiger Akzentbalken pro Desktop unten am Button
     "AccentBarH",     3,       ; Hoehe des Farbbalkens (px @100%)
     "ActiveStyle",    "desktop", ; aktiver Tab: "desktop" = eigene Desktop-Farbe, getoent | "accent" = Windows-Akzentfarbe, getoent | "solid" = kraeftig gefuellt
@@ -71,6 +71,8 @@ global CONF := Map(
     "TabMargin",      4,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
     "ShowDividers",   0,       ; 1 = duenne Trennstriche zwischen den Tabs
     "ShowIcons",      1,       ; 1 = Symbole aus settings.ini [Icons] im Tab zeigen
+    "DefaultIcons",   1,       ; 1 = Desktops ohne eigenes Symbol bekommen eines aus einem Vorschlagssatz
+                               ;     (nur Anzeige, nichts wird in die Datei geschrieben; "Symbol entfernen" hebt es auf)
     "IconSize",       18,      ; Kantenlaenge des Symbols neben dem Text (px @100%)
     "IconOnlySize",   24,      ; Kantenlaenge in der Stufe "nur Symbol" (px @100%), wie die Taskleisten-Symbole
     "IconGap",        7,       ; Abstand zwischen Symbol und Text (px @100%)
@@ -615,7 +617,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "DefaultIcons"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -942,6 +944,14 @@ SetGlyphIcon(num, code, g, closeFn := 0, *) {
 ; ------------------------------- Symbole ------------------------------------
 ; settings.ini [Icons] "Desktopname = Pfad ODER URL". Eine URL wird einmal geholt
 ; (hochaufgeloestes Seiten-Symbol) und in icons\<Desktopname>.png zwischengespeichert.
+; Vorschlagssymbole: Desktops ohne eigenen Eintrag bekommen reihum eines davon,
+; damit die Leiste vom ersten Start an nach etwas aussieht. Nur Anzeige - in der
+; settings.ini steht nichts, jede eigene Zuweisung sticht das hier sofort aus.
+DefaultGlyph(num) {
+    static set := StrSplit("E7F4 E838 E715 E787 E9D2 E90F E8F1 E77B E912 E774 E8EF E8AE", " ")
+    return "glyph:" set[Mod(num, set.Length) + 1]
+}
+
 IconsDir() => A_ScriptDir "\icons"
 
 ; Dateiname aus einem Desktop-Namen (ohne verbotene Zeichen)
@@ -957,8 +967,10 @@ IsUrl(s) => (SubStr(s, 1, 7) = "http://" || SubStr(s, 1, 8) = "https://" || RegE
 IconPathFor(num) {
     raw := GetDesktopNameRaw(num)
     spec := IniLookup("Icons", raw)
-    if (spec = "")
+    if (spec = "none")                       ; ausdruecklich entfernt: auch kein Vorschlag
         return ""
+    if (spec = "")
+        return CONF["DefaultIcons"] ? DefaultGlyph(num) : ""
     if (IsGlyphSpec(spec))
         return spec                      ; Bibliotheks-Symbol, wird direkt gezeichnet
     if (!IsUrl(spec)) {
@@ -1292,6 +1304,8 @@ ClearIcon(num, *) {
     raw := GetDesktopNameRaw(num)
     IniDelLoose("Icons", raw)
     try FileDelete(IconsDir() "\" SafeName(raw) ".png")
+    if (CONF["DefaultIcons"])
+        IniSet("Icons", raw, "none")         ; sonst erschiene sofort wieder das Vorschlagssymbol
     RebuildAll()
 }
 
@@ -1354,7 +1368,7 @@ ShowContextMenu(num, *) {
         MenuGlyph(im, T("menu.icon.file"), "E8B9")
         im.Add()
         im.Add(T("menu.icon.clear"), ClearIcon.Bind(num))
-        if (IniLookup("Icons", raw) = "")
+        if (IniLookup("Icons", raw) = "none")
             im.Disable(T("menu.icon.clear"))
         m.Add(T("menu.tab.icon"), im)
         MenuGlyph(m, T("menu.tab.icon"), "E91B")
@@ -1836,7 +1850,7 @@ LargerLevel(lv) {
     return ""
 }
 ; Der Auto-Modus schaltet nur zwischen den Textstufen herunter
-AutoSmaller(lv) => (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
+AutoSmaller(lv) => (lv = "bigtext") ? "full" : (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
 
 ; Farbe fuer den Akzentbalken eines Desktops. Palette nach Index, optional per
 ; settings.ini [Colors] mit Desktop-Name ueberschreibbar (z.B.  Miller & Sons=E5471D )
@@ -1861,7 +1875,7 @@ BuildBar() {
         return
     gBuilding := true
     mode := CONF["CompactMode"]
-    level := (mode = "auto") ? "full" : mode
+    level := (mode = "auto") ? "bigtext" : mode   ; grosszuegig anfangen, dann bei Platzmangel herunter
     Loop {
         gCompact := level
         BuildBarAt()
