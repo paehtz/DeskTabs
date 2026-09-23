@@ -688,11 +688,19 @@ ParseGlyphs() {
     return out
 }
 
-; Schnellfilter: Beschriftung => Suchbegriff
-GlyphTopics() => Map(T("iconlib.t.files"), "ordner", T("iconlib.t.time"), "zeit"
-    , T("iconlib.t.people"), "person", T("iconlib.t.comm"), "nachricht"
-    , T("iconlib.t.media"), "bild", T("iconlib.t.data"), "diagramm"
-    , T("iconlib.t.system"), "einstellungen", T("iconlib.t.places"), "ort")
+; Schnellfilter: Beschriftung => Suchbegriffe, durch | getrennt (ODER-Suche).
+; Bewusst mehrere Begriffe je Thema, sonst liefert ein Filter nur eine Handvoll
+; Treffer - die Namen im Index sind englisch, die deutschen Woerter kommen nur
+; bei den gemappten Begriffen dazu.
+GlyphTopics() => Map(
+      T("iconlib.t.files"),  "folder|file|document|page|ordner|datei|dokument|save|copy|print"
+    , T("iconlib.t.time"),   "time|clock|calendar|date|history|timer|hour|zeit|kalender|termin"
+    , T("iconlib.t.people"), "people|person|contact|user|account|group|team|profile|kontakt|benutzer"
+    , T("iconlib.t.comm"),   "mail|message|chat|comment|send|reply|inbox|phone|call|nachricht|post"
+    , T("iconlib.t.media"),  "photo|picture|image|video|camera|music|audio|play|media|bild|foto|musik"
+    , T("iconlib.t.data"),   "chart|graph|analytics|data|report|table|calculator|percent|diagramm|daten"
+    , T("iconlib.t.system"), "settings|system|device|network|power|security|tool|repair|einstellungen|werkzeug"
+    , T("iconlib.t.places"), "map|location|place|home|globe|world|car|train|flight|ort|karte|welt")
 
 IsGlyphSpec(s) => (SubStr(s, 1, 6) = "glyph:")
 GlyphChar(spec) => Chr(Integer("0x" SubStr(spec, 7)))
@@ -751,25 +759,40 @@ MenuGlyph(menu, item, code) {
 ; gesamte Bibliothek. Eine Seite ist EIN gezeichnetes Bild (wie die Leiste), nicht
 ; hundert Steuerelemente - sonst baut sich das Raster beim Rollen sichtbar auf.
 ; Fertige Seiten bleiben im Zwischenspeicher, die Nachbarseiten werden vorbereitet.
+; Bedienung: Klick markiert, OK (oder Doppelklick, oder Enter) uebernimmt.
 ShowIconLibrary(num, *) {
     NCOLS := 12, NROWS := 8, CELLW := 44   ; als lokale Variablen, damit die inneren Funktionen sie mitbekommen
     glyphs := GlyphList()
     raw := GetDesktopNameRaw(num)
     col := DesktopColor(num)
     gridW := NCOLS * CELLW, gridH := NROWS * CELLW
-    filtered := [], offset := 0, pages := Map(), sig := "", hoverIdx := 0
+    filtered := [], offset := 0, pages := Map(), sig := "", hoverCell := 0, lastInfo := ""
+    selG := 0                                ; markiertes Symbol (Index in glyphs, 0 = keins)
+
+    ; aktuelles Bibliotheks-Symbol des Desktops vormarkieren
+    curSpec := IconPathFor(num)
+    if (IsGlyphSpec(curSpec)) {
+        curCode := SubStr(curSpec, 7)
+        for gi, gl in glyphs
+            if (gl["code"] = curCode) {
+                selG := gi
+                break
+            }
+    }
 
     g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("iconlib.title", raw))
     g.SetFont("s10", "Segoe UI")
     g.MarginX := 14, g.MarginY := 12
     g.Add("Text", "xm ym w" (gridW + 21), T("iconlib.hint"))
-    search := g.Add("Edit", "xm y+8 w" (gridW + 21) " h26")
+    search := g.Add("Edit", "xm y+8 w" (gridW - 13) " h26")
     SendMessage(0x1501, 1, StrPtr(T("iconlib.search")), search)   ; EM_SETCUEBANNER
+    btnClear := g.Add("Button", "x+4 yp w30 h26", "✕")            ; Suche leeren
+    btnClear.OnEvent("Click", (*) => (search.Value := "", ApplyFilter(""), search.Focus()))
     g.SetFont("s9")
     firstBtn := 0
-    for label, term in GlyphTopics() {
+    for label, topic in GlyphTopics() {
         b := g.Add("Button", (firstBtn ? "x+4 yp" : "xm y+8") " h24 w" Max(58, StrLen(label) * 8), label)
-        b.OnEvent("Click", ((t, *) => (search.Value := t, ApplyFilter(t))).Bind(term))
+        b.OnEvent("Click", ((t, *) => (search.Value := t, ApplyFilter(t))).Bind(topic))
         if (!firstBtn)
             firstBtn := b
     }
@@ -780,33 +803,44 @@ ShowIconLibrary(num, *) {
 
     sheet := g.Add("Picture", Format("x{1} y{2} w{3} h{4} +0x100", gridX, gridY, gridW, gridH))
     sb := g.Add("Custom", Format("ClassScrollBar x{1} y{2} w17 h{3} 0x1", gridX + gridW + 4, gridY, gridH))
-    count := g.Add("Text", "x" gridX " y" (gridY + gridH + 14) " w260 h24 +0x200", "")
-    btnCancel := g.Add("Button", "x" (gridX + gridW - 104) " y" (gridY + gridH + 12) " w120 h28", T("dlg.cancel"))
+    info := g.Add("Text", "x" gridX " y" (gridY + gridH + 14) " w" (gridW - 250) " h24 +0x200", "")
+    btnOk := g.Add("Button", "x" (gridX + gridW - 211) " y" (gridY + gridH + 12) " w110 h28 Default", T("dlg.ok"))
+    btnCancel := g.Add("Button", "x+8 yp w110 h28", T("dlg.cancel"))
+    btnOk.OnEvent("Click", (*) => Apply())
     btnCancel.OnEvent("Click", (*) => Close())
 
+    ; Zeichenflaeche in echten Bildpunkten (das Fenster ist bei hoher DPI skaliert)
+    rc0 := Buffer(16, 0)
+    DllCall("GetClientRect", "Ptr", sheet.Hwnd, "Ptr", rc0)
+    pw := NumGet(rc0, 8, "Int"), ph := NumGet(rc0, 12, "Int")
+    if (pw < NCOLS || ph < NROWS)
+        pw := gridW, ph := gridH
+    CELLP := pw / NCOLS, CELLH := ph / NROWS
+    zoom := pw / gridW
+
     ; --- eine Seite als Bild zeichnen (und im Zwischenspeicher behalten) ---
-    PageBitmap(off, hover := 0) {
-        key := sig "|" off "|" hover
+    PageBitmap(off) {
+        key := sig "|" off "|" selG
         if (pages.Has(key))
             return pages[key]
         GdipStart()
         bmp := 0, gr := 0
-        DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", gridW, "Int", gridH, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &bmp)
+        DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", pw, "Int", ph, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &bmp)
         DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", bmp, "Ptr*", &gr)
         DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", gr, "Int", 4)
         DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", gr, "Int", 5)
         DllCall("gdiplus\GdipGraphicsClear", "Ptr", gr, "UInt", ARGB(0xF6F6F6))
-        font := MakeIconFont(28)
+        font := MakeIconFont(28 * zoom)
         sf := MakeFormat()
         Loop NCOLS * NROWS {
             i := A_Index
             idx := off * NCOLS + i
             if (idx > filtered.Length)
                 break
-            cx := Mod(i - 1, NCOLS) * CELLW, cy := ((i - 1) // NCOLS) * CELLW
-            if (i = hover)
-                FillRoundRect(gr, cx + 2, cy + 2, CELLW - 4, CELLW - 4, 5, ARGB(Mix(0x000000, 0xF6F6F6, 7)))
-            DrawText(gr, font, sf, GlyphChar("glyph:" glyphs[filtered[idx]]["code"]), cx, cy, CELLW, CELLW, ARGB(col))
+            cx := Mod(i - 1, NCOLS) * CELLP, cy := ((i - 1) // NCOLS) * CELLH
+            if (filtered[idx] = selG)
+                MarkCell(gr, cx, cy)
+            DrawText(gr, font, sf, GlyphChar("glyph:" glyphs[filtered[idx]]["code"]), cx, cy, CELLP, CELLH, ARGB(col))
         }
         DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
         DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
@@ -817,17 +851,49 @@ ShowIconLibrary(num, *) {
         pages[key] := hbm
         return hbm
     }
+    ; Markierung: zart getoente Flaeche mit Rahmen in der Desktop-Farbe
+    MarkCell(gr, cx, cy) {
+        m := 2 * zoom, rr := 6 * zoom, lw := 2 * zoom
+        FillRoundRect(gr, cx + m, cy + m, CELLP - 2 * m, CELLH - 2 * m, rr, ARGB(Mix(col, 0xF6F6F6, 16)))
+        pen := 0
+        DllCall("gdiplus\GdipCreatePen1", "UInt", ARGB(col), "Float", lw, "Int", 2, "Ptr*", &pen)
+        path := RoundRectPath(cx + m + lw / 2, cy + m + lw / 2, CELLP - 2 * m - lw, CELLH - 2 * m - lw, rr)
+        DllCall("gdiplus\GdipDrawPath", "Ptr", gr, "Ptr", pen, "Ptr", path)
+        DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+        DllCall("gdiplus\GdipDeletePen", "Ptr", pen)
+    }
+    ; Bild tauschen, ohne dass die Flaeche vorher leer aufblitzt: Neuzeichnen
+    ; kurz aussetzen und danach ohne Hintergrund-Loeschen neu malen lassen.
     ShowPage() {
-        sheet.Value := "HBITMAP:*" PageBitmap(offset, hoverIdx)
+        SendMessage(0x000B, 0, 0, sheet)             ; WM_SETREDRAW aus
+        sheet.Value := "HBITMAP:*" PageBitmap(offset)
+        SendMessage(0x000B, 1, 0, sheet)             ; WM_SETREDRAW an
+        DllCall("RedrawWindow", "Ptr", sheet.Hwnd, "Ptr", 0, "Ptr", 0, "UInt", 0x0101)  ; INVALIDATE | UPDATENOW
         SetScroll(Ceil(filtered.Length / NCOLS), NROWS, offset)
-        count.Text := T("iconlib.count", filtered.Length)
+        UpdateInfo()
         SetTimer(Preload, -60)          ; Nachbarseiten im Hintergrund vorbereiten
     }
     Preload() {
         maxOff := Max(0, Ceil(filtered.Length / NCOLS) - NROWS)
         for , off in [offset + 1, offset - 1, offset + NROWS, offset - NROWS]
             if (off >= 0 && off <= maxOff)
-                PageBitmap(off, 0)
+                PageBitmap(off)
+    }
+    ; Zeile unter dem Raster: Name unter der Maus, sonst die Auswahl, sonst die Anzahl
+    UpdateInfo() {
+        if (hoverCell && offset * NCOLS + hoverCell <= filtered.Length)
+            txt := glyphs[filtered[offset * NCOLS + hoverCell]]["name"]
+        else if (selG)
+            txt := T("iconlib.selected", glyphs[selG]["name"])
+        else if (filtered.Length = 0)
+            txt := T("iconlib.none")
+        else
+            txt := T("iconlib.count", filtered.Length)
+        if (txt != lastInfo) {
+            lastInfo := txt
+            info.Text := txt
+        }
+        btnOk.Enabled := (selG > 0)
     }
     SetScroll(nRows, pageSize, pos) {
         si := Buffer(28, 0)
@@ -836,11 +902,21 @@ ShowIconLibrary(num, *) {
     }
     ApplyFilter(needle) {
         needle := Trim(StrLower(needle))
+        terms := (needle = "") ? [] : StrSplit(needle, "|")   ; mehrere Begriffe = ODER
         filtered := []
-        for i, item in glyphs
-            if (needle = "" || InStr(item["kw"], needle))
+        for i, item in glyphs {
+            hitAny := (terms.Length = 0)
+            for , tm in terms {
+                tm := Trim(tm)
+                if (tm != "" && InStr(item["kw"], tm)) {
+                    hitAny := true
+                    break
+                }
+            }
+            if (hitAny)
                 filtered.Push(i)
-        sig := needle, offset := 0, hoverIdx := 0
+        }
+        sig := needle, offset := 0, hoverCell := 0
         ShowPage()
     }
     Scroll(deltaRows) {
@@ -848,42 +924,63 @@ ShowIconLibrary(num, *) {
         newOff := Min(Max(offset + deltaRows, 0), maxOff)
         if (newOff = offset)
             return
-        offset := newOff, hoverIdx := 0
+        offset := newOff, hoverCell := 0
         ShowPage()
     }
-    ; Zelle unter der Maus (1-basiert), 0 = daneben
-    CellAt(&idx) {
-        CoordMode("Mouse", "Screen")
-        MouseGetPos(&mx, &my)
-        sx := 0, sy := 0
-        ControlGetPos(&sx, &sy, , , sheet, g)
-        gx := 0, gy := 0
-        WinGetPos(&gx, &gy, , , g)
-        lx := mx - gx - sx, ly := my - gy - sy
-        if (lx < 0 || ly < 0 || lx >= gridW || ly >= gridH)
-            return false
-        hitCell := (ly // CELLW) * NCOLS + (lx // CELLW) + 1
-        idx := offset * NCOLS + hitCell
-        return (idx <= filtered.Length) ? hitCell : false
+    ; Die markierte Zeile ins Bild rollen (beim Oeffnen)
+    RevealSelection() {
+        for k, gi2 in filtered
+            if (gi2 = selG) {
+                maxOff := Max(0, Ceil(filtered.Length / NCOLS) - NROWS)
+                offset := Min(Max((k - 1) // NCOLS - NROWS // 2 + 1, 0), maxOff)
+                ShowPage()
+                return
+            }
     }
+    ; Zelle unter der Maus (1-basiert, 0 = daneben); idx = Position in filtered.
+    ; Gerechnet wird direkt im Koordinatensystem des Rasters - Rahmen und
+    ; Titelleiste des Fensters spielen so keine Rolle (frueher um 8/31 px versetzt).
+    CellAt(&idx) {
+        pt := Buffer(8, 0)
+        DllCall("GetCursorPos", "Ptr", pt)
+        DllCall("ScreenToClient", "Ptr", sheet.Hwnd, "Ptr", pt)
+        lx := NumGet(pt, 0, "Int"), ly := NumGet(pt, 4, "Int")
+        if (lx < 0 || ly < 0 || lx >= pw || ly >= ph)
+            return 0
+        hit := Floor(ly / CELLH) * NCOLS + Floor(lx / CELLP) + 1
+        idx := offset * NCOLS + hit
+        return (idx <= filtered.Length) ? hit : 0
+    }
+    ; Beim Ueberfahren wird NICHT neu gezeichnet (sonst blitzt die Seite), nur die
+    ; Namenszeile unter dem Raster aendert sich. Keine schwebende Kurzinfo mehr -
+    ; die lag unter dem Mauszeiger und schluckte Klicks.
     HoverTickLib() {
         if (!WinExist("ahk_id " g.Hwnd))
             return
         idx := 0
-        hitCell := CellAt(&idx)
-        if (hitCell != hoverIdx) {
-            hoverIdx := hitCell ? hitCell : 0
-            sheet.Value := "HBITMAP:*" PageBitmap(offset, hoverIdx)
-            if (hitCell)
-                ToolTip(glyphs[idx]["name"])
-            else
-                ToolTip()
+        hit := CellAt(&idx)
+        if (hit != hoverCell) {
+            hoverCell := hit
+            UpdateInfo()
         }
     }
     SheetClick(*) {
         idx := 0
-        if (CellAt(&idx))
-            SetGlyphIcon(num, glyphs[filtered[idx]]["code"], g, Close)
+        if (!CellAt(&idx) || filtered[idx] = selG)
+            return
+        selG := filtered[idx]
+        ShowPage()
+    }
+    SheetDoubleClick(*) {
+        idx := 0
+        if (!CellAt(&idx))
+            return
+        selG := filtered[idx]
+        Apply()
+    }
+    Apply() {
+        if (selG)
+            SetGlyphIcon(num, glyphs[selG]["code"], g, Close)
     }
     OnVScroll(wParam, lParam, msg, hwnd) {
         if (lParam != sb.Hwnd)
@@ -911,7 +1008,6 @@ ShowIconLibrary(num, *) {
     Close() {
         SetTimer(HoverTickLib, 0)
         SetTimer(Preload, 0)
-        ToolTip()
         OnMessage(0x0115, OnVScroll, 0)
         OnMessage(0x020A, OnPickerWheel, 0)
         for , h in pages
@@ -920,12 +1016,15 @@ ShowIconLibrary(num, *) {
     }
 
     sheet.OnEvent("Click", SheetClick)
+    sheet.OnEvent("DoubleClick", SheetDoubleClick)
     search.OnEvent("Change", (ctrl, *) => ApplyFilter(ctrl.Value))
     OnMessage(0x0115, OnVScroll)
     OnMessage(0x020A, OnPickerWheel)
     g.OnEvent("Escape", (*) => Close())
     g.OnEvent("Close", (*) => Close())
     ApplyFilter("")
+    if (selG)
+        RevealSelection()
     SetGuiIcon(g)
     g.Show("AutoSize Center")
     search.Focus()
