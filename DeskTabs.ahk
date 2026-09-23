@@ -79,7 +79,7 @@ global CONF := Map(
     "ColHoverTx",     0x1F1F1F,
     "HoverPct",      58,      ; Deckkraft (%) der Hover-Aufhellung; je Theme ueberschrieben
     "GradientPct",   14,      ; Staerke des senkrechten Verlaufs in gefuellten Tabs (0 = flach), wie bei Fluent-Buttons
-    "ActiveBold",    1,       ; 1 = Beschriftung des aktiven Desktops fett
+    "ActiveBold",    0,       ; 1 = Beschriftung des aktiven Desktops fett (im Ansicht-Menue schaltbar)
     "ActiveBarBoost", 2,      ; um so viele px waechst der Farbbalken des aktiven Desktops (px @100%)
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
     "ClickActiveTaskView", 1,  ; 1 = Klick auf aktiven Desktop oeffnet Task-Ansicht (Win+Tab)
@@ -314,6 +314,7 @@ global LANG_DE := Map(
     "menu.active.accent", "Einheitlich in Akzentfarbe (getönt)",
     "menu.active.solid", "Einheitlich, kräftig gefüllt",
     "menu.dividers",   "Trennstriche anzeigen",
+    "menu.activebold", "Aktiven Desktop fett beschriften",
     "menu.view",       "Ansicht",
     "menu.view.auto",  "Automatisch (nach Platz)",
     "menu.theme",      "Farbschema",
@@ -437,6 +438,7 @@ global LANG_EN := Map(
     "menu.active.accent", "Uniform accent colour (tinted)",
     "menu.active.solid", "Uniform, solid fill",
     "menu.dividers",   "Show dividers",
+    "menu.activebold", "Bold label for the active desktop",
     "menu.view",       "View",
     "menu.view.auto",  "Automatic (by available space)",
     "menu.theme",      "Theme",
@@ -613,7 +615,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -1395,6 +1397,9 @@ FillSettingsMenu(m) {
     vm.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
     if (CONF["ShowDividers"])
         vm.Check(T("menu.dividers"))
+    vm.Add(T("menu.activebold"), ToggleView.Bind("ActiveBold"))
+    if (CONF["ActiveBold"])
+        vm.Check(T("menu.activebold"))
     m.Add(T("menu.view"), vm)
     MenuGlyph(m, T("menu.view"), "E8FD")
     tm := Menu()
