@@ -157,7 +157,9 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
 | `UpdateCheck` | 1 | 1 = einmal täglich die GitHub-Releases-API nach einer neueren Version fragen (nur die Versionsnummer wird gelesen). Auch im Hilfe-Menü schaltbar; landet in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `solid` = kräftige Füllung. |
-| `TintL` / `TintS` | 88 / 100 (hell), 30 / 70 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
+| `TintL` / `TintS` | 86 / 100 (hell), 32 / 78 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
+| `ActiveBold` | 0 | 1 = Beschriftung des aktiven Desktops fett. Auch im Ansicht-Menü schaltbar. |
+| `ActiveBarBoost` | 2 | Um wie viele Pixel der Farbbalken des aktiven Desktops wächst, damit er auf den ersten Blick auffällt. |
 | `GradientPct` | 14 | Stärke des senkrechten Verlaufs in gefüllten Tabs, `0` = flach. |
 | `HoverPct` | 58 (hell), 12 (dunkel) | Wie stark ein Tab beim Drüberfahren aufhellt. |
 | `CornerRadius` | 4 | Eckenradius der Tabs (wie die Windows-11-Taskleisten-Buttons). |

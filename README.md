@@ -157,7 +157,9 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `solid` = a strong fill. |
-| `TintL` / `TintS` | 88 / 100 (light), 30 / 70 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
+| `TintL` / `TintS` | 86 / 100 (light), 32 / 78 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
+| `ActiveBold` | 0 | 1 = write the active desktop's label in bold. Also in the view menu. |
+| `ActiveBarBoost` | 2 | How many pixels the colour bar of the active desktop grows, so it reads as active at a glance. |
 | `GradientPct` | 14 | Strength of the vertical gradient inside filled tabs, `0` = flat. |
 | `HoverPct` | 58 (light), 12 (dark) | How far a hovered tab is lightened. |
 | `CornerRadius` | 4 | Corner radius of the tabs (like Windows 11 taskbar buttons). |
