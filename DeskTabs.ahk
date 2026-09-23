@@ -65,7 +65,7 @@ global CONF := Map(
     "ColorCoding",    1,       ; 1 = farbiger Akzentbalken pro Desktop unten am Button
     "AccentBarH",     3,       ; Hoehe des Farbbalkens (px @100%)
     "ActiveStyle",    "desktop", ; aktiver Tab: "desktop" = eigene Desktop-Farbe, getoent | "accent" = Windows-Akzentfarbe, getoent | "solid" = kraeftig gefuellt
-    "TintL",          88,      ; Helligkeit (%) des getoenten aktiven Tabs - Farbton bleibt, nur heller (je Theme ueberschrieben)
+    "TintL",          86,      ; Helligkeit (%) des getoenten aktiven Tabs - Farbton bleibt, nur heller (je Theme ueberschrieben)
     "TintS",          100,     ; Anteil (%) der Original-Saettigung im getoenten Tab
     "CornerRadius",   4,       ; Eckenradius der Tabs (px @100%), wie Windows-11-Taskleisten-Buttons
     "TabMargin",      4,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
@@ -79,6 +79,8 @@ global CONF := Map(
     "ColHoverTx",     0x1F1F1F,
     "HoverPct",      58,      ; Deckkraft (%) der Hover-Aufhellung; je Theme ueberschrieben
     "GradientPct",   14,      ; Staerke des senkrechten Verlaufs in gefuellten Tabs (0 = flach), wie bei Fluent-Buttons
+    "ActiveBold",    1,       ; 1 = Beschriftung des aktiven Desktops fett
+    "ActiveBarBoost", 2,      ; um so viele px waechst der Farbbalken des aktiven Desktops (px @100%)
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
     "ClickActiveTaskView", 1,  ; 1 = Klick auf aktiven Desktop oeffnet Task-Ansicht (Win+Tab)
     "Palette",        [0xE5471D, 0x2E7D32, 0x1565C0, 0x6A1B9A, 0xEF6C00, 0x00838F, 0xC2185B, 0x558B2F],
@@ -104,7 +106,7 @@ global THEME_LIGHT := Map(
     "ColActiveTx",   0xFFFFFF,
     "ColGripBg",     0xE9E9E9,
     "ColGripTx",     0x909090,
-    "TintL",         88,        ; hell: klarer Pastellton in der Desktop-Farbe
+    "TintL",         86,        ; hell: heller Ton in der Desktop-Farbe - der fette Text und der dicke Balken tragen das Erkennen, die Flaeche muss nur stuetzen
     "TintS",         100,
     "ColHoverBg",    0xFFFFFF,   ; hell: Weiss ueber den Grund -> Tab wird heller
     "HoverPct",      58,
@@ -119,8 +121,8 @@ global THEME_DARK := Map(
     "ColActiveTx",   0xFFFFFF,
     "ColGripBg",     0x202020,
     "ColGripTx",     0x808080,
-    "TintL",         30,        ; dunkel: ruhiger, dunkler Ton derselben Farbe
-    "TintS",         70,
+    "TintL",         32,        ; dunkel: derselbe Ton, etwas heller als die Leiste
+    "TintS",         78,
     "ColHoverBg",    0xFFFFFF,   ; dunkel: wenig Weiss -> Tab wird leicht heller
     "HoverPct",      12,
     "ColHoverTx",    0xFFFFFF,
@@ -2156,7 +2158,7 @@ RenderBar(force := false) {
     DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
     bg := CONF["ColBarBg"]
     DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", ARGB(bg))
-    font := MakeFont(), sf := MakeFormat()
+    font := MakeFont(), fontBold := MakeFont(true), sf := MakeFormat()
     y := L["margin"], h := L["btnH"], r := L["radius"]
 
     ; Griff (beim Drueberfahren leicht hervorgehoben)
@@ -2193,7 +2195,9 @@ RenderBar(force := false) {
         if (iw) {
             iy := y + (h - iw) // 2 - px(1)
             if (IsGlyphSpec(item["icon"])) {
-                DrawGlyph(g, item["icon"], tx0, iy, iw, col)
+                ; Bibliotheks-Symbol in der Desktop-Farbe; auf kraeftig gefuelltem
+                ; Grund stattdessen in der Textfarbe, sonst verschwindet es darin
+                DrawGlyph(g, item["icon"], tx0, iy, iw, (active && style = "solid") ? tx : col)
             } else {
                 img := LoadIconBitmap(item["icon"])
                 if (img)
@@ -2206,12 +2210,16 @@ RenderBar(force := false) {
             tw -= iw ? iw + L["iconGap"] : 0
         }
         if (item["label"] != "")
-            DrawText(g, font, sf, item["label"], tx0, y, tw, h, ARGB(tx))
+            DrawText(g, (active && CONF["ActiveBold"]) ? fontBold : font, sf, item["label"], tx0, y, tw, h, ARGB(tx))
         ; Farbbalken unten im Tab (abgerundet, eingerueckt)
         if (CONF["ColorCoding"]) {
             iconOnly := (item["label"] = "" && iw)
             inset := iconOnly ? px(5) : px(10)
             ah := L["accH"] + (iconOnly ? px(1) : 0)   ; Symbol-Stufe: deutlicher Streifen als Kennung
+            if (active) {
+                ah += px(CONF["ActiveBarBoost"])    ; aktiver Desktop: dickerer, breiterer Streifen
+                inset := Max(px(2), inset - px(4))
+            }
             FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2, ARGB(col))
         }
         ; optionaler Trennstrich in der Luecke danach
@@ -2233,6 +2241,7 @@ RenderBar(force := false) {
     DllCall("InvalidateRect", "Ptr", MyGui.Hwnd, "Ptr", 0, "Int", 0)   ; ohne Loeschen
     DllCall("UpdateWindow", "Ptr", MyGui.Hwnd)
     DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fontBold)
     DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
     DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
     DllCall("gdiplus\GdipDisposeImage", "Ptr", pBmp)
