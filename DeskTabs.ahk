@@ -69,8 +69,9 @@ global CONF := Map(
     "TabMargin",      4,       ; Abstand der Tabs zum oberen/unteren Rand der Leiste (px @100%)
     "ShowDividers",   0,       ; 1 = duenne Trennstriche zwischen den Tabs
     "ShowIcons",      1,       ; 1 = Symbole aus settings.ini [Icons] im Tab zeigen
-    "DefaultIcons",   1,       ; 1 = Desktops ohne eigenes Symbol bekommen eines aus einem Vorschlagssatz
+    "DefaultIcons",   1,       ; Desktops ohne eigenes Symbol: 1 = eines aus einem Vorschlagssatz, 2 = ihre Nummer, 0 = keins
                                ;     (nur Anzeige, nichts wird in die Datei geschrieben; "Symbol entfernen" hebt es auf)
+    "NumberBadge",    "auto",  ; kleine Nummer oben links am Symbol: "auto" = wenn die Tastenkuerzel an sind | "on" | "off"
     "IconSize",       18,      ; Kantenlaenge des Symbols neben dem Text (px @100%)
     "IconOnlySize",   24,      ; Kantenlaenge in der Stufe "nur Symbol" (px @100%), wie die Taskleisten-Symbole
     "IconGap",        7,       ; Abstand zwischen Symbol und Text (px @100%)
@@ -88,7 +89,7 @@ global CONF := Map(
     "CompactMode",    "auto",  ; "auto" = Stufe nach Platz waehlen | "full" | "short" | "icon" (fest)
     "MaxBarWidthPct", 40,      ; auto: max. Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird
     "ShortNameLen",   8,       ; Stufe "short": Namen laenger als das werden gekuerzt
-    "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (desktop-log_YYYY-MM.csv)
+    "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (timelog\desktop-log_YYYY-MM.csv)
     "TimeLogIdleMin", 5,       ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
     "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
     "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
@@ -136,10 +137,23 @@ global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
 global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
 
 ; ------------------------------ Zeit-Log ------------------------------------
-; Schreibt pro Aufenthalt auf einem Desktop eine CSV-Zeile (Monatsdatei neben
-; settings.ini): start,end,seconds,desktop_index,desktop_name. Gedacht fuer
+; Schreibt pro Aufenthalt auf einem Desktop eine CSV-Zeile (Monatsdatei im
+; Unterordner timelog\): start,end,seconds,desktop_index,desktop_name. Gedacht fuer
 ; Nutzer ohne Time-Tracker und fuer Coding-Agenten, die daraus abrechnen.
-LogFile(ts) => A_ScriptDir "\desktop-log_" SubStr(ts, 1, 4) "-" SubStr(ts, 5, 2) ".csv"
+LogDir() => A_ScriptDir "\timelog"
+LogFile(ts) => LogDir() "\desktop-log_" SubStr(ts, 1, 4) "-" SubStr(ts, 5, 2) ".csv"
+
+; Bis 1.1.4 lagen die Monatsdateien direkt neben dem Skript: einmalig in den
+; Unterordner umziehen. Eine gleichnamige Datei dort wird nie ueberschrieben.
+MigrateLogs() {
+    Loop Files, A_ScriptDir "\desktop-log_*.csv" {
+        try {
+            DirCreate(LogDir())
+            if !FileExist(LogDir() "\" A_LoopFileName)
+                FileMove(A_LoopFileFullPath, LogDir() "\" A_LoopFileName)
+        }
+    }
+}
 IsoTime(ts) => FormatTime(ts, "yyyy-MM-dd'T'HH:mm:ss")
 CsvQuote(s) => '"' StrReplace(s, '"', '""') '"'
 
@@ -160,6 +174,7 @@ LogClose(endTime := "") {
     if (secs >= 1) {
         file := LogFile(gSegStart)
         try {
+            DirCreate(LogDir())
             if !FileExist(file)
                 FileAppend("start,end,seconds,desktop_index,desktop_name`n", file, "UTF-8")
             FileAppend(Format("{1},{2},{3},{4},{5}`n", IsoTime(gSegStart), IsoTime(end), secs, gSegDesk + 1, CsvQuote(gSegName)), file, "UTF-8")
@@ -254,6 +269,13 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.timelog.open", "Ordner öffnen",
+    "menu.timelog.on", "Aufzeichnen",
+    "menu.more", "Weitere Einstellungen",
+    "menu.hotkeys.mods", "Zusatztasten:",
+    "menu.numbers", "Nummern",
+    "menu.icons.show", "Anzeigen",
+    "menu.icons", "Symbole",
     "err.dll_missing", "VirtualDesktopAccessor.dll nicht gefunden:`n{1}",
     "err.dll_load",    "Die DLL konnte nicht geladen werden.",
     "tray.rebuild",    "Leiste neu aufbauen",
@@ -261,16 +283,16 @@ global LANG_DE := Map(
     "tray.exit",       "Beenden",
     "view.tip",        "Ansicht: {1}",
     "view.auto",       "automatisch ({1})",
-    "level.full",      "Voller Name",
-    "level.short",     "Kurzname",
-    "level.icon",      "Kürzel oder Nummer",
-    "level.big",       "Nur Symbol (groß)",
-    "level.bigtext",   "Symbol (groß) + Name",
+    "level.full",      "Symbol und Name",
+    "level.short",     "Symbol und Kurzname",
+    "level.icon",      "Nur Symbol oder Kürzel",
+    "level.big",       "Nur großes Symbol",
+    "level.bigtext",   "Großes Symbol und Name",
     "menu.settings",   "Einstellungen…",
-    "menu.tab.short",  "Kürzel setzen…",
+    "menu.tab.short",  "Kürzel festlegen…",
     "menu.tab.color",  "Farbe",
     "menu.tab.icon",   "Symbol",
-    "menu.icon.library", "Aus der Symbol-Bibliothek…",
+    "menu.icon.library", "Aus der Bibliothek…",
     "iconlib.title",   "Symbol für „{1}“",
     "iconlib.hint",    "Symbol anklicken. Es erscheint in der Farbe des Desktops. Suchen geht deutsch und englisch.",
     "iconlib.search",  "Suchen, z.B. Kalender, Ordner, Zeit…",
@@ -284,10 +306,9 @@ global LANG_DE := Map(
     "iconlib.t.system", "System",
     "iconlib.t.places", "Orte",
     "iconlib.none",    "Kein Symbol gefunden.",
-    "menu.icon.url",   "Von einer Webseite holen…",
-    "menu.icon.file",  "Eigene Bilddatei wählen…",
+    "menu.icon.url",   "Von einer Webseite…",
+    "menu.icon.file",  "Aus einer Bilddatei…",
     "menu.icon.clear", "Symbol entfernen",
-    "menu.showicons",  "Symbole anzeigen",
     "prompt.iconurl.title", "Symbol für „{1}“",
     "prompt.iconurl.text", "Adresse der Webseite (leer = Symbol entfernen):",
     "dlg.ok",          "OK",
@@ -296,8 +317,8 @@ global LANG_DE := Map(
     "icon.fetching",   "Symbol wird geholt…",
     "err.icon_fetch",  "Von dieser Adresse konnte kein Symbol geladen werden.",
     "menu.color.custom", "Eigene Farbe…",
-    "menu.color.default", "Standardfarbe verwenden",
-    "menu.color.fromicon", "Farbe aus dem Symbol übernehmen",
+    "menu.color.default", "Farbe zurücksetzen",
+    "menu.color.fromicon", "Aus dem Symbol übernehmen",
     "err.color_icon",  "Aus diesem Symbol lässt sich keine Farbe ableiten. Das geht nur bei Symbolen von einer Webseite oder aus einer Bilddatei.",
     "color.E5471D",    "Rot",
     "color.2E7D32",    "Grün",
@@ -307,22 +328,28 @@ global LANG_DE := Map(
     "color.00838F",    "Petrol",
     "color.C2185B",    "Pink",
     "color.558B2F",    "Olivgrün",
-    "menu.showindex",  "Nummern anzeigen",
-    "menu.colorcoding", "Farbcodierung",
+    "menu.showindex",  "Vor dem Namen",
+    "menu.colorcoding", "Farbbalken unter den Tabs",
     "menu.active",     "Aktiver Desktop",
-    "menu.active.desktop", "In seiner Desktop-Farbe (getönt)",
-    "menu.active.accent", "Einheitlich in Akzentfarbe (getönt)",
-    "menu.active.solid", "Einheitlich, kräftig gefüllt",
-    "menu.dividers",   "Trennstriche anzeigen",
-    "menu.activebold", "Aktiven Desktop fett beschriften",
+    "menu.active.desktop", "Getönt in seiner Farbe",
+    "menu.active.accent", "Getönt in der Akzentfarbe",
+    "menu.active.solid", "Kräftig gefüllt",
+    "menu.dividers",   "Trennstriche zwischen den Tabs",
+    "menu.activebold", "Fett beschriften",
+    "menu.badge",      "Als Badge am Symbol",
+    "menu.noicon",     "Für Desktops ohne eigenes Symbol:",
+    "menu.noicon.suggest", "Vorschlagssymbol",
+    "menu.noicon.number", "Nummer",
+    "menu.noicon.none", "Keins",
+    "menu.icon.number", "Nummer als Symbol",
     "menu.view",       "Ansicht",
     "menu.view.auto",  "Automatisch (nach Platz)",
-    "menu.theme",      "Farbschema",
-    "menu.theme.auto", "Automatisch (Windows)",
+    "menu.theme",      "Hell oder dunkel",
+    "menu.theme.auto", "Wie Windows",
     "menu.theme.light", "Hell",
     "menu.theme.dark", "Dunkel",
     "menu.hotkeys",    "Tastenkürzel",
-    "menu.hotkeys.on", "Direktsprung per Zifferntaste",
+    "menu.hotkeys.on", "Einschalten",
     "menu.hotkeys.off", "aus",
     "err.hotkey_mod",  "Mindestens eine Zusatztaste muss gewählt bleiben, sonst würden die blanken Zifferntasten belegt.",
     "key.ctrl",        "Strg",
@@ -330,11 +357,11 @@ global LANG_DE := Map(
     "key.alt",         "Alt",
     "key.shift",       "Umschalt",
     "err.hotkeys",     "Die Tastenkürzel konnten nicht registriert werden. Vermutlich belegt sie ein anderes Programm. Bitte einen anderen Modifikator wählen.",
-    "menu.directjump", "Direkt springen (ohne Zwischen-Desktops)",
-    "menu.snap",       "An Taskleiste einrasten",
-    "menu.timelog",    "Zeit-Log schreiben",
+    "menu.directjump", "Direkt springen statt durchblättern",
+    "menu.snap",       "Beim Verschieben an der Taskleiste einrasten",
+    "menu.timelog",    "Zeit-Log",
     "menu.language",   "Sprache",
-    "menu.language.auto", "Automatisch (Windows)",
+    "menu.language.auto", "Wie Windows",
     "prompt.short.title", "Kürzel für „{1}“",
     "prompt.short.text", "Kurzname für die Kompakt-Ansicht (leer = keins):",
     "prompt.color.title", "Farbe für „{1}“",
@@ -375,6 +402,13 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.timelog.open", "Open folder",
+    "menu.timelog.on", "Record",
+    "menu.more", "More settings",
+    "menu.hotkeys.mods", "Modifier keys:",
+    "menu.numbers", "Numbers",
+    "menu.icons.show", "Show",
+    "menu.icons", "Icons",
     "err.dll_missing", "VirtualDesktopAccessor.dll not found:`n{1}",
     "err.dll_load",    "The DLL could not be loaded.",
     "tray.rebuild",    "Rebuild bar",
@@ -382,16 +416,16 @@ global LANG_EN := Map(
     "tray.exit",       "Exit",
     "view.tip",        "View: {1}",
     "view.auto",       "automatic ({1})",
-    "level.full",      "Full name",
-    "level.short",     "Short name",
-    "level.icon",      "Abbreviation or number",
-    "level.big",       "Icon only (large)",
-    "level.bigtext",   "Large icon + name",
+    "level.full",      "Icon and name",
+    "level.short",     "Icon and short name",
+    "level.icon",      "Icon or abbreviation only",
+    "level.big",       "Large icon only",
+    "level.bigtext",   "Large icon and name",
     "menu.settings",   "Settings…",
     "menu.tab.short",  "Set abbreviation…",
     "menu.tab.color",  "Colour",
     "menu.tab.icon",   "Icon",
-    "menu.icon.library", "From the icon library…",
+    "menu.icon.library", "From the library…",
     "iconlib.title",   "Icon for “{1}”",
     "iconlib.hint",    "Click an icon. It is drawn in the desktop's colour. Search works in English and German.",
     "iconlib.search",  "Search, e.g. calendar, folder, time…",
@@ -405,10 +439,9 @@ global LANG_EN := Map(
     "iconlib.t.system", "System",
     "iconlib.t.places", "Places",
     "iconlib.none",    "No icon found.",
-    "menu.icon.url",   "Fetch from a website…",
-    "menu.icon.file",  "Choose an image file…",
+    "menu.icon.url",   "From a website…",
+    "menu.icon.file",  "From an image file…",
     "menu.icon.clear", "Remove icon",
-    "menu.showicons",  "Show icons",
     "prompt.iconurl.title", "Icon for “{1}”",
     "prompt.iconurl.text", "Website address (empty = removes the icon):",
     "dlg.ok",          "OK",
@@ -417,8 +450,8 @@ global LANG_EN := Map(
     "icon.fetching",   "Fetching icon…",
     "err.icon_fetch",  "No icon could be loaded from that address.",
     "menu.color.custom", "Custom colour…",
-    "menu.color.default", "Use default colour",
-    "menu.color.fromicon", "Take the colour from the icon",
+    "menu.color.default", "Reset colour",
+    "menu.color.fromicon", "Take from the icon",
     "err.color_icon",  "No colour could be derived from this icon. That only works for icons fetched from a website or loaded from an image file.",
     "color.E5471D",    "Red",
     "color.2E7D32",    "Green",
@@ -428,22 +461,28 @@ global LANG_EN := Map(
     "color.00838F",    "Teal",
     "color.C2185B",    "Pink",
     "color.558B2F",    "Olive",
-    "menu.showindex",  "Show numbers",
-    "menu.colorcoding", "Colour coding",
+    "menu.showindex",  "Before the name",
+    "menu.colorcoding", "Colour bar under each tab",
     "menu.active",     "Active desktop",
-    "menu.active.desktop", "In its own desktop colour (tinted)",
-    "menu.active.accent", "Uniform accent colour (tinted)",
-    "menu.active.solid", "Uniform, solid fill",
-    "menu.dividers",   "Show dividers",
-    "menu.activebold", "Bold label for the active desktop",
+    "menu.active.desktop", "Tinted in its own colour",
+    "menu.active.accent", "Tinted in the accent colour",
+    "menu.active.solid", "Solid fill",
+    "menu.dividers",   "Dividers between tabs",
+    "menu.activebold", "Bold label",
+    "menu.badge",      "As a badge on the icon",
+    "menu.noicon",     "For desktops without their own icon:",
+    "menu.noicon.suggest", "Suggested icon",
+    "menu.noicon.number", "Number",
+    "menu.noicon.none", "None",
+    "menu.icon.number", "Number as icon",
     "menu.view",       "View",
     "menu.view.auto",  "Automatic (by available space)",
-    "menu.theme",      "Theme",
-    "menu.theme.auto", "Automatic (Windows)",
+    "menu.theme",      "Light or dark",
+    "menu.theme.auto", "Match Windows",
     "menu.theme.light", "Light",
     "menu.theme.dark", "Dark",
     "menu.hotkeys",    "Keyboard shortcuts",
-    "menu.hotkeys.on", "Jump to a desktop with a number key",
+    "menu.hotkeys.on", "Turn on",
     "menu.hotkeys.off", "off",
     "err.hotkey_mod",  "At least one modifier has to stay selected, otherwise the plain number keys would be taken.",
     "key.ctrl",        "Ctrl",
@@ -451,11 +490,11 @@ global LANG_EN := Map(
     "key.alt",         "Alt",
     "key.shift",       "Shift",
     "err.hotkeys",     "The shortcuts could not be registered. Another program probably uses them. Please pick a different modifier.",
-    "menu.directjump", "Jump directly (skip desktops in between)",
-    "menu.snap",       "Snap to taskbar",
-    "menu.timelog",    "Write time log",
+    "menu.directjump", "Jump directly instead of stepping through",
+    "menu.snap",       "Snap to the taskbar when moving",
+    "menu.timelog",    "Time log",
     "menu.language",   "Language",
-    "menu.language.auto", "Automatic (Windows)",
+    "menu.language.auto", "Match Windows",
     "prompt.short.title", "Abbreviation for “{1}”",
     "prompt.short.text", "Short name for the compact levels (empty = none):",
     "prompt.color.title", "Colour for “{1}”",
@@ -552,6 +591,7 @@ Main() {
         ExitApp
     }
     ApplyIniOverrides()                      ; gemerkte Einstellungen aus settings.ini [View]
+    MigrateLogs()                            ; alte Zeit-Log-Dateien in den Unterordner
     ApplyTheme()                             ; Farbsatz passend zum Windows-Theme
     BuildBar()
     ApplyWindowHooks()                       ; Pin auf alle Desktops + Change-Hook
@@ -607,7 +647,7 @@ ApplyIniOverrides() {
     }
     for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
                           , "Language", "*", "ActiveStyle", "desktop,accent,solid"
-                          , "SwitchMethod", "native,dll") {
+                          , "SwitchMethod", "native,dll", "NumberBadge", "auto,on,off") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
             CONF[key] := v
@@ -616,11 +656,14 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "DefaultIcons"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
     }
+    v := IniRead(CONF["IniPath"], "View", "DefaultIcons", "")
+    if (v = "0" || v = "1" || v = "2")
+        CONF["DefaultIcons"] := Integer(v)
 }
 
 ; Einstellung setzen, merken, anwenden
@@ -700,6 +743,8 @@ GlyphTopics() => Map(
     , T("iconlib.t.places"), "map|location|place|home|globe|world|car|train|flight|ort|karte|welt")
 
 IsGlyphSpec(s) => (SubStr(s, 1, 6) = "glyph:")
+IsNumberSpec(s) => (s = "number")          ; Nummer des Desktops als Symbol (gefuellter Kreis)
+IsDrawnSpec(s) => (IsGlyphSpec(s) || IsNumberSpec(s))   ; gezeichnet statt aus einer Bilddatei
 GlyphChar(spec) => Chr(Integer("0x" SubStr(spec, 7)))
 
 ; Schriftobjekt der Symbolschrift (mit Fallback auf aeltere Windows-Versionen)
@@ -1066,9 +1111,9 @@ IconPathFor(num) {
     if (spec = "none")                       ; ausdruecklich entfernt: auch kein Vorschlag
         return ""
     if (spec = "")
-        return CONF["DefaultIcons"] ? DefaultGlyph(num) : ""
-    if (IsGlyphSpec(spec))
-        return spec                      ; Bibliotheks-Symbol, wird direkt gezeichnet
+        return (CONF["DefaultIcons"] = 2) ? "number" : CONF["DefaultIcons"] ? DefaultGlyph(num) : ""
+    if (IsDrawnSpec(spec))
+        return spec                      ; Bibliotheks-Symbol oder Nummer, wird direkt gezeichnet
     if (!IsUrl(spec)) {
         path := (InStr(spec, ":") || SubStr(spec, 1, 1) = "\") ? spec : A_ScriptDir "\" spec
         return FileExist(path) ? path : ""
@@ -1324,7 +1369,7 @@ DominantColor(path) {
 ; Farbe des Desktops aus seinem Symbol uebernehmen
 ColorFromIcon(num, *) {
     spec := IconPathFor(num)
-    if (spec = "" || IsGlyphSpec(spec)) {
+    if (spec = "" || IsDrawnSpec(spec)) {
         MsgBox(T("err.color_icon"), "DeskTabs", 0x30)
         return
     }
@@ -1396,6 +1441,13 @@ PromptIconFile(num, *) {
     RebuildAll()
 }
 
+SetNumberIcon(num, *) {
+    raw := GetDesktopNameRaw(num)
+    IniSet("Icons", raw, "number")
+    try FileDelete(IconsDir() "\" SafeName(raw) ".png")
+    RebuildAll()
+}
+
 ClearIcon(num, *) {
     raw := GetDesktopNameRaw(num)
     IniDelLoose("Icons", raw)
@@ -1420,15 +1472,115 @@ OnRButtonUp(wParam, lParam, msg, hwnd) {
     return 0
 }
 
+; Kopf jedes Menues: App-Symbol, "DeskTabs" fett und die Version kleiner und grau
+; dahinter. Ein normaler Menue-Eintrag kann Groesse und Farbe nicht mischen, also
+; wird diese eine Zeile selbst gezeichnet (owner-draw). Klick oeffnet "Ueber DeskTabs".
+AddAppHeader(m) {
+    static hooked := false
+    if (!hooked) {
+        OnMessage(0x002C, HeadMeasure)          ; WM_MEASUREITEM
+        OnMessage(0x002B, HeadDraw)             ; WM_DRAWITEM
+        hooked := true
+    }
+    m.Add("DeskTabs", ShowAbout)
+    m.Add()
+    mii := Buffer(80, 0)                        ; MENUITEMINFOW (64 Bit)
+    NumPut("UInt", 80, "UInt", 0x100 | 0x20, "UInt", 0x100, mii)   ; MIIM_FTYPE|MIIM_DATA, MFT_OWNERDRAW
+    NumPut("UPtr", 0xDE5C, mii, 48)                                ; Kennung fuer HeadMeasure/HeadDraw
+    DllCall("SetMenuItemInfoW", "Ptr", m.Handle, "UInt", 0, "Int", 1, "Ptr", mii)
+}
+
+; Schriften des Menues (Windows-Menueschrift): fett fuer den Namen, kleiner fuer die Version
+HeadFonts() {
+    static fonts := 0
+    if (fonts)
+        return fonts
+    ncm := Buffer(504, 0)
+    NumPut("UInt", 504, ncm)
+    DllCall("SystemParametersInfoW", "UInt", 0x29, "UInt", 504, "Ptr", ncm, "UInt", 0)   ; SPI_GETNONCLIENTMETRICS
+    lf := Buffer(92, 0)
+    DllCall("RtlMoveMemory", "Ptr", lf, "Ptr", ncm.Ptr + 224, "UPtr", 92)                ; lfMenuFont
+    h := NumGet(lf, 0, "Int")
+    NumPut("Int", 700, lf, 16)
+    bold := DllCall("CreateFontIndirectW", "Ptr", lf, "Ptr")
+    NumPut("Int", Round(h * 0.85), lf, 0)
+    NumPut("Int", 400, lf, 16)
+    small := DllCall("CreateFontIndirectW", "Ptr", lf, "Ptr")
+    fonts := [bold, small]
+    return fonts
+}
+
+HeadTextW(hdc, font, s) {
+    old := DllCall("SelectObject", "Ptr", hdc, "Ptr", font, "Ptr")
+    sz := Buffer(8, 0)
+    DllCall("GetTextExtentPoint32W", "Ptr", hdc, "Str", s, "Int", StrLen(s), "Ptr", sz)
+    DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+    return NumGet(sz, 0, "Int")
+}
+
+HeadMeasure(wParam, lParam, msg, hwnd) {
+    if (NumGet(lParam, 0, "UInt") != 1 || NumGet(lParam, 24, "UPtr") != 0xDE5C)   ; ODT_MENU + unsere Kennung
+        return
+    f := HeadFonts(), s := A_ScreenDPI / 96
+    hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
+    w := HeadTextW(hdc, f[1], "DeskTabs") + Round(7 * s) + HeadTextW(hdc, f[2], APP_VERSION)
+    DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
+    NumPut("UInt", w + Round(16 * s), lParam, 12)                  ; itemWidth (Rest macht Windows)
+    NumPut("UInt", Round(30 * s), lParam, 16)                      ; itemHeight
+    return 1
+}
+
+HeadDraw(wParam, lParam, msg, hwnd) {
+    if (NumGet(lParam, 0, "UInt") != 1 || NumGet(lParam, 56, "UPtr") != 0xDE5C)
+        return
+    static icon := 0
+    f := HeadFonts(), s := A_ScreenDPI / 96
+    hdc := NumGet(lParam, 32, "Ptr")
+    l := NumGet(lParam, 40, "Int"), t := NumGet(lParam, 44, "Int"), r := NumGet(lParam, 48, "Int"), b := NumGet(lParam, 52, "Int")
+    ; Grund: die Farbe, die Windows fuer das Menue gemalt hat (rechte obere Ecke der Zeile)
+    bgc := DllCall("GetPixel", "Ptr", hdc, "Int", r - 1, "Int", t, "UInt")
+    if (bgc = 0xFFFFFFFF)
+        bgc := DllCall("GetSysColor", "Int", 4, "UInt")            ; COLOR_MENU
+    br := DllCall("CreateSolidBrush", "UInt", bgc, "Ptr")
+    rc := Buffer(16, 0)
+    NumPut("Int", l, "Int", t, "Int", r, "Int", b, rc)
+    DllCall("FillRect", "Ptr", hdc, "Ptr", rc, "Ptr", br)
+    DllCall("DeleteObject", "Ptr", br)
+    ; Symbol in der Spalte, in der auch die anderen Menue-Symbole stehen
+    isz := Round(14 * s)                       ; so gross wie die Symbole der anderen Eintraege
+    if (!icon && FileExist(AppIconPath()))
+        try icon := LoadPicture(AppIconPath(), "w" isz " h" isz " Icon1", &imgType)
+    x := l + Round(3 * s)
+    if (icon)
+        DllCall("DrawIconEx", "Ptr", hdc, "Int", x, "Int", t + (b - t - isz) // 2, "Ptr", icon, "Int", isz, "Int", isz, "UInt", 0, "Ptr", 0, "UInt", 3)
+    ; Texte auf gemeinsamer Grundlinie: Name fett, Version kleiner und grau
+    tx := l + Round(20 * s)
+    DllCall("SetBkMode", "Ptr", hdc, "Int", 1)
+    old := DllCall("SelectObject", "Ptr", hdc, "Ptr", f[1], "Ptr")
+    tm := Buffer(60, 0)
+    DllCall("GetTextMetricsW", "Ptr", hdc, "Ptr", tm)
+    asc := NumGet(tm, 4, "Int"), desc := NumGet(tm, 8, "Int")
+    base := t + (b - t - asc - desc) // 2 + asc
+    DllCall("SetTextAlign", "Ptr", hdc, "UInt", 24)               ; TA_BASELINE
+    DllCall("SetTextColor", "Ptr", hdc, "UInt", DllCall("GetSysColor", "Int", 7, "UInt"))   ; COLOR_MENUTEXT
+    DllCall("TextOutW", "Ptr", hdc, "Int", tx, "Int", base, "Str", "DeskTabs", "Int", 8)
+    w1 := HeadTextW(hdc, f[1], "DeskTabs")
+    DllCall("SelectObject", "Ptr", hdc, "Ptr", f[2])
+    DllCall("SetTextColor", "Ptr", hdc, "UInt", 0x8A8A8A)          ; grau, ruhiger als der Name
+    DllCall("TextOutW", "Ptr", hdc, "Int", tx + w1 + Round(7 * s), "Int", base, "Str", APP_VERSION, "Int", StrLen(APP_VERSION))
+    DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+    DllCall("SetTextAlign", "Ptr", hdc, "UInt", 0)
+    return 1
+}
+
 ShowContextMenu(num, *) {
     m := Menu()
+    AddAppHeader(m)
     if (num >= 0) {
         raw := GetDesktopNameRaw(num)
         head := (num + 1) " · " raw
         m.Add(head, (*) => 0)
         m.Disable(head)
-        m.Add(T("menu.tab.short"), PromptShort.Bind(num))
-        MenuGlyph(m, T("menu.tab.short"), "E8AC")
         cm := Menu()
         cur := DesktopColor(num)
         hit := false
@@ -1450,11 +1602,9 @@ ShowContextMenu(num, *) {
         iconSpec := IconPathFor(num)
         cm.Add(T("menu.color.fromicon"), ColorFromIcon.Bind(num))
         MenuGlyph(cm, T("menu.color.fromicon"), "EF3B")
-        if (iconSpec = "" || IsGlyphSpec(iconSpec))
+        if (iconSpec = "" || IsDrawnSpec(iconSpec))
             cm.Disable(T("menu.color.fromicon"))
         cm.Add(T("menu.color.default"), ClearColor.Bind(num))
-        m.Add(T("menu.tab.color"), cm)
-        MenuGlyph(m, T("menu.tab.color"), "E790")
         im := Menu()
         im.Add(T("menu.icon.library"), ShowIconLibrary.Bind(num))
         MenuGlyph(im, T("menu.icon.library"), "ECAA")
@@ -1462,12 +1612,19 @@ ShowContextMenu(num, *) {
         MenuGlyph(im, T("menu.icon.url"), "E774")
         im.Add(T("menu.icon.file"), PromptIconFile.Bind(num))
         MenuGlyph(im, T("menu.icon.file"), "E8B9")
+        im.Add(T("menu.icon.number"), SetNumberIcon.Bind(num))
+        if (IsNumberSpec(IniLookup("Icons", raw)))
+            im.Check(T("menu.icon.number"))
         im.Add()
         im.Add(T("menu.icon.clear"), ClearIcon.Bind(num))
         if (IniLookup("Icons", raw) = "none")
             im.Disable(T("menu.icon.clear"))
         m.Add(T("menu.tab.icon"), im)
         MenuGlyph(m, T("menu.tab.icon"), "E91B")
+        m.Add(T("menu.tab.color"), cm)
+        MenuGlyph(m, T("menu.tab.color"), "E790")
+        m.Add(T("menu.tab.short"), PromptShort.Bind(num))
+        MenuGlyph(m, T("menu.tab.short"), "E8AC")
         m.Add()
     }
     FillSettingsMenu(m)
@@ -1477,49 +1634,74 @@ ShowContextMenu(num, *) {
 ; Allgemeiner Teil des Einstellungsmenues; identisch im Rechtsklick auf die
 ; Leiste und im Tray-Menue (dort ohne Umweg ueber "Einstellungen…").
 FillSettingsMenu(m) {
-    am := Menu()
-    for val, label in Map("desktop", T("menu.active.desktop"), "accent", T("menu.active.accent"), "solid", T("menu.active.solid")) {
-        am.Add(label, SetViewStr.Bind("ActiveStyle", val))
-        if (CONF["ActiveStyle"] = val)
-            am.Check(label)
-    }
-    m.Add(T("menu.active"), am)
-    MenuGlyph(m, T("menu.active"), "E7C4")
-    ; Ansicht: erst die Stufe (was im Tab steht), darunter die Schalter dazu.
-    ; Die Nummern sind bewusst ein eigener Schalter und nicht Teil der Stufe.
+    ; Reihenfolgen stehen bewusst in Arrays: eine Map zaehlt ihre Schluessel
+    ; alphabetisch auf, die Menues standen dadurch frueher kreuz und quer.
+    ; Ansicht: erst die Stufe (was im Tab steht, von breit nach schmal),
+    ; darunter Symbole, Nummern und die Schalter fuer die Optik der Leiste.
     vm := Menu()
-    for val, label in Map("auto", T("menu.view.auto"), "bigtext", T("level.bigtext"), "full", T("level.full")
-                        , "short", T("level.short"), "icon", T("level.icon"), "big", T("level.big")) {
-        vm.Add(label, SetViewStr.Bind("CompactMode", val))
-        if (CONF["CompactMode"] = val)
-            vm.Check(label)
+    for , it in [["auto", T("menu.view.auto")], ["bigtext", T("level.bigtext")], ["full", T("level.full")]
+               , ["short", T("level.short")], ["icon", T("level.icon")], ["big", T("level.big")]] {
+        vm.Add(it[2], SetViewStr.Bind("CompactMode", it[1]))
+        if (CONF["CompactMode"] = it[1])
+            vm.Check(it[2])
     }
     vm.Add()
-    vm.Add(T("menu.showindex"), ToggleView.Bind("ShowIndex"))
-    if (CONF["ShowIndex"])
-        vm.Check(T("menu.showindex"))
-    vm.Add(T("menu.showicons"), ToggleView.Bind("ShowIcons"))
+    sm := Menu()
+    sm.Add(T("menu.icons.show"), ToggleView.Bind("ShowIcons"))
     if (CONF["ShowIcons"])
-        vm.Check(T("menu.showicons"))
+        sm.Check(T("menu.icons.show"))
+    sm.Add()
+    sm.Add(T("menu.noicon"), (*) => 0)
+    sm.Disable(T("menu.noicon"))
+    for , it in [[1, T("menu.noicon.suggest")], [2, T("menu.noicon.number")], [0, T("menu.noicon.none")]] {
+        sm.Add(it[2], SetViewStr.Bind("DefaultIcons", it[1]))
+        if (CONF["DefaultIcons"] = it[1])
+            sm.Check(it[2])
+    }
+    vm.Add(T("menu.icons"), sm)
+    MenuGlyph(vm, T("menu.icons"), "E91B")
+    nm := Menu()
+    nm.Add(T("menu.showindex"), ToggleView.Bind("ShowIndex"))
+    if (CONF["ShowIndex"])
+        nm.Check(T("menu.showindex"))
+    ; Haken zeigt, ob die Badges gerade zu sehen sind; ein Klick legt es ausdruecklich fest
+    nm.Add(T("menu.badge"), (*) => SetView("NumberBadge", BadgesOn() ? "off" : "on"))
+    if (BadgesOn())
+        nm.Check(T("menu.badge"))
+    vm.Add(T("menu.numbers"), nm)
+    MenuGlyph(vm, T("menu.numbers"), "E8EF")
     vm.Add(T("menu.colorcoding"), ToggleView.Bind("ColorCoding"))
     if (CONF["ColorCoding"])
         vm.Check(T("menu.colorcoding"))
     vm.Add(T("menu.dividers"), ToggleView.Bind("ShowDividers"))
     if (CONF["ShowDividers"])
         vm.Check(T("menu.dividers"))
-    vm.Add(T("menu.activebold"), ToggleView.Bind("ActiveBold"))
-    if (CONF["ActiveBold"])
-        vm.Check(T("menu.activebold"))
     m.Add(T("menu.view"), vm)
     MenuGlyph(m, T("menu.view"), "E8FD")
+
+    ; Aktiver Desktop: Hervorhebung und (dazu gehoerig) die fette Beschriftung
+    am := Menu()
+    for , it in [["desktop", T("menu.active.desktop")], ["accent", T("menu.active.accent")], ["solid", T("menu.active.solid")]] {
+        am.Add(it[2], SetViewStr.Bind("ActiveStyle", it[1]))
+        if (CONF["ActiveStyle"] = it[1])
+            am.Check(it[2])
+    }
+    am.Add()
+    am.Add(T("menu.activebold"), ToggleView.Bind("ActiveBold"))
+    if (CONF["ActiveBold"])
+        am.Check(T("menu.activebold"))
+    m.Add(T("menu.active"), am)
+    MenuGlyph(m, T("menu.active"), "E7C4")
+
     tm := Menu()
-    for val, label in Map("auto", T("menu.theme.auto"), "light", T("menu.theme.light"), "dark", T("menu.theme.dark")) {
-        tm.Add(label, SetViewStr.Bind("ThemeMode", val))
-        if (CONF["ThemeMode"] = val)
-            tm.Check(label)
+    for , it in [["auto", T("menu.theme.auto")], ["light", T("menu.theme.light")], ["dark", T("menu.theme.dark")]] {
+        tm.Add(it[2], SetViewStr.Bind("ThemeMode", it[1]))
+        if (CONF["ThemeMode"] = it[1])
+            tm.Check(it[2])
     }
     m.Add(T("menu.theme"), tm)
     MenuGlyph(m, T("menu.theme"), "E793")
+
     ; Der Hauptmenue-Eintrag zeigt gleich, ob die Kuerzel an sind und welche gelten -
     ; sonst sucht man den Schalter im Untermenue und haelt die Funktion fuer kaputt.
     km := Menu()
@@ -1527,33 +1709,51 @@ FillSettingsMenu(m) {
     if (CONF["Hotkeys"])
         km.Check(T("menu.hotkeys.on"))
     km.Add()
-    ; Modifikatoren frei kombinieren: Strg, Umschalt, Alt, Windows.
+    km.Add(T("menu.hotkeys.mods"), (*) => 0)
+    km.Disable(T("menu.hotkeys.mods"))
+    ; Modifikatoren frei kombinieren, in der Reihenfolge der Tastatur.
     ; Ein Klick hier schaltet die Kuerzel gleich mit ein.
-    for sign, label in Map("^", T("key.ctrl"), "+", T("key.shift"), "!", T("key.alt"), "#", T("key.win")) {
-        km.Add(label, ToggleHotkeyMod.Bind(sign))
-        if (InStr(CONF["HotkeyMod"], sign))
-            km.Check(label)
+    for , it in [["^", T("key.ctrl")], ["+", T("key.shift")], ["!", T("key.alt")], ["#", T("key.win")]] {
+        km.Add(it[2], ToggleHotkeyMod.Bind(it[1]))
+        if (InStr(CONF["HotkeyMod"], it[1]))
+            km.Check(it[2])
     }
     hkHead := T("menu.hotkeys") ": " (CONF["Hotkeys"] ? HotkeyLabel(CONF["HotkeyMod"]) : T("menu.hotkeys.off"))
     m.Add(hkHead, km)
     MenuGlyph(m, hkHead, "E961")
-    m.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
-    if (CONF["SwitchMethod"] = "dll")
-        m.Check(T("menu.directjump"))
-    m.Add(T("menu.snap"), ToggleView.Bind("SnapToTaskbar"))
-    if (CONF["SnapToTaskbar"])
-        m.Check(T("menu.snap"))
-    m.Add(T("menu.timelog"), ToggleView.Bind("TimeLog"))
-    if (CONF["TimeLog"])
-        m.Check(T("menu.timelog"))
+
     lm := Menu()
-    for val, label in Map("auto", T("menu.language.auto"), "de", "Deutsch", "en", "English") {
-        lm.Add(label, SetViewStr.Bind("Language", val))
-        if (CONF["Language"] = val)
-            lm.Check(label)
+    for , it in [["auto", T("menu.language.auto")], ["de", "Deutsch"], ["en", "English"]] {
+        lm.Add(it[2], SetViewStr.Bind("Language", it[1]))
+        if (CONF["Language"] = it[1])
+            lm.Check(it[2])
     }
     m.Add(T("menu.language"), lm)
     MenuGlyph(m, T("menu.language"), "E774")
+
+    ; Selten gebraucht: Verhalten, Zeit-Log, Reparatur
+    xm := Menu()
+    xm.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
+    if (CONF["SwitchMethod"] = "dll")
+        xm.Check(T("menu.directjump"))
+    xm.Add(T("menu.snap"), ToggleView.Bind("SnapToTaskbar"))
+    if (CONF["SnapToTaskbar"])
+        xm.Check(T("menu.snap"))
+    lgm := Menu()
+    lgm.Add(T("menu.timelog.on"), ToggleView.Bind("TimeLog"))
+    if (CONF["TimeLog"])
+        lgm.Check(T("menu.timelog.on"))
+    lgm.Add(T("menu.timelog.open"), OpenLogFolder)
+    MenuGlyph(lgm, T("menu.timelog.open"), "E838")
+    xm.Add(T("menu.timelog"), lgm)
+    MenuGlyph(xm, T("menu.timelog"), "E823")
+    xm.Add()
+    xm.Add(T("tray.rebuild"), (*) => RebuildAll())
+    MenuGlyph(xm, T("tray.rebuild"), "E72C")
+    xm.Add(T("tray.resetpos"), ResetPos)
+    m.Add(T("menu.more"), xm)
+    MenuGlyph(m, T("menu.more"), "E713")
+
     m.Add()
     m.Add(T("menu.help"), HelpMenu())
     MenuGlyph(m, T("menu.help"), "E897")
@@ -1562,12 +1762,18 @@ FillSettingsMenu(m) {
     m.Add(T("menu.about"), ShowAbout)
     MenuGlyph(m, T("menu.about"), "E946")
     m.Add()
-    m.Add(T("tray.rebuild"), (*) => RebuildAll())
-    MenuGlyph(m, T("tray.rebuild"), "E72C")
-    m.Add(T("tray.resetpos"), ResetPos)
-    m.Add()
     m.Add(T("tray.exit"), (*) => ExitApp())
     MenuGlyph(m, T("tray.exit"), "E7E8")
+}
+
+; Ordner mit den Zeit-Log-Dateien oeffnen, die Datei des laufenden Monats markiert
+OpenLogFolder(*) {
+    file := LogFile(A_Now)
+    try DirCreate(LogDir())
+    if FileExist(file)
+        Run('explorer.exe /select,"' file '"')
+    else
+        Run('explorer.exe "' LogDir() '"')
 }
 
 ; Untermenue "Hilfe": Doku, Changelog, Feedback-Wege, Update-Pruefung
@@ -2036,7 +2242,7 @@ BuildBarAt() {
         w := px(CONF["PadX"]) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
         if (iw && label = "")
             w := Max(btnH, iw + px(12) * 2)       ; quadratische Kachel wie die Taskleisten-Buttons
-        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false))
+        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false, "badge", BadgeText(num, icon, label)))
         x += w
         if (A_Index < cnt)
             x += gap
@@ -2148,6 +2354,12 @@ HslToRgb(h, s, l) {
     return (r << 16) | (g << 8) | b
 }
 
+; Helle Variante einer Farbe (gleicher Farbton), fuer Symbole auf dunkler Toenung
+LightTone(col) {
+    hsl := RgbToHsl(col)
+    return HslToRgb(hsl["h"], Min(1, hsl["s"]), 0.74)
+}
+
 ; Fuellfarbe des aktiven Tabs: Farbton der Desktop-Farbe, Helligkeit aus dem Theme
 TintFill(col) {
     hsl := RgbToHsl(col)
@@ -2188,6 +2400,93 @@ DrawText(g, font, sf, s, x, y, w, h, argb) {
     NumPut("Float", x, "Float", y, "Float", w, "Float", h, rect)
     DllCall("gdiplus\GdipDrawString", "Ptr", g, "Str", s, "Int", -1, "Ptr", font, "Ptr", rect, "Ptr", sf, "Ptr", brush)
     DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+}
+
+; ------------------------------ Nummern -------------------------------------
+; Sind die Nummern-Badges gerade an? "auto" folgt den Tastenkuerzeln: nur dann
+; hat die Zahl am Symbol einen Zweck (sie zeigt die Taste, die man drueckt).
+BadgesOn() => (CONF["NumberBadge"] = "on") || (CONF["NumberBadge"] = "auto" && CONF["Hotkeys"])
+
+; Text des Badges fuer einen Tab ("" = keins). Nur an echten Symbolen (nicht, wenn
+; die Nummer selbst das Symbol ist) und nicht, wenn die Nummer schon im Text steht.
+; Mit Tastenkuerzeln zeigt es die Taste: Desktop 10 = "0", ab 11 gibt es keine.
+BadgeText(num, icon, label) {
+    if (!BadgesOn() || icon = "" || IsNumberSpec(icon))
+        return ""
+    if (CONF["ShowIndex"] && label != "")
+        return ""
+    if (CONF["Hotkeys"])
+        return (num < 9) ? String(num + 1) : (num = 9) ? "0" : ""
+    return String(num + 1)
+}
+
+; Kleiner gefuellter Kreis mit Zahl, halb ueber der oberen linken Ecke des Symbols.
+; Ein schmaler Ring in der Farbe des Untergrunds stanzt ihn vom Symbol frei.
+DrawBadge(g, s, ix, iy, iw, fill, fg, under) {
+    d := Max(px(12), Round(iw * 0.6))
+    bw := (StrLen(s) > 1) ? Round(d * 1.45) : d          ; zweistellig: Pille statt Kreis
+    bx := ix - Round(d * 0.38), by := iy - Round(d * 0.38)
+    ring := Max(1, px(1.5))
+    FillRoundRect(g, bx - ring, by - ring, bw + 2 * ring, d + 2 * ring, (d + 2 * ring) / 2, ARGB(under))
+    FillRoundRect(g, bx, by, bw, d, d / 2, ARGB(fill))
+    digits := DigitPath(s, d * 0.72, bx + bw / 2, by + d / 2)
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(fg), "Ptr*", &brush)
+    DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", digits)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+    DllCall("gdiplus\GdipDeletePath", "Ptr", digits)
+}
+
+; Nummer als Symbol: gefuellter Kreis, die Ziffern sind echte Loecher (Pfad mit
+; Alternate-Fuellung), damit Toenung und Verlauf des Tabs durchscheinen.
+; knockout = false: Ziffern weiss auf den Kreis (fuer dunklen Grund).
+DrawNumberDisc(g, s, x, y, size, rgb, knockout := true) {
+    d := size * 0.92, off := (size - d) / 2
+    path := 0
+    DllCall("gdiplus\GdipCreatePath", "Int", 0, "Ptr*", &path)       ; 0 = Alternate
+    DllCall("gdiplus\GdipAddPathEllipse", "Ptr", path, "Float", x + off, "Float", y + off, "Float", d, "Float", d)
+    digits := DigitPath(s, d * ((StrLen(s) > 1) ? 0.52 : 0.64), x + size / 2, y + size / 2)
+    if (knockout)
+        DllCall("gdiplus\GdipAddPathPath", "Ptr", path, "Ptr", digits, "Int", 0)   ; Ziffern im selben Pfad = Loecher
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(rgb), "Ptr*", &brush)
+    DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", path)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+    if (!knockout) {
+        DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(0xFFFFFF), "Ptr*", &brush)
+        DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", digits)
+        DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+    }
+    DllCall("gdiplus\GdipDeletePath", "Ptr", digits)
+    DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+}
+
+; Ziffern als Pfad, genau auf (cx, cy) zentriert. Gemessen wird die tatsaechliche
+; Form der Ziffern, nicht das Textfeld - das hat links Innenabstand und oben
+; Platz fuer Akzente, die Zahl saesse sonst ein, zwei Pixel daneben.
+DigitPath(s, em, cx, cy) {
+    fam := 0
+    DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", CONF["FontName"], "Ptr", 0, "Ptr*", &fam)
+    if (!fam)
+        DllCall("gdiplus\GdipGetGenericFontFamilySansSerif", "Ptr*", &fam)
+    path := 0
+    DllCall("gdiplus\GdipCreatePath", "Int", 0, "Ptr*", &path)
+    sf := MakeFormat()
+    rect := Buffer(16, 0)
+    NumPut("Float", 0, "Float", 0, "Float", em * 4, "Float", em * 4, rect)
+    DllCall("gdiplus\GdipAddPathString", "Ptr", path, "WStr", s, "Int", -1, "Ptr", fam, "Int", 1
+        , "Float", em, "Ptr", rect, "Ptr", sf)                          ; 1 = fett
+    b := Buffer(16, 0)
+    DllCall("gdiplus\GdipGetPathWorldBounds", "Ptr", path, "Ptr", b, "Ptr", 0, "Ptr", 0)
+    dx := cx - (NumGet(b, 0, "Float") + NumGet(b, 8, "Float") / 2)
+    dy := cy - (NumGet(b, 4, "Float") + NumGet(b, 12, "Float") / 2)
+    m := 0
+    DllCall("gdiplus\GdipCreateMatrix2", "Float", 1, "Float", 0, "Float", 0, "Float", 1, "Float", dx, "Float", dy, "Ptr*", &m)
+    DllCall("gdiplus\GdipTransformPath", "Ptr", path, "Ptr", m)
+    DllCall("gdiplus\GdipDeleteMatrix", "Ptr", m)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteFontFamily", "Ptr", fam)
+    return path
 }
 
 RoundRectPath(x, y, w, h, r) {
@@ -2299,10 +2598,18 @@ RenderBar(force := false) {
             tx0 := x + (w - iw) // 2              ; nur Symbol: mittig in der Kachel
         if (iw) {
             iy := y + (h - iw) // 2 - px(1)
-            if (IsGlyphSpec(item["icon"])) {
+            if (IsNumberSpec(item["icon"])) {
+                ; Nummer als Symbol: gefuellter Kreis, Zahl ausgestanzt (der Tab scheint durch)
+                ; im dunklen Schema waeren ausgestanzte Ziffern zu dunkel: dort weisse Ziffern
+                DrawNumberDisc(g, String(item["num"] + 1), tx0, iy, iw, (active && style = "solid") ? tx : col
+                    , (gTheme != "dark") || (active && style = "solid"))
+            } else if (IsGlyphSpec(item["icon"])) {
                 ; Bibliotheks-Symbol in der Desktop-Farbe; auf kraeftig gefuelltem
                 ; Grund stattdessen in der Textfarbe, sonst verschwindet es darin
-                DrawGlyph(g, item["icon"], tx0, iy, iw, (active && style = "solid") ? tx : col)
+                ; im dunklen Schema ginge es auf der gleichfarbigen Toenung des aktiven Tabs
+                ; unter: dort in einer hellen Variante derselben Farbe
+                DrawGlyph(g, item["icon"], tx0, iy, iw, (active && style = "solid") ? tx
+                    : (active && gTheme = "dark") ? LightTone(col) : col)
             } else {
                 img := LoadIconBitmap(item["icon"])
                 if (img)
@@ -2310,6 +2617,16 @@ RenderBar(force := false) {
                         , "Int", iy, "Int", iw, "Int", iw)
                 else
                     iw := 0
+            }
+            if (iw && item["badge"] != "") {
+                ; Grund, auf dem das Badge liegt: dieselbe Farbe wie der Tab dort
+                under := active ? ((style = "solid") ? CONF["ColActiveBg"] : TintFill((style = "accent") ? CONF["ColActiveBg"] : col)) : item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg
+                if (active && style = "solid")
+                    DrawBadge(g, item["badge"], tx0, iy, iw, tx, CONF["ColActiveBg"], under)   ; umgekehrt: weiss mit farbiger Zahl
+                else if (active && gTheme = "dark")
+                    DrawBadge(g, item["badge"], tx0, iy, iw, LightTone(col), 0x1F1F1F, under)   ; hebt sich von der dunklen Toenung ab
+                else
+                    DrawBadge(g, item["badge"], tx0, iy, iw, col, 0xFFFFFF, under)
             }
             tx0 += iw ? iw + L["iconGap"] : 0
             tw -= iw ? iw + L["iconGap"] : 0
@@ -2867,11 +3184,9 @@ HotkeyLabel(mk) {
 ; ------------------------------- Tray ---------------------------------------
 BuildTray() {
     A_TrayMenu.Delete()
-    A_TrayMenu.Add("DeskTabs", (*) => 0)
-    A_TrayMenu.Disable("DeskTabs")
-    A_TrayMenu.Add()
+    AddAppHeader(A_TrayMenu)
     FillSettingsMenu(A_TrayMenu)
-    A_TrayMenu.Default := T("menu.about")
+    A_TrayMenu.Default := T("menu.about")     ; Doppelklick aufs Tray-Symbol = "Ueber DeskTabs"
     ; kompiliert: die exe traegt das Icon bereits (Ahk2Exe-SetMainIcon)
     if (!A_IsCompiled && FileExist(AppIconPath()))
         TraySetIcon(AppIconPath(), 1)

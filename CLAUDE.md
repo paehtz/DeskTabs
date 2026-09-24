@@ -52,7 +52,7 @@ Keys are the exact desktop names as shown in Windows Task View (read them with `
 
 ## Read the time log (billing, reports)
 
-If the user asks "how long did I work on client X this week/month", read `desktop-log_YYYY-MM.csv` next to the script (one file per month, written by the bar itself):
+If the user asks "how long did I work on client X this week/month", read `timelog\desktop-log_YYYY-MM.csv` in the script folder (one file per month, written by the bar itself; up to v1.1.4 the files sat directly next to the script and are moved on the next start):
 
 ```csv
 start,end,seconds,desktop_index,desktop_name
@@ -78,7 +78,7 @@ All user-facing options are in the `CONF := Map(...)` block at the very top of `
 - **UI texts / languages** → every visible string goes through `T("key", args*)`. Built-in maps `LANG_DE` / `LANG_EN` near the top of the script; `lang\<code>.ini` (UTF-8, `key=Text`) overrides or adds a language, chosen by `Language` (`auto` = Windows display language). **When you add a UI string, add it to both maps and both `lang\*.ini` files.**
 - **Fullscreen auto-hide** → `IsForegroundFullscreen()` walks the z-order and checks the top-most real window *on the bar's monitor*; don't switch it back to `GetForegroundWindow()` (breaks with multiple monitors).
 
-After editing: run `/validate`, then restart the script and look at the bar.
+After editing: run `/validate`, then restart the script and look at the bar. **Restart by launching the script again** (`#SingleInstance Force` closes the running instance cleanly, so `OnExit` still writes the open time-log segment). Never kill the process: that skips `OnExit` and the time since the last desktop switch is lost from the log.
 
 ## Pitfalls (read before editing — easy to re-introduce)
 

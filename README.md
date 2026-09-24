@@ -51,19 +51,20 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 
 - **Live names from Windows:** the button labels come straight from the desktops you named in Windows (Task View). Nothing is maintained twice.
 - **Dynamic:** add or remove a desktop in Windows → the bar adapts automatically within ~1.2 s (or via Tray → "Rebuild bar").
-- **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via the menu entry “Jump directly”.
+- **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via *More settings › Jump directly instead of stepping through*.
 - **Visible on all desktops:** the window is pinned to every desktop.
 - **Light/Dark automatic:** follows the Windows theme (taskbar brightness), switchable or fixed.
 - **Index prefix:** "3 · ProjectName" (can be disabled).
 - **Colour coding:** a thin colour bar per desktop (tab-indicator style, can be disabled, overridable per desktop). *Take the colour from the icon* reads the dominant colour out of a fetched site icon and uses it for that desktop.
 - **Icon library:** a built-in picker over the whole `Segoe Fluent Icons` font that Windows 11 ships with (1500+ icons), searchable in English and German, with quick filters and a scrollable grid. Click an icon to mark it, then OK (or double-click). The current icon is preselected. Library icons are drawn in the desktop's own colour and stored as `[Icons] Desktop = glyph:E713`.
+- **Desktop numbers:** a small numbered badge on the top left of each icon shows which number key jumps there (on automatically while the keyboard shortcuts are on; desktop 10 shows `0`). Or use the number itself as the icon: a filled circle in the desktop colour, per desktop via *Icon → Number as icon* (`[Icons] Desktop = number`) or for all desktops without an icon of their own.
 - **Tab icons:** give a desktop an icon from a website (DeskTabs fetches the site icon in the best resolution it can find and caches it) or from your own image file. Right-click a tab → *Icon*, or set `[Icons] Desktop name = URL or path` in `settings.ini`. The bare domain is enough, no `https://www.` needed.
 - **Fluent look:** rounded tabs, the active desktop tinted in its own colour (hue kept, lightness from the theme), subtle vertical gradients, hover lightens the tab like the Windows taskbar buttons. The active style is switchable: own desktop colour, uniform accent colour, or a solid fill.
 - **Click on the active desktop:** opens Task View (Win+Tab).
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
-- **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
-- **Right-click menu:** right-click a tab for its abbreviation and colour, plus all app settings (numbers, colour coding, view level, theme, snapping, time log, language). No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
+- **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`timelog\desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
+- **Right-click menu:** right-click a tab for its icon, colour and abbreviation, plus all app settings: *View* (what a tab shows, icons, numbers, colour bars), *Active desktop*, *Light or dark*, *Keyboard shortcuts*, *Language*, and under *More settings* direct jumping, snapping and the time log. No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
 - **Help menu:** documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
 - **Update check:** once a day DeskTabs asks the GitHub releases API for the latest version number (nothing else is sent) and shows a tray notification if a newer release exists. Disable via the Help menu or `UpdateCheck = 0`.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
@@ -152,18 +153,19 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `CompactMode` | `auto` | What a tab shows: `bigtext` (large icon + name), `full` (name), `short` (short name), `icon` (abbreviation or number), `big` (large icon only). `auto` starts at `bigtext` and steps down until the bar fits the width budget. |
 | `MaxBarWidthPct` | 40 | `auto` only: maximum share of the taskbar width before the bar steps down one level. |
 | `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
-| `TimeLog` | 1 | Write per-desktop stay times to `desktop-log_YYYY-MM.csv` next to the script. `0` = off. |
+| `TimeLog` | 1 | Write per-desktop stay times to `timelog\desktop-log_YYYY-MM.csv` in the program folder. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `solid` = a strong fill. |
 | `TintL` / `TintS` | 86 / 100 (light), 32 / 78 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
-| `ActiveBold` | 0 | 1 = write the active desktop's label in bold. Also in the view menu. |
+| `ActiveBold` | 0 | 1 = write the active desktop's label in bold. Also in the menu under *Active desktop*. |
 | `ActiveBarBoost` | 2 | How many pixels the colour bar of the active desktop grows, so it reads as active at a glance. |
 | `GradientPct` | 14 | Strength of the vertical gradient inside filled tabs, `0` = flat. |
 | `HoverPct` | 58 (light), 12 (dark) | How far a hovered tab is lightened. |
 | `CornerRadius` | 4 | Corner radius of the tabs (like Windows 11 taskbar buttons). |
 | `ShowIcons` | 1 | Show the icons from `[Icons]` in the tabs. |
-| `DefaultIcons` | 1 | Desktops without an icon of their own get one from a suggested set, so the bar looks finished from the first start. Nothing is written to the file; assigning your own icon, or *Remove icon*, overrides it. |
+| `DefaultIcons` | 1 | What desktops without an icon of their own show: `1` = one from a suggested set, so the bar looks finished from the first start; `2` = their number as a filled circle; `0` = nothing. Nothing is written to the file; assigning your own icon, or *Remove icon*, overrides it. Also under *View › Icons*. |
+| `NumberBadge` | `auto` | Small number on the top left of each icon: `auto` = while the keyboard shortcuts are on (it then shows the key, desktop 10 = `0`), `on`, `off`. Not shown when the number is already in the label or is the icon itself. Also under *View › Numbers*. |
 | `IconSize` / `IconGap` | 16 / 7 | Icon size and the gap between icon and text. |
 | `ShowDividers` | 0 | Thin separators between the tabs. |
 | `Hotkeys` | 0 | 1 = register the number-key shortcuts for jumping to a desktop. |
@@ -208,7 +210,7 @@ DeskTabs speaks German and English out of the box and picks the language from yo
 
 ## Time log
 
-With `TimeLog=1` (default) DeskTabs writes one line per stay on a desktop into `desktop-log_YYYY-MM.csv` next to the script:
+With `TimeLog=1` (default) DeskTabs writes one line per stay on a desktop into `desktop-log_YYYY-MM.csv` in the subfolder `timelog\` of the program folder (up to v1.1.4 the files sat directly next to the program; they are moved on the next start). *More settings › Time log › Open folder* shows the files:
 
 ```csv
 start,end,seconds,desktop_index,desktop_name

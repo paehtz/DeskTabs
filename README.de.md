@@ -51,19 +51,20 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 
 - **Live-Namen aus Windows:** die Button-Beschriftung kommt direkt aus den in Windows benannten Desktops (Task-Ansicht). Nichts wird doppelt gepflegt.
 - **Dynamisch:** Desktop hinzufügen/entfernen in Windows → die Leiste passt sich innerhalb ~1,2 s automatisch an (oder Tray → „Leiste neu aufbauen").
-- **Direktsprung:** Ein Klick springt in einem Schritt zum Ziel-Desktop (~100 ms), ohne die Desktops dazwischen durchzuschalten. Auf 25H2 (26200) gemessen: Das fokussierte Fenster bleibt liegen; nimmt ein Build es doch mit, schiebt DeskTabs es sofort zurück. Der schrittweise Wechsel (`Win+Strg+Pfeil`) bleibt über den Menüpunkt „Direkt springen“ verfügbar.
+- **Direktsprung:** Ein Klick springt in einem Schritt zum Ziel-Desktop (~100 ms), ohne die Desktops dazwischen durchzuschalten. Auf 25H2 (26200) gemessen: Das fokussierte Fenster bleibt liegen; nimmt ein Build es doch mit, schiebt DeskTabs es sofort zurück. Der schrittweise Wechsel (`Win+Strg+Pfeil`) bleibt über *Weitere Einstellungen › Direkt springen statt durchblättern* verfügbar.
 - **Auf allen Desktops sichtbar:** das Fenster ist an alle Desktops gepinnt.
 - **Hell/Dunkel automatisch:** folgt dem Windows-Theme (Taskleisten-Helligkeit), umschaltbar oder fest einstellbar.
 - **Index-Präfix:** „3 · Projektname" (abschaltbar).
 - **Farbcodierung:** dünner Farbbalken pro Desktop (Tab-Indikator-Stil, abschaltbar, pro Desktop überschreibbar). *Farbe aus dem Symbol übernehmen* liest die Hauptfarbe aus einem geholten Seiten-Symbol und setzt sie für diesen Desktop.
 - **Symbol-Bibliothek:** eingebautes Auswahlfenster über die komplette Windows-11-Schrift `Segoe Fluent Icons` (1500+ Symbole), durchsuchbar auf Deutsch und Englisch, mit Schnellfiltern und rollbarem Raster. Symbol anklicken, dann OK (oder doppelklicken); das aktuelle Symbol ist vormarkiert. Bibliotheks-Symbole erscheinen in der Farbe des Desktops und stehen als `[Icons] Desktopname = glyph:E713` in der Datei.
+- **Desktop-Nummern:** Ein kleines Nummern-Badge oben links am Symbol zeigt, welche Zifferntaste dorthin springt (automatisch, solange die Tastenkürzel an sind; Desktop 10 zeigt `0`). Oder die Nummer selbst als Symbol: ein gefüllter Kreis in der Desktop-Farbe, pro Desktop über *Symbol → Nummer als Symbol* (`[Icons] Desktopname = number`) oder für alle Desktops ohne eigenes Symbol.
 - **Symbole pro Tab:** Symbol von einer Webseite holen (DeskTabs sucht das Seiten-Symbol in der bestmöglichen Auflösung und legt es im Zwischenspeicher ab) oder eigene Bilddatei wählen. Rechtsklick auf den Tab → *Symbol*, oder in der `settings.ini`: `[Icons] Desktopname = URL oder Pfad`. Die Domain genügt, `https://www.` ist nicht nötig.
 - **Fluent-Optik:** abgerundete Tabs, aktiver Desktop getönt in seiner eigenen Farbe (Farbton bleibt, Helligkeit kommt vom Farbschema), dezente senkrechte Verläufe, Hover hellt auf wie bei den Windows-Taskleisten-Buttons. Der aktive Stil ist umschaltbar: eigene Desktop-Farbe, einheitliche Akzentfarbe oder kräftige Füllung.
 - **Klick auf aktiven Desktop:** öffnet die Task-Ansicht (Win+Tab).
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
-- **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
-- **Rechtsklick-Menü:** Rechtsklick auf einen Tab für Kürzel und Farbe, dazu alle App-Einstellungen (Nummern, Farbcodierung, Ansichtsstufe, Farbschema, Einrasten, Zeit-Log, Sprache). Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
+- **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`timelog\desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
+- **Rechtsklick-Menü:** Rechtsklick auf einen Tab für Symbol, Farbe und Kürzel, dazu alle App-Einstellungen: *Ansicht* (was im Tab steht, Symbole, Nummern, Farbbalken), *Aktiver Desktop*, *Hell oder dunkel*, *Tastenkürzel*, *Sprache* und unter *Weitere Einstellungen* Direktsprung, Einrasten und Zeit-Log. Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
 - **Hilfe-Menü:** Dokumentation, Änderungsverlauf, Fehler melden und Wunsch einreichen (öffnet ein vorausgefülltes GitHub-Issue), E-Mail an den Autor, Update-Prüfung und *Über DeskTabs* (Version, Lizenz, Links).
 - **Update-Prüfung:** einmal täglich fragt DeskTabs die GitHub-Releases-API nach der aktuellen Versionsnummer (mehr wird nicht übertragen) und zeigt bei einer neueren Version einen Tray-Hinweis. Abschaltbar im Hilfe-Menü oder per `UpdateCheck = 0`.
 - **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
@@ -152,18 +153,19 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `CompactMode` | `auto` | Was ein Tab zeigt: `bigtext` (großes Symbol + Name), `full` (Name), `short` (Kurzname), `icon` (Kürzel oder Nummer), `big` (nur großes Symbol). `auto` beginnt bei `bigtext` und schaltet herunter, bis die Leiste ins Breiten-Budget passt. |
 | `MaxBarWidthPct` | 40 | Nur `auto`: maximaler Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird. |
 | `ShortNameLen` | 8 | Stufe `short`: Namen länger als das werden gekürzt (wenn kein Kürzel hinterlegt ist). |
-| `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `desktop-log_YYYY-MM.csv` neben dem Skript schreiben. `0` = aus. |
+| `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `timelog\desktop-log_YYYY-MM.csv` im Programmordner schreiben. `0` = aus. |
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
 | `UpdateCheck` | 1 | 1 = einmal täglich die GitHub-Releases-API nach einer neueren Version fragen (nur die Versionsnummer wird gelesen). Auch im Hilfe-Menü schaltbar; landet in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `solid` = kräftige Füllung. |
 | `TintL` / `TintS` | 86 / 100 (hell), 32 / 78 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
-| `ActiveBold` | 0 | 1 = Beschriftung des aktiven Desktops fett. Auch im Ansicht-Menü schaltbar. |
+| `ActiveBold` | 0 | 1 = Beschriftung des aktiven Desktops fett. Auch im Menü unter *Aktiver Desktop*. |
 | `ActiveBarBoost` | 2 | Um wie viele Pixel der Farbbalken des aktiven Desktops wächst, damit er auf den ersten Blick auffällt. |
 | `GradientPct` | 14 | Stärke des senkrechten Verlaufs in gefüllten Tabs, `0` = flach. |
 | `HoverPct` | 58 (hell), 12 (dunkel) | Wie stark ein Tab beim Drüberfahren aufhellt. |
 | `CornerRadius` | 4 | Eckenradius der Tabs (wie die Windows-11-Taskleisten-Buttons). |
 | `ShowIcons` | 1 | Symbole aus `[Icons]` in den Tabs anzeigen. |
-| `DefaultIcons` | 1 | Desktops ohne eigenes Symbol bekommen eines aus einem Vorschlagssatz, damit die Leiste vom ersten Start an fertig aussieht. In die Datei wird nichts geschrieben; ein eigenes Symbol oder *Symbol entfernen* sticht den Vorschlag. |
+| `DefaultIcons` | 1 | Was Desktops ohne eigenes Symbol zeigen: `1` = eines aus einem Vorschlagssatz, damit die Leiste vom ersten Start an fertig aussieht; `2` = ihre Nummer als gefüllten Kreis; `0` = nichts. In die Datei wird nichts geschrieben; ein eigenes Symbol oder *Symbol entfernen* sticht den Vorschlag. Auch unter *Ansicht › Symbole*. |
+| `NumberBadge` | `auto` | Kleine Nummer oben links am Symbol: `auto` = solange die Tastenkürzel an sind (dann zeigt sie die Taste, Desktop 10 = `0`), `on`, `off`. Entfällt, wenn die Nummer schon im Text steht oder selbst das Symbol ist. Auch unter *Ansicht › Nummern*. |
 | `IconSize` / `IconGap` | 16 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
 | `ShowDividers` | 0 | Dünne Trennstriche zwischen den Tabs. |
 | `Hotkeys` | 0 | 1 = Tastenkürzel für den Direktsprung auf einen Desktop registrieren. |
@@ -208,7 +210,7 @@ DeskTabs spricht von Haus aus Deutsch und Englisch und wählt die Sprache nach D
 
 ## Zeit-Log
 
-Mit `TimeLog=1` (Standard) schreibt DeskTabs pro Aufenthalt auf einem Desktop eine Zeile in `desktop-log_YYYY-MM.csv` neben dem Skript:
+Mit `TimeLog=1` (Standard) schreibt DeskTabs pro Aufenthalt auf einem Desktop eine Zeile in `desktop-log_YYYY-MM.csv` im Unterordner `timelog\` des Programmordners (bis v1.1.4 lagen die Dateien direkt neben dem Programm; sie werden beim nächsten Start umgezogen). *Weitere Einstellungen › Zeit-Log › Ordner öffnen* zeigt die Dateien:
 
 ```csv
 start,end,seconds,desktop_index,desktop_name

@@ -65,7 +65,7 @@ Name: "autostart"; Description: "{cm:AutoStart}"; GroupDescription: "{cm:Additio
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Programmdateien - Nutzerdaten (settings.ini, icons\, desktop-log_*.csv) stehen
+; Programmdateien - Nutzerdaten (settings.ini, icons\, timelog\) stehen
 ; bewusst NICHT hier, damit ein Update sie nicht anfasst.
 Source: "{#SourceDir}\DeskTabs.exe";                DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\VirtualDesktopAccessor.dll";  DestDir: "{app}"; Flags: ignoreversion

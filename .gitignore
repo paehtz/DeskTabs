@@ -2,6 +2,7 @@
 settings.ini
 # Zeit-Log (persoenliche Nutzungsdaten, nie versionieren)
 desktop-log_*.csv
+timelog/
 
 # Debug-/Temp-Artefakte
 _debug.txt

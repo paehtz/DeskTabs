@@ -32,7 +32,7 @@ $installDir = Join-Path $env:LOCALAPPDATA 'DeskTabs'
 $startup    = [System.IO.Path]::Combine($env:APPDATA, 'Microsoft\Windows\Start Menu\Programs\Startup')
 $lnk        = Join-Path $startup 'DeskTabs.lnk'
 # Files that belong to the user, not to the release
-$userFiles  = @('settings.ini', 'icons', 'desktop-log_*.csv', '_error.log')
+$userFiles  = @('settings.ini', 'icons', 'timelog', 'desktop-log_*.csv', '_error.log')   # desktop-log_*.csv: Ablage bis 1.1.4
 
 function Stop-DeskTabs {
     $procs = Get-Process DeskTabs -ErrorAction SilentlyContinue

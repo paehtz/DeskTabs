@@ -26,7 +26,7 @@ Everything stays in the program's own folder:
 |---|---|
 | `settings.ini` | Your settings: position, colours, abbreviations, icons, view |
 | `icons\` | Icons that were fetched from websites |
-| `desktop-log_YYYY-MM.csv` | If the time log is on: which desktop was active when, and for how long |
+| `timelog\desktop-log_YYYY-MM.csv` | If the time log is on: which desktop was active when, and for how long |
 | `_error.log` | Only if something went wrong: time, message, line number |
 
 The time log is a local file for your own time tracking. It is never uploaded anywhere. Switch it off in the right-click menu or with `TimeLog = 0`.
