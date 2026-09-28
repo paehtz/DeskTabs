@@ -52,6 +52,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Live names from Windows:** the button labels come straight from the desktops you named in Windows (Task View). Nothing is maintained twice.
 - **Dynamic:** add or remove a desktop in Windows → the bar adapts automatically within ~1.2 s (or via Tray → "Rebuild bar").
 - **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via *More settings › Jump directly instead of stepping through*.
+- **Unexpected switches are flagged:** when another app pulls you to a different desktop (say, a PDF opens in a reader that lives elsewhere), the new tab flashes orange and keeps a frame until you hover it, and a hint tells you which app is now in front. Your own switches (tabs, wheel, number keys, Ctrl+Win+Arrow, Task View) stay quiet.
 - **Visible on all desktops:** the window is pinned to every desktop.
 - **Light/Dark automatic:** follows the Windows theme (taskbar brightness), switchable or fixed.
 - **Index prefix:** "3 · ProjectName" (can be disabled).
@@ -156,7 +157,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `TimeLog` | 1 | Write per-desktop stay times to `timelog\desktop-log_YYYY-MM.csv` in the program folder. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
-| `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `solid` = a strong fill. |
+| `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `soliddesk` = a strong fill in its own desktop colour, `solid` = a strong fill in the accent colour. |
 | `TintL` / `TintS` | 86 / 100 (light), 32 / 78 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
 | `ActiveBold` | 0 | 1 = write the active desktop's label in bold. Also in the menu under *Active desktop*. |
 | `ActiveBarBoost` | 2 | How many pixels the colour bar of the active desktop grows, so it reads as active at a glance. |
@@ -169,6 +170,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `IconSize` / `IconGap` | 16 / 7 | Icon size and the gap between icon and text. |
 | `ShowDividers` | 0 | Thin separators between the tabs. |
 | `Hotkeys` | 0 | 1 = register the number-key shortcuts for jumping to a desktop. |
+| `SwitchAlert` | 1 | Flag desktop switches that other apps cause (the new tab flashes orange, then keeps an orange frame until you hover it, plus a short hint). Also under *More settings*. |
 | `HotkeyMod` | `^#` | Modifier for those shortcuts, in AutoHotkey notation: `^#` Ctrl+Win, `^!` Ctrl+Alt, `#!` Win+Alt, `^+` Ctrl+Shift. |
 | `SwitchMethod` | `dll` | `dll` = jump straight to the desktop, `native` = emulate `Win+Ctrl+Arrow` step by step. |
 | `Language` | `auto` | UI language: `auto` follows the Windows display language (German → `de`, everything else → `en`), or `de` / `en` fixed. Any other code loads `lang\<code>.ini`. Can also be set in `settings.ini` `[View] Language=`. Takes effect on restart. |

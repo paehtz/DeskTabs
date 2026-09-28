@@ -94,6 +94,7 @@ global CONF := Map(
     "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
     "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
     "Hotkeys",        0,       ; 1 = Tastenkuerzel fuer den Direktsprung (Ziffernreihe UND Ziffernblock)
+    "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
 )
 
@@ -135,6 +136,96 @@ global gSegStart := ""          ; Zeit-Log: Beginn des laufenden Aufenthalts (YY
 global gSegDesk := -1           ; Zeit-Log: Desktop-Index des laufenden Aufenthalts
 global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
 global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
+
+; ------------------------ Fremde Desktop-Wechsel ----------------------------
+; Oeffnet man z.B. eine PDF und laeuft der Reader auf einem anderen Desktop, springt
+; Windows still dorthin - und die Zeit landet unbemerkt beim falschen Projekt. Wechsel,
+; die weder von DeskTabs noch von den Windows-Tastenkuerzeln oder der Task-Ansicht
+; kommen, meldet die Leiste: der neue Tab blinkt, danach bleibt ein Rahmen, bis die
+; Maus ueber ihn faehrt. Dazu eine kurze Kurzinfo, welches Programm es war.
+
+; Windows-eigene Wechsel per Tastatur mitbekommen (~ = Taste geht normal durch)
+InitSwitchWatch() {
+    for , key in ["~^#Left", "~^#Right", "~^#d", "~^#F4"]
+        try Hotkey(key, MarkKeySwitch)
+    try Hotkey("~#Tab", MarkTaskView)
+}
+MarkKeySwitch(*) {
+    global gKeyTick := A_TickCount
+}
+MarkTaskView(*) {
+    global gTaskViewTick := A_TickCount
+}
+
+; Aus UpdateHighlight: war der Wechsel von from nach to "fremd"?
+CheckForeignSwitch(from, to) {
+    global gSelfTick, gKeyTick, gTaskViewTick, gPrevCount
+    cnt := GetDesktopCount()
+    countChanged := (gPrevCount && cnt != gPrevCount)   ; Desktop angelegt/entfernt: Windows wechselt selbst
+    now := A_TickCount
+    if (!CONF["SwitchAlert"] || countChanged
+        || now - gSelfTick < 2000 || now - gKeyTick < 2000 || now - gTaskViewTick < 60000) {
+        ClearSwitchAlert()                    ; gewollter Wechsel: alter Hinweis erledigt
+        return
+    }
+    StartSwitchAlert(to)
+}
+
+StartSwitchAlert(num) {
+    global gAlertNum, gAlertPhase
+    gAlertNum := num, gAlertPhase := 8        ; 8 Phasen x 250 ms = viermal blinken
+    SetTimer(SwitchAlertTick, 250)
+    ShowSwitchTip(num)
+    RenderBar()
+}
+SwitchAlertTick() {
+    global gAlertPhase
+    gAlertPhase -= 1
+    if (gAlertPhase <= 0) {
+        gAlertPhase := 0
+        SetTimer(SwitchAlertTick, 0)
+    }
+    RenderBar()
+}
+ClearSwitchAlert() {
+    global gAlertNum, gAlertPhase
+    if (gAlertNum < 0)
+        return
+    gAlertNum := -1, gAlertPhase := 0
+    SetTimer(SwitchAlertTick, 0)
+    ToolTip(, , , 3)
+    RenderBar()
+}
+
+; Kurzinfo ueber dem Tab: wohin gewechselt wurde und welches Programm vorne ist
+ShowSwitchTip(num) {
+    global MyGui, BTNS, gHidden
+    if (!MyGui || gHidden)
+        return
+    proc := ""
+    try proc := WinGetProcessName("A")
+    name := GetDesktopNameRaw(num)
+    txt := (proc != "" && proc != "explorer.exe") ? T("alert.switched", name, RegExReplace(proc, "i)\.exe$")) : T("alert.switched.noproc", name)
+    bx := 0, by := 0
+    MyGui.GetPos(&bx, &by)
+    ix := bx
+    for item in BTNS
+        if (item["num"] = num)
+            ix := bx + item["x"]
+    CoordMode("ToolTip", "Screen")
+    ToolTip(txt, ix, by - px(34), 3)
+    SetTimer(() => ToolTip(, , , 3), -8000)
+}
+
+; Rahmen um einen Tab (fuer den Hinweis nach dem Blinken)
+StrokeRoundRect(g, x, y, w, h, r, argb, lw) {
+    pen := 0
+    DllCall("gdiplus\GdipCreatePen1", "UInt", argb, "Float", lw, "Int", 2, "Ptr*", &pen)
+    path := RoundRectPath(x + lw / 2, y + lw / 2, w - lw, h - lw, r)
+    DllCall("gdiplus\GdipDrawPath", "Ptr", g, "Ptr", pen, "Ptr", path)
+    DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+    DllCall("gdiplus\GdipDeletePen", "Ptr", pen)
+}
 
 ; ------------------------------ Zeit-Log ------------------------------------
 ; Schreibt pro Aufenthalt auf einem Desktop eine CSV-Zeile (Monatsdatei im
@@ -261,6 +352,8 @@ global gWinEventCb := 0
 global gBurst := 0           ; Restzahl schneller Re-Asserts nach Fensterwechsel
 global gBuilding := false    ; Re-Entrancy-Schutz: laeuft gerade ein BuildBar?
 global gSwitching := false   ; laeuft gerade ein Desktop-Wechsel? (gegen Rebuild-Race)
+global gSelfTick := 0, gKeyTick := 0, gTaskViewTick := 0   ; letzte gewollte Wechsel (DeskTabs, Tastatur, Task-Ansicht)
+global gAlertNum := -1, gAlertPhase := 0, gPrevCount := 0  ; Hinweis auf fremden Wechsel
 global gCompact := "full"    ; aktuell dargestellte Stufe: "full" | "short" | "icon"
 global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-Budget im auto-Modus)
 
@@ -269,6 +362,9 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "alert.switched.noproc", "Desktop gewechselt zu „{1}“, nicht von Dir",
+    "alert.switched", "Desktop gewechselt zu „{1}“, im Vordergrund: {2}",
+    "menu.switchalert", "Desktop-Wechsel durch andere Programme melden",
     "menu.timelog.open", "Ordner öffnen",
     "menu.timelog.on", "Aufzeichnen",
     "menu.more", "Weitere Einstellungen",
@@ -333,7 +429,8 @@ global LANG_DE := Map(
     "menu.active",     "Aktiver Desktop",
     "menu.active.desktop", "Getönt in seiner Farbe",
     "menu.active.accent", "Getönt in der Akzentfarbe",
-    "menu.active.solid", "Kräftig gefüllt",
+    "menu.active.solid", "Kräftig gefüllt in der Akzentfarbe",
+    "menu.active.soliddesk", "Kräftig gefüllt in seiner Farbe",
     "menu.dividers",   "Trennstriche zwischen den Tabs",
     "menu.activebold", "Fett beschriften",
     "menu.badge",      "Als Badge am Symbol",
@@ -402,6 +499,9 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "alert.switched.noproc", "Switched to “{1}”, not by you",
+    "alert.switched", "Switched to “{1}”, now in front: {2}",
+    "menu.switchalert", "Flag desktop switches made by other apps",
     "menu.timelog.open", "Open folder",
     "menu.timelog.on", "Record",
     "menu.more", "More settings",
@@ -466,7 +566,8 @@ global LANG_EN := Map(
     "menu.active",     "Active desktop",
     "menu.active.desktop", "Tinted in its own colour",
     "menu.active.accent", "Tinted in the accent colour",
-    "menu.active.solid", "Solid fill",
+    "menu.active.solid", "Solid fill in the accent colour",
+    "menu.active.soliddesk", "Solid fill in its own colour",
     "menu.dividers",   "Dividers between tabs",
     "menu.activebold", "Bold label",
     "menu.badge",      "As a badge on the icon",
@@ -622,6 +723,7 @@ Main() {
     SetTimer(AutoUpdateTick, -20000)         ; Update-Pruefung 20 s nach dem Start, hoechstens einmal pro Tag
     SetTimer(FirstRunHint, -1500)            ; beim allerersten Start kurz erklaeren, wo die Einstellungen sind
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
+    InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
 }
 
 ; Beim allerersten Start (noch keine settings.ini) einmalig erklaeren, wie man
@@ -646,7 +748,7 @@ ApplyIniOverrides() {
         IniDel("Position", "Y")
     }
     for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
-                          , "Language", "*", "ActiveStyle", "desktop,accent,solid"
+                          , "Language", "*", "ActiveStyle", "desktop,accent,soliddesk,solid"
                           , "SwitchMethod", "native,dll", "NumberBadge", "auto,on,off") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
@@ -656,7 +758,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "SwitchAlert"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -1681,7 +1783,7 @@ FillSettingsMenu(m) {
 
     ; Aktiver Desktop: Hervorhebung und (dazu gehoerig) die fette Beschriftung
     am := Menu()
-    for , it in [["desktop", T("menu.active.desktop")], ["accent", T("menu.active.accent")], ["solid", T("menu.active.solid")]] {
+    for , it in [["desktop", T("menu.active.desktop")], ["accent", T("menu.active.accent")], ["soliddesk", T("menu.active.soliddesk")], ["solid", T("menu.active.solid")]] {
         am.Add(it[2], SetViewStr.Bind("ActiveStyle", it[1]))
         if (CONF["ActiveStyle"] = it[1])
             am.Check(it[2])
@@ -1736,6 +1838,9 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
     if (CONF["SwitchMethod"] = "dll")
         xm.Check(T("menu.directjump"))
+    xm.Add(T("menu.switchalert"), ToggleView.Bind("SwitchAlert"))
+    if (CONF["SwitchAlert"])
+        xm.Check(T("menu.switchalert"))
     xm.Add(T("menu.snap"), ToggleView.Bind("SnapToTaskbar"))
     if (CONF["SnapToTaskbar"])
         xm.Check(T("menu.snap"))
@@ -2218,6 +2323,7 @@ BuildBarAt() {
     cnt := GetDesktopCount()
     if (cnt < 1)
         cnt := 1
+    global gPrevCount := cnt
 
     ; Layout: Breiten der Tabs per GDI+ messen (die Leiste wird komplett gezeichnet,
     ; siehe RenderBar), Positionen in BTNS merken
@@ -2352,6 +2458,105 @@ HslToRgb(h, s, l) {
     g := Round(Hue2Rgb(p, q, h) * 255)
     b := Round(Hue2Rgb(p, q, h - 1/3) * 255)
     return (r << 16) | (g << 8) | b
+}
+
+; Kennwerte eines Bild-Symbols (einmal gemessen, dann gemerkt): mittlere Farbe der
+; sichtbaren Pixel und Anteil durchsichtiger Flaeche. Dient der Entscheidung, ob das
+; Symbol auf einer kraeftigen Fuellung noch zu erkennen ist.
+IconStats(path) {
+    static cache := Map()
+    if (cache.Has(path))
+        return cache[path]
+    res := Map("mean", -1, "transp", 0)
+    cache[path] := res
+    GdipStart()
+    img := 0
+    if (DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", path, "Ptr*", &img) != 0 || !img)
+        return res
+    w := 0, h := 0
+    DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
+    DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
+    rect := Buffer(16, 0)
+    NumPut("Int", 0, "Int", 0, "Int", w, "Int", h, rect)
+    bd := Buffer(32, 0)
+    if (!w || !h || DllCall("gdiplus\GdipBitmapLockBits", "Ptr", img, "Ptr", rect, "UInt", 1, "Int", 0x26200A, "Ptr", bd) != 0) {
+        DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+        return res
+    }
+    stride := NumGet(bd, 8, "Int"), scan := NumGet(bd, 16, "Ptr")
+    step := Max(1, w // 48)
+    n := 0, clear := 0, sr := 0, sg := 0, sb := 0, sw := 0
+    y := 0
+    while (y < h) {
+        x := 0
+        while (x < w) {
+            p := NumGet(scan + y * stride + x * 4, "UInt")
+            a := (p >> 24) & 0xFF
+            n += 1
+            if (a < 60)
+                clear += 1
+            else {
+                wt := a / 255
+                sr += ((p >> 16) & 0xFF) * wt, sg += ((p >> 8) & 0xFF) * wt, sb += (p & 0xFF) * wt, sw += wt
+            }
+            x += step
+        }
+        y += step
+    }
+    DllCall("gdiplus\GdipBitmapUnlockBits", "Ptr", img, "Ptr", bd)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+    if (sw > 0)
+        res["mean"] := (Round(sr / sw) << 16) | (Round(sg / sw) << 8) | Round(sb / sw)
+    res["transp"] := n ? clear / n : 0
+    return res
+}
+
+; Kontrastverhaeltnis zweier Farben nach WCAG (1 = gleich, 21 = schwarz/weiss)
+ContrastRatio(c1, c2) {
+    l1 := RelLum(c1), l2 := RelLum(c2)
+    return (Max(l1, l2) + 0.05) / (Min(l1, l2) + 0.05)
+}
+RelLum(c) {
+    ch(v) {
+        v := v / 255
+        return (v <= 0.03928) ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
+    }
+    return 0.2126 * ch(c >> 16 & 0xFF) + 0.7152 * ch(c >> 8 & 0xFF) + 0.0722 * ch(c & 0xFF)
+}
+
+; Bild als einfarbige Silhouette zeichnen: jede sichtbare Stelle in rgb, die
+; Durchsichtigkeit bleibt (Farbmatrix: RGB fest, Alpha unveraendert).
+; rgb = -1: stattdessen Graustufen hell/dunkel umgekehrt (dunkle Kachel wird hell).
+DrawImageTinted(g, img, x, y, size, rgb) {
+    ia := 0
+    DllCall("gdiplus\GdipCreateImageAttributes", "Ptr*", &ia)
+    m := Buffer(100, 0)                          ; 5x5 Float
+    NumPut("Float", 1, m, (3 * 5 + 3) * 4)       ; Alpha behalten
+    if (rgb = -1) {
+        for i, wgt in [0.299, 0.587, 0.114]      ; Ausgabe = 1 - Helligkeit, in allen drei Kanaelen
+            Loop 3
+                NumPut("Float", -wgt, m, ((i - 1) * 5 + A_Index - 1) * 4)
+        Loop 3
+            NumPut("Float", 1, m, (4 * 5 + A_Index - 1) * 4)
+    } else {
+        NumPut("Float", (rgb >> 16 & 0xFF) / 255, m, (4 * 5 + 0) * 4)
+        NumPut("Float", (rgb >> 8 & 0xFF) / 255, m, (4 * 5 + 1) * 4)
+        NumPut("Float", (rgb & 0xFF) / 255, m, (4 * 5 + 2) * 4)
+    }
+    NumPut("Float", 1, m, (4 * 5 + 4) * 4)
+    DllCall("gdiplus\GdipSetImageAttributesColorMatrix", "Ptr", ia, "Int", 0, "Int", 1, "Ptr", m, "Ptr", 0, "Int", 0)
+    w := 0, h := 0
+    DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
+    DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
+    DllCall("gdiplus\GdipDrawImageRectRectI", "Ptr", g, "Ptr", img, "Int", x, "Int", y, "Int", size, "Int", size
+        , "Int", 0, "Int", 0, "Int", w, "Int", h, "Int", 2, "Ptr", ia, "Ptr", 0, "Ptr", 0)   ; 2 = UnitPixel
+    DllCall("gdiplus\GdipDisposeImageAttributes", "Ptr", ia)
+}
+
+; Lesbare Textfarbe auf einer Fuellfarbe: weiss auf dunkel, fast schwarz auf hell
+ReadableOn(col) {
+    lum := 0.299 * (col >> 16 & 0xFF) + 0.587 * (col >> 8 & 0xFF) + 0.114 * (col & 0xFF)
+    return (lum > 160) ? 0x1F1F1F : 0xFFFFFF
 }
 
 ; Helle Variante einer Farbe (gleicher Farbton), fuer Symbole auf dunkler Toenung
@@ -2543,9 +2748,10 @@ FillRoundRect(g, x, y, w, h, r, argb) {
 ; Ohne force nur, wenn sich der sichtbare Zustand geaendert hat.
 RenderBar(force := false) {
     global BTNS, GUIW, GUIH, MyGui, gCurrent, gTheme, gLayout, gBarDC, gBarBmp, gRenderSig, gGripHover
+    global gAlertNum, gAlertPhase
     if (!MyGui || !gLayout)
         return
-    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover
+    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
@@ -2579,10 +2785,13 @@ RenderBar(force := false) {
         col := DesktopColor(item["num"])
         active := (item["num"] = gCurrent)
         tx := CONF["ColInactiveTx"]
+        ; kraeftig gefuellt: in der Akzentfarbe ("solid") oder in der eigenen Desktop-Farbe ("soliddesk")
+        solid := (style = "solid" || style = "soliddesk")
+        solidBg := (style = "soliddesk") ? col : CONF["ColActiveBg"]
         if (active) {
-            if (style = "solid") {
-                FillRoundRectGrad(g, x, y, w, h, r, ARGB(CONF["ColActiveBg"]), grad)
-                tx := CONF["ColActiveTx"]
+            if (solid) {
+                FillRoundRectGrad(g, x, y, w, h, r, ARGB(solidBg), grad)
+                tx := (style = "soliddesk") ? ReadableOn(col) : CONF["ColActiveTx"]
             } else {
                 base := (style = "accent") ? CONF["ColActiveBg"] : col
                 FillRoundRectGrad(g, x, y, w, h, r, ARGB(TintFill(base)), grad)
@@ -2601,18 +2810,25 @@ RenderBar(force := false) {
             if (IsNumberSpec(item["icon"])) {
                 ; Nummer als Symbol: gefuellter Kreis, Zahl ausgestanzt (der Tab scheint durch)
                 ; im dunklen Schema waeren ausgestanzte Ziffern zu dunkel: dort weisse Ziffern
-                DrawNumberDisc(g, String(item["num"] + 1), tx0, iy, iw, (active && style = "solid") ? tx : col
-                    , (gTheme != "dark") || (active && style = "solid"))
+                DrawNumberDisc(g, String(item["num"] + 1), tx0, iy, iw, (active && solid) ? tx : col
+                    , (gTheme != "dark") || (active && solid))
             } else if (IsGlyphSpec(item["icon"])) {
                 ; Bibliotheks-Symbol in der Desktop-Farbe; auf kraeftig gefuelltem
                 ; Grund stattdessen in der Textfarbe, sonst verschwindet es darin
                 ; im dunklen Schema ginge es auf der gleichfarbigen Toenung des aktiven Tabs
                 ; unter: dort in einer hellen Variante derselben Farbe
-                DrawGlyph(g, item["icon"], tx0, iy, iw, (active && style = "solid") ? tx
+                DrawGlyph(g, item["icon"], tx0, iy, iw, (active && solid) ? tx
                     : (active && gTheme = "dark") ? LightTone(col) : col)
             } else {
                 img := LoadIconBitmap(item["icon"])
-                if (img)
+                ; auf kraeftiger Fuellung: Logo mit zu wenig Kontrast umfaerben, damit es sichtbar bleibt
+                st := (img && active && solid) ? IconStats(item["icon"]) : 0
+                low := (img && st && st["mean"] >= 0 && ContrastRatio(st["mean"], solidBg) < 2.0)
+                if (low && st["transp"] >= 0.15)
+                    DrawImageTinted(g, img, tx0, iy, iw, tx)          ; freigestelltes Logo: weisse Silhouette
+                else if (low && RelLum(st["mean"]) < RelLum(solidBg))   ; nur dunkle Kachel auf hellerer Fuellung
+                    DrawImageTinted(g, img, tx0, iy, iw, -1)          ; Logo mit eigener Kachel auf dunkler Fuellung: hell/dunkel umgekehrt
+                else if (img)
                     DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", img, "Int", tx0
                         , "Int", iy, "Int", iw, "Int", iw)
                 else
@@ -2620,9 +2836,9 @@ RenderBar(force := false) {
             }
             if (iw && item["badge"] != "") {
                 ; Grund, auf dem das Badge liegt: dieselbe Farbe wie der Tab dort
-                under := active ? ((style = "solid") ? CONF["ColActiveBg"] : TintFill((style = "accent") ? CONF["ColActiveBg"] : col)) : item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg
-                if (active && style = "solid")
-                    DrawBadge(g, item["badge"], tx0, iy, iw, tx, CONF["ColActiveBg"], under)   ; umgekehrt: weiss mit farbiger Zahl
+                under := active ? (solid ? solidBg : TintFill((style = "accent") ? CONF["ColActiveBg"] : col)) : item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg
+                if (active && solid)
+                    DrawBadge(g, item["badge"], tx0, iy, iw, tx, solidBg, under)   ; umgekehrt: weiss mit farbiger Zahl
                 else if (active && gTheme = "dark")
                     DrawBadge(g, item["badge"], tx0, iy, iw, LightTone(col), 0x1F1F1F, under)   ; hebt sich von der dunklen Toenung ab
                 else
@@ -2642,7 +2858,14 @@ RenderBar(force := false) {
                 ah += px(CONF["ActiveBarBoost"])    ; aktiver Desktop: dickerer, breiterer Streifen
                 inset := Max(px(2), inset - px(4))
             }
-            FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2, ARGB(col))
+            FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2
+                , (active && style = "soliddesk") ? (0xB0000000 | tx) : ARGB(col))   ; auf eigener Farbe unsichtbar -> in Textfarbe
+        }
+        ; fremder Wechsel: Tab blinkt orange, danach bleibt ein oranger Rahmen
+        if (item["num"] = gAlertNum) {
+            if (gAlertPhase & 1)
+                FillRoundRect(g, x, y, w, h, r, 0x99F5A524)
+            StrokeRoundRect(g, x, y, w, h, r, ARGB(0xF5A524), Max(2, px(2)))
         }
         ; optionaler Trennstrich in der Luecke danach
         if (CONF["ShowDividers"] && A_Index < BTNS.Length) {
@@ -2746,6 +2969,7 @@ SwitchToDesktop(target) {
     if (target < 0 || target >= cnt || target = cur)
         return
     gSwitching := true            ; sperrt Rebuilds + Mausrad-Folgeticks waehrend des Wechsels
+    global gSelfTick := A_TickCount
     if (CONF["SwitchMethod"] = "native") {
         steps := Abs(target - cur)
         key := (target > cur) ? "{Right}" : "{Left}"
@@ -2768,14 +2992,17 @@ SwitchToDesktop(target) {
             VD("MoveWindowToDesktopNumber", "Ptr", fg, "Int", fgDesk)
     }
     gSwitching := false
+    gSelfTick := A_TickCount
     UpdateHighlight()
 }
 
 BtnClick(num, *) {
     ; Klick auf den bereits aktiven Desktop -> Task-Ansicht oeffnen
     if (num = GetCurrentDesktop()) {
-        if (CONF["ClickActiveTaskView"])
+        if (CONF["ClickActiveTaskView"]) {
+            MarkTaskView()
             Send("#{Tab}")
+        }
         return
     }
     SwitchToDesktop(num)
@@ -2908,14 +3135,17 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
 
 UpdateHighlight() {
     global BTNS, gCurrent
+    prev := gCurrent
     gCurrent := GetCurrentDesktop()
+    if (prev >= 0 && gCurrent >= 0 && gCurrent != prev)
+        CheckForeignSwitch(prev, gCurrent)
     LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
     RenderBar()
 }
 
 ; Hover: Tab unter dem Mauszeiger leicht hervorheben
 HoverTick() {
-    global BTNS, gHidden, gBuilding, gGripHover, gLayout
+    global BTNS, gHidden, gBuilding, gGripHover, gLayout, gAlertNum, gAlertPhase
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
     lx := BarMouseX()
@@ -2930,6 +3160,8 @@ HoverTick() {
             changed := true
         }
     }
+    if (gAlertNum >= 0 && gAlertPhase = 0 && over && over["num"] = gAlertNum)
+        ClearSwitchAlert()
     if (changed)
         RenderBar()
 }

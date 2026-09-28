@@ -52,6 +52,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Live-Namen aus Windows:** die Button-Beschriftung kommt direkt aus den in Windows benannten Desktops (Task-Ansicht). Nichts wird doppelt gepflegt.
 - **Dynamisch:** Desktop hinzufügen/entfernen in Windows → die Leiste passt sich innerhalb ~1,2 s automatisch an (oder Tray → „Leiste neu aufbauen").
 - **Direktsprung:** Ein Klick springt in einem Schritt zum Ziel-Desktop (~100 ms), ohne die Desktops dazwischen durchzuschalten. Auf 25H2 (26200) gemessen: Das fokussierte Fenster bleibt liegen; nimmt ein Build es doch mit, schiebt DeskTabs es sofort zurück. Der schrittweise Wechsel (`Win+Strg+Pfeil`) bleibt über *Weitere Einstellungen › Direkt springen statt durchblättern* verfügbar.
+- **Ungewollte Wechsel werden gemeldet:** Zieht ein anderes Programm Dich auf einen anderen Desktop (etwa eine PDF, deren Reader woanders offen ist), blinkt der neue Tab orange und behält einen Rahmen, bis Du mit der Maus darüberfährst; ein Hinweis nennt das Programm im Vordergrund. Eigene Wechsel (Tabs, Mausrad, Zifferntasten, Strg+Win+Pfeil, Task-Ansicht) bleiben still.
 - **Auf allen Desktops sichtbar:** das Fenster ist an alle Desktops gepinnt.
 - **Hell/Dunkel automatisch:** folgt dem Windows-Theme (Taskleisten-Helligkeit), umschaltbar oder fest einstellbar.
 - **Index-Präfix:** „3 · Projektname" (abschaltbar).
@@ -156,7 +157,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `timelog\desktop-log_YYYY-MM.csv` im Programmordner schreiben. `0` = aus. |
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
 | `UpdateCheck` | 1 | 1 = einmal täglich die GitHub-Releases-API nach einer neueren Version fragen (nur die Versionsnummer wird gelesen). Auch im Hilfe-Menü schaltbar; landet in `[View] UpdateCheck`. |
-| `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `solid` = kräftige Füllung. |
+| `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `soliddesk` = kräftige Füllung in der eigenen Desktop-Farbe, `solid` = kräftige Füllung in der Akzentfarbe. |
 | `TintL` / `TintS` | 86 / 100 (hell), 32 / 78 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
 | `ActiveBold` | 0 | 1 = Beschriftung des aktiven Desktops fett. Auch im Menü unter *Aktiver Desktop*. |
 | `ActiveBarBoost` | 2 | Um wie viele Pixel der Farbbalken des aktiven Desktops wächst, damit er auf den ersten Blick auffällt. |
@@ -169,6 +170,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `IconSize` / `IconGap` | 16 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
 | `ShowDividers` | 0 | Dünne Trennstriche zwischen den Tabs. |
 | `Hotkeys` | 0 | 1 = Tastenkürzel für den Direktsprung auf einen Desktop registrieren. |
+| `SwitchAlert` | 1 | Desktop-Wechsel melden, die andere Programme auslösen (der neue Tab blinkt orange und behält einen orangen Rahmen, bis die Maus darüberfährt, dazu ein kurzer Hinweis). Auch unter *Weitere Einstellungen*. |
 | `HotkeyMod` | `^#` | Modifikator dafür, in AutoHotkey-Schreibweise: `^#` Strg+Windows, `^!` Strg+Alt, `#!` Windows+Alt, `^+` Strg+Umschalt. |
 | `SwitchMethod` | `dll` | `dll` = direkt zum Desktop springen, `native` = `Win+Strg+Pfeil` schrittweise nachbilden. |
 | `Language` | `auto` | Oberflächensprache: `auto` folgt der Windows-Anzeigesprache (Deutsch → `de`, alles andere → `en`), oder `de` / `en` fest. Jeder andere Code lädt `lang\<code>.ini`. Auch in `settings.ini` `[View] Language=` setzbar. Wirkt nach Neustart. |
