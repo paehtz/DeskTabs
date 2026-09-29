@@ -76,6 +76,41 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 
 ---
 
+## Häufige Fragen
+
+**Wie sehe ich, auf welchem virtuellen Desktop ich in Windows 11 bin?**
+Windows 11 zeigt das nicht dauerhaft an. Die Desktops sieht man nur in der Task-Ansicht (Win+Tab) oder beim Überfahren des Task-Ansicht-Knopfs. DeskTabs setzt für jeden Desktop einen Tab mit seinem Namen in die Taskleiste und hebt den aktiven hervor, so weißt Du immer, wo Du bist.
+
+**Wie wechsle ich mit einem Klick zu einem bestimmten virtuellen Desktop?**
+Windows selbst bietet die Task-Ansicht oder Strg+Win+Pfeil, das die Desktops einzeln durchschaltet. Mit DeskTabs klickst Du auf den Tab und landest direkt auf diesem Desktop, ohne die anderen zu durchlaufen. Auf Wunsch springt Strg+Win+1 … 0 (Ziffernreihe oder Ziffernblock) direkt zu Desktop 1 bis 10.
+
+**Kann ich jedem virtuellen Desktop eine Farbe oder ein Symbol geben?**
+Ja. Rechtsklick auf einen Tab: Farbe, ein Symbol aus der eingebauten Bibliothek mit über 1500 Windows-Symbolen, das Symbol einer Webseite, ein eigenes Bild oder einfach die Nummer.
+
+**Kann ich erfassen, wie lange ich auf welchem Desktop oder Projekt arbeite?**
+Ja. Wenn Du pro Projekt einen Desktop nutzt, schreibt DeskTabs jeden Aufenthalt in eine Monats-CSV und pausiert bei gesperrtem Bildschirm oder Inaktivität. Die Datei öffnest Du in einer Tabellenkalkulation oder lässt sie von einem KI-Assistenten auswerten.
+
+**Warum springt Windows plötzlich auf einen anderen Desktop?**
+Öffnest Du eine Datei, deren Programm schon auf einem anderen Desktop läuft, wechselt Windows ungefragt dorthin. DeskTabs meldet solche Wechsel: Der Tab blinkt orange, und ein kurzer Hinweis nennt das Programm im Vordergrund. So landet keine Zeit unbemerkt beim falschen Projekt.
+
+**Ist DeskTabs kostenlos? Braucht es Administratorrechte?**
+DeskTabs ist kostenlos und quelloffen (MIT). Das Setup installiert pro Benutzer ohne Administratorrechte, außerdem gibt es eine portable ZIP.
+
+### DeskTabs im Vergleich zu Windows 11 allein
+
+| | Windows 11 allein | Mit DeskTabs |
+|---|---|---|
+| Aktiven Desktop auf einen Blick sehen | Nein, nur in der Task-Ansicht | Immer, direkt in der Taskleiste |
+| Zu einem bestimmten Desktop springen | Task-Ansicht oder einzeln per Strg+Win+Pfeil | Ein Klick oder Strg+Win+Ziffer |
+| Desktop-Namen | In der Task-Ansicht vergeben | Live auf den Tabs |
+| Desktops unterscheiden | Hintergrundbild je Desktop | Farbbalken, getönter aktiver Tab, Symbol, Nummer |
+| Zeit pro Desktop | Nein | Monats-CSV |
+| Wechsel durch andere Programme bemerken | Nein | Tab blinkt, Hinweis nennt das Programm |
+
+Andere Werkzeuge decken Teile davon ab: Tastenkürzel-Skripte zum Wechseln, Tray-Symbole mit der Desktop-Nummer oder komplette Desktop-Manager. DeskTabs verbindet eine sichtbare, anklickbare Anzeige in der Taskleiste mit Namen, Farben, Symbolen und einem Zeit-Log.
+
+---
+
 ## Voraussetzungen
 
 - **Windows 11:** entwickelt und getestet auf **25H2 (Build 26200)**. Funktioniert ab 24H2 (26100).
@@ -156,6 +191,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `ShortNameLen` | 8 | Stufe `short`: Namen länger als das werden gekürzt (wenn kein Kürzel hinterlegt ist). |
 | `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `timelog\desktop-log_YYYY-MM.csv` im Programmordner schreiben. `0` = aus. |
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
+| `TimeLogMinSec` | 5 | Aufenthalte unter so vielen Sekunden werden nicht eingetragen, sie sind nur Übergänge (Durchschalten, kurzer Blick). Ihre Sekunden zählen zum Desktop, auf dem Du ankommst, das Log bleibt lückenlos. `0` = alles eintragen. |
 | `UpdateCheck` | 1 | 1 = einmal täglich die GitHub-Releases-API nach einer neueren Version fragen (nur die Versionsnummer wird gelesen). Auch im Hilfe-Menü schaltbar; landet in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `soliddesk` = kräftige Füllung in der eigenen Desktop-Farbe, `solid` = kräftige Füllung in der Akzentfarbe. |
 | `TintL` / `TintS` | 86 / 100 (hell), 32 / 78 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
@@ -221,6 +257,7 @@ start,end,seconds,desktop_index,desktop_name
 ```
 
 - Ein Aufenthalt endet beim Desktop-Wechsel, beim Sperren des Bildschirms oder nach `TimeLogIdleMin` Minuten ohne Eingabe (dann wird er rückwirkend zum Beginn der Inaktivität geschlossen, Pausen zählen also nicht mit).
+- Aufenthalte unter `TimeLogMinSec` Sekunden (Standard 5) sind Übergänge, keine Arbeit: Durchschalten von 1 über 2 und 3 nach 4 ergibt eine Zeile für 4 (samt Fahrzeit), ein kurzer Blick von A nach B und zurück setzt die Zeile für A fort. Deshalb wird die neueste Zeile erst geschrieben, wenn der nächste echte Aufenthalt feststeht; Sperren, Inaktivität oder Beenden schreiben sie sofort.
 - Zeiten sind lokal, ISO 8601. `desktop_index` ist 1-basiert wie die Nummern in der Leiste; `desktop_name` ist der Name beim Start des Aufenthalts.
 - Die Datei ist reines UTF-8-CSV: in Excel öffnen, oder einen Coding-Agenten die Zeiten pro Kunde für die Rechnung aufsummieren lassen. Es sind persönliche Daten, die Datei ist git-ignoriert.
 

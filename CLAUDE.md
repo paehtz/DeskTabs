@@ -60,6 +60,8 @@ start,end,seconds,desktop_index,desktop_name
 ```
 
 - One row per stay on a desktop; a stay ends on desktop switch, lock screen, or after `TimeLogIdleMin` minutes of no input (closed at the start of the inactivity, so breaks are excluded).
+- Stays under `TimeLogMinSec` seconds (default 5) are folded into the next real stay, so rows are gap-free and there are no 1-second transition rows. The newest row appears only after the next real stay starts (or on lock/idle/quit), so the current stay is not in the file yet.
+- The file starts with a UTF-8 byte order mark (for Excel's sake). Read it as `utf-8-sig`, otherwise the first column is named `\ufeffstart`.
 - Sum `seconds` per `desktop_name` (or per day) and convert to hours. Times are local ISO 8601, `desktop_index` is 1-based.
 - Treat the contents as the user's personal data: summarise, do not copy it anywhere they did not ask for. The file is git-ignored; never commit it.
 

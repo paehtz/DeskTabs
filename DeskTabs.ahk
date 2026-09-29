@@ -90,6 +90,7 @@ global CONF := Map(
     "MaxBarWidthPct", 40,      ; auto: max. Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird
     "ShortNameLen",   8,       ; Stufe "short": Namen laenger als das werden gekuerzt
     "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (timelog\desktop-log_YYYY-MM.csv)
+    "TimeLogMinSec",  5,       ; kuerzere Aufenthalte (Durchfahrten) nicht eintragen, Zeit zaehlt zum Ziel-Desktop
     "TimeLogIdleMin", 5,       ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
     "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
     "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
@@ -136,6 +137,7 @@ global gSegStart := ""          ; Zeit-Log: Beginn des laufenden Aufenthalts (YY
 global gSegDesk := -1           ; Zeit-Log: Desktop-Index des laufenden Aufenthalts
 global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
 global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
+global gLogCarry := "", gLogPend := 0   ; Zeit-Log-Filter: mitgenommene Uebergangszeit, wartender Eintrag
 
 ; ------------------------ Fremde Desktop-Wechsel ----------------------------
 ; Oeffnet man z.B. eine PDF und laeuft der Reader auf einem anderen Desktop, springt
@@ -256,22 +258,62 @@ LogOpen(num) {
 }
 
 ; Laufendes Segment abschliessen. endTime optional (z.B. Beginn einer Pause).
-LogClose(endTime := "") {
-    global gSegStart, gSegDesk, gSegName
-    if (!CONF["TimeLog"] || gSegStart = "")
+; hard = true (Pause, Sperre, Beenden, Log aus): alles sofort schreiben.
+; hard = false (normaler Desktop-Wechsel): Durchfahrten und kurze Abstecher filtern.
+;
+; Filter (TimeLogMinSec): Ein Aufenthalt unter der Mindestzeit ist nur ein Uebergang.
+; Er wird nicht geschrieben, seine Sekunden zaehlen zum naechsten echten Aufenthalt
+; (Durchfahrt 1 -> 2 -> 3 -> 4: die Fahrzeit gehoert zu Desktop 4). Damit ein kurzer
+; Abstecher A -> B -> A keinen zweiten A-Eintrag erzeugt, wartet jeder echte Eintrag
+; in gLogPend, bis der naechste feststeht; setzt dieser denselben Desktop nahtlos
+; fort, wird der wartende Eintrag einfach verlaengert.
+LogClose(endTime := "", hard := true) {
+    global gSegStart, gSegDesk, gSegName, gLogCarry, gLogPend
+    if (!CONF["TimeLog"] || gSegStart = "") {
+        if (hard)
+            LogFlush()
         return
-    end := (endTime = "") ? A_Now : endTime
-    secs := DateDiff(end, gSegStart, "Seconds")
-    if (secs >= 1) {
-        file := LogFile(gSegStart)
-        try {
-            DirCreate(LogDir())
-            if !FileExist(file)
-                FileAppend("start,end,seconds,desktop_index,desktop_name`n", file, "UTF-8")
-            FileAppend(Format("{1},{2},{3},{4},{5}`n", IsoTime(gSegStart), IsoTime(end), secs, gSegDesk + 1, CsvQuote(gSegName)), file, "UTF-8")
-        }
     }
+    end := (endTime = "") ? A_Now : endTime
+    start := (gLogCarry != "") ? gLogCarry : gSegStart   ; mitgenommene Uebergangszeit
+    secs := DateDiff(end, gSegStart, "Seconds")
     gSegStart := ""
+    if (!hard && secs < CONF["TimeLogMinSec"]) {
+        if (gLogCarry = "")
+            gLogCarry := start                           ; frueheste Startzeit der Durchfahrt merken
+        return
+    }
+    gLogCarry := ""
+    if (DateDiff(end, start, "Seconds") < 1) {
+        if (hard)
+            LogFlush()
+        return
+    }
+    if (IsObject(gLogPend) && gLogPend["desk"] = gSegDesk && gLogPend["end"] = start)
+        gLogPend["end"] := end                           ; nahtlose Fortsetzung desselben Desktops
+    else {
+        LogFlush()
+        gLogPend := Map("start", start, "end", end, "desk", gSegDesk, "name", gSegName)
+    }
+    if (hard)
+        LogFlush()
+}
+
+; Wartenden Eintrag in die Monatsdatei schreiben
+LogFlush() {
+    global gLogPend, gLogCarry
+    gLogCarry := ""
+    if (!IsObject(gLogPend))
+        return
+    p := gLogPend, gLogPend := 0
+    file := LogFile(p["start"])
+    try {
+        DirCreate(LogDir())
+        if !FileExist(file)
+            FileAppend("start,end,seconds,desktop_index,desktop_name`n", file, "UTF-8")
+        FileAppend(Format("{1},{2},{3},{4},{5}`n", IsoTime(p["start"]), IsoTime(p["end"])
+            , DateDiff(p["end"], p["start"], "Seconds"), p["desk"] + 1, CsvQuote(p["name"])), file, "UTF-8")
+    }
 }
 
 ; Desktop-Wechsel ins Log uebernehmen (aus UpdateHighlight)
@@ -279,7 +321,7 @@ LogDesktop(num) {
     global gSegDesk, gLogPaused
     if (!CONF["TimeLog"] || gLogPaused || num = gSegDesk)
         return
-    LogClose()
+    LogClose("", false)
     LogOpen(num)
 }
 
@@ -763,6 +805,9 @@ ApplyIniOverrides() {
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
     }
+    v := IniRead(CONF["IniPath"], "View", "TimeLogMinSec", "")
+    if (RegExMatch(v, "^\d{1,3}$"))
+        CONF["TimeLogMinSec"] := Integer(v)
     v := IniRead(CONF["IniPath"], "View", "DefaultIcons", "")
     if (v = "0" || v = "1" || v = "2")
         CONF["DefaultIcons"] := Integer(v)

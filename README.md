@@ -76,6 +76,41 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 
 ---
 
+## FAQ
+
+**How can I see which virtual desktop I'm on in Windows 11?**
+Windows 11 has no permanent indicator. You only see your desktops in Task View (Win+Tab) or when you hover the Task View button. DeskTabs puts one tab per desktop on the taskbar, labelled with the desktop's name, and highlights the active one, so you always know where you are.
+
+**How do I switch to a specific virtual desktop with one click?**
+Windows itself offers Task View or Ctrl+Win+Left/Right, which steps through the desktops one by one. With DeskTabs you click the tab and land directly on that desktop, without passing through the others. Optionally Ctrl+Win+1 … 0 (number row or numpad) jumps straight to desktop 1 to 10.
+
+**Can I give each virtual desktop a colour or an icon?**
+Yes. Right-click a tab and pick a colour, an icon from the built-in library of 1500+ Windows icons, a website's icon, your own image, or simply its number.
+
+**Can I track how long I work on each desktop or project?**
+Yes. If you keep one desktop per project, DeskTabs writes a monthly CSV with every stay per desktop and pauses when the screen is locked or you are idle. Open it in a spreadsheet or let an AI assistant summarise it.
+
+**Why does Windows suddenly jump to another desktop?**
+When you open a file whose program already runs on another desktop, Windows switches there without asking. DeskTabs flags these switches: the tab flashes orange and a short hint names the app that is now in front, so no time ends up on the wrong project unnoticed.
+
+**Is it free? Does it need admin rights?**
+DeskTabs is free and open source (MIT). The setup installs per user without admin rights, and there is a portable ZIP as well.
+
+### DeskTabs compared with Windows 11 alone
+
+| | Windows 11 alone | With DeskTabs |
+|---|---|---|
+| See the active desktop at a glance | No, only in Task View | Always, right on the taskbar |
+| Jump to a specific desktop | Task View, or step with Ctrl+Win+Arrow | One click, or Ctrl+Win+number |
+| Desktop names | Set in Task View | Shown live on the tabs |
+| Tell desktops apart | Wallpaper per desktop | Colour bar, tinted active tab, icon, number |
+| Time per desktop | No | Monthly CSV |
+| Notice switches caused by other apps | No | Tab flashes, hint names the app |
+
+Other tools cover parts of this: hotkey scripts for switching, tray icons that show the desktop number, or full desktop managers. DeskTabs combines a visible, clickable indicator on the taskbar with names, colours, icons and a time log.
+
+---
+
 ## Requirements
 
 - **Windows 11:** developed and tested on **25H2 (build 26200)**. Works from 24H2 (26100).
@@ -156,6 +191,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
 | `TimeLog` | 1 | Write per-desktop stay times to `timelog\desktop-log_YYYY-MM.csv` in the program folder. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
+| `TimeLogMinSec` | 5 | Stays shorter than this many seconds are not written: they are just transitions (stepping through desktops, a quick glance). Their seconds count towards the desktop you settle on, so the log stays gap-free. `0` = log everything. |
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `soliddesk` = a strong fill in its own desktop colour, `solid` = a strong fill in the accent colour. |
 | `TintL` / `TintS` | 86 / 100 (light), 32 / 78 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
@@ -221,6 +257,7 @@ start,end,seconds,desktop_index,desktop_name
 ```
 
 - A stay ends when you switch desktops, lock the screen, or stop giving input for `TimeLogIdleMin` minutes (the stay is then closed at the moment the inactivity began, so breaks are not counted).
+- Stays shorter than `TimeLogMinSec` seconds (default 5) are transitions, not work: stepping 1 → 2 → 3 → 4 gives one row for 4 (including the travel time), and a quick glance from A to B and back continues the row for A. Because of that, the newest row is written once the next real stay is certain; locking, idling or quitting writes it immediately.
 - Times are local, ISO 8601. `desktop_index` is 1-based like the bar's numbers; `desktop_name` is the name at the start of the stay.
 - The file is plain UTF-8 CSV: open it in Excel, or let a coding agent sum it up per client for your invoice. It is personal data and git-ignored.
 
