@@ -95,6 +95,8 @@ global CONF := Map(
     "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
     "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
     "Hotkeys",        0,       ; 1 = Tastenkuerzel fuer den Direktsprung (Ziffernreihe UND Ziffernblock)
+    "DragToTab",      1,       ; 1 = Fenster an der Titelleiste auf einen Tab ziehen schickt es auf diesen Desktop
+    "AttentionDot",   1,       ; 1 = Punkt am Tab, wenn ein Programm auf einem anderen Desktop blinkt
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
 )
@@ -139,6 +141,320 @@ global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
 global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
 global gLogCarry := "", gLogPend := 0   ; Zeit-Log-Filter: mitgenommene Uebergangszeit, wartender Eintrag
 
+; ----------- Fenster verschieben, Aufmerksamkeit, zurueck zum letzten Desktop ----------
+
+; Das Fenster, an dem der Nutzer gerade arbeitet (nicht die Leiste, nicht Taskleiste/Desktop)
+WorkWindow() {
+    global MyGui
+    hwnd := DllCall("GetForegroundWindow", "Ptr")
+    if (!hwnd || (MyGui && hwnd = MyGui.Hwnd))
+        return 0
+    cls := ""
+    try cls := WinGetClass("ahk_id " hwnd)
+    if (cls = "" || InStr(",Shell_TrayWnd,Shell_SecondaryTrayWnd,Progman,WorkerW,#32768,", "," cls ","))
+        return 0
+    return hwnd
+}
+
+; Aktives Fenster (Tastenkuerzel) bzw. ein bestimmtes Fenster (Tab-Menue) auf Desktop idx schicken.
+; Man bleibt, wo man ist - das Fenster geht, nicht der Nutzer.
+MoveActiveTo(idx, *) => MoveWindowTo(idx, WorkWindow())
+; Fenster mitnehmen: erst verschieben (mit Bestaetigungsblinken), dann selbst dorthin
+; wechseln und das Fenster wieder nach vorne holen
+TakeActiveTo(idx, *) {
+    hwnd := WorkWindow()
+    if (hwnd)
+        MoveWindowTo(idx, hwnd)
+    SwitchToDesktop(idx)
+    if (hwnd)
+        try WinActivate("ahk_id " hwnd)
+}
+; Windows-Einstellung "auf allen Desktops anzeigen" wird respektiert:
+;   nur dieses Fenster auf allen Desktops -> wer es gezielt verschiebt, will es dort haben:
+;                                             Einstellung aufheben, verschieben, offen sagen
+;   die ganze App auf allen Desktops       -> nichts anfassen (betraefe alle ihre Fenster), nur Hinweis
+MoveWindowTo(idx, hwnd, *) {
+    if (!hwnd || idx < 0 || idx >= GetDesktopCount() || !WinExist("ahk_id " hwnd))
+        return
+    pin := PinState(hwnd)
+    if (pin = 2) {
+        ShowBarTip(idx, T("tip.apppinned", TruncName(ProgName(hwnd), 30)), 5000)
+        return
+    }
+    title := ""
+    try title := WinGetTitle("ahk_id " hwnd)
+    if (pin = 1)
+        VD("UnPinWindow", "Ptr", hwnd)
+    VD("MoveWindowToDesktopNumber", "Ptr", hwnd, "Int", idx)
+    if (VD("GetWindowDesktopNumber", "Ptr", hwnd, "Int") = idx)
+        StartConfirmBlink(idx)                 ; angekommen: Ziel-Tab blinkt zur Bestaetigung
+    ShowBarTip(idx, T(pin = 1 ? "tip.movedunpinned" : "tip.moved", TruncName(title != "" ? title : "?", 40), GetDesktopNameRaw(idx)), 3500)
+}
+
+; 2 = die ganze App wird auf allen Desktops angezeigt, 1 = nur dieses Fenster, 0 = normal (ein Desktop)
+PinState(hwnd) {
+    if (!hwnd)
+        return 0
+    try if (VD("IsPinnedApp", "Ptr", hwnd, "Int") = 1)
+        return 2
+    try if (VD("IsPinnedWindow", "Ptr", hwnd, "Int") = 1)
+        return 1
+    return 0
+}
+; Fenster auf allen Desktops anzeigen bzw. wieder nur auf dem aktuellen (Griff-Menue, Ziehen auf den Griff)
+TogglePinWindow(hwnd, *) {
+    if (!hwnd || !WinExist("ahk_id " hwnd) || PinState(hwnd) = 2)
+        return
+    name := TruncName(ProgName(hwnd), 30)
+    if (PinState(hwnd) = 1) {
+        VD("UnPinWindow", "Ptr", hwnd)
+        ShowBarTip(-2, T("tip.unpinned", name, GetDesktopNameRaw(GetCurrentDesktop())), 3500)
+    } else {
+        VD("PinWindow", "Ptr", hwnd)
+        StartConfirmBlink(-2)                  ; -2 = der Griff
+        ShowBarTip(-2, T("tip.pinned", name), 3500)
+    }
+}
+; Alle Fenster der App auf allen Desktops (wie "Fenster dieser App auf allen Desktops anzeigen" in Windows)
+TogglePinApp(hwnd, *) {
+    if (!hwnd || !WinExist("ahk_id " hwnd))
+        return
+    name := TruncName(ProgName(hwnd), 30)
+    if (PinState(hwnd) = 2) {
+        VD("UnPinApp", "Ptr", hwnd)
+        ShowBarTip(-2, T("tip.appunpinned", name), 3500)
+    } else {
+        VD("PinApp", "Ptr", hwnd)
+        StartConfirmBlink(-2)
+        ShowBarTip(-2, T("tip.apppinnednow", name), 3500)
+    }
+}
+
+; Kurzinfo ueber einem Tab (Slot 3, verschwindet nach ms)
+ShowBarTip(num, txt, ms) {
+    global MyGui, BTNS, gHidden
+    if (!MyGui || gHidden)
+        return
+    bx := 0, by := 0
+    MyGui.GetPos(&bx, &by)
+    ix := bx
+    for item in BTNS
+        if (item["num"] = num)
+            ix := bx + item["x"]
+    CoordMode("ToolTip", "Screen")
+    static hide := () => ToolTip(, , , 3)     ; feste Referenz: neuer Aufruf verlaengert statt alter Timer kappt
+    ToolTip(txt, ix, by - px(34), 3)
+    SetTimer(hide, -ms)
+}
+
+; Blinkt ein Programm auf einem anderen Desktop (so ruft Windows sonst nur in der
+; Taskleiste dieses Desktops um Aufmerksamkeit), bekommt dessen Tab einen Punkt.
+InitAttentionWatch() {
+    global gShellMsg
+    gShellMsg := DllCall("RegisterWindowMessage", "Str", "SHELLHOOK", "UInt")
+    DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)
+    OnMessage(gShellMsg, OnShellHook)
+}
+OnShellHook(wParam, lParam, msg, hwnd) {
+    global gAttention, gCurrent
+    if (!CONF["AttentionDot"] || wParam != 0x8006)      ; HSHELL_FLASH
+        return
+    desk := -1
+    try desk := VD("GetWindowDesktopNumber", "Ptr", lParam, "Int")
+    if (desk >= 0 && desk != gCurrent && !gAttention.Has(desk)) {
+        gAttention[desk] := true
+        RenderBar()
+    }
+}
+
+; Zurueck zum zuletzt genutzten Desktop (Tastenkuerzel oder Mittelklick auf die Leiste).
+; "Genutzt" heisst: laenger als die Durchfahrt-Grenze des Zeit-Logs dort gewesen.
+GoBack(*) {
+    global gLastDesk
+    if (gLastDesk >= 0 && gLastDesk < GetDesktopCount() && gLastDesk != GetCurrentDesktop())
+        SwitchToDesktop(gLastDesk)
+}
+OnMButtonUp(wParam, lParam, msg, hwnd) {
+    global MyGui
+    if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
+        return
+    GoBack()
+    return 0
+}
+
+AttentionSig() {
+    global gAttention
+    s := ""
+    for k in gAttention
+        s .= k ","
+    return s
+}
+
+; ------------- Fenster per Titelleiste auf einen Tab ziehen -------------------
+; Windows meldet Beginn und Ende jedes Fenster-Ziehens (EVENT_SYSTEM_MOVESIZESTART/END).
+; Laesst man das Fenster ueber einem Tab los, wandert es auf diesen Desktop - an seine
+; alte Stelle und in seinen alten Zustand (maximiert bleibt maximiert). Man selbst
+; bleibt auf dem aktuellen Desktop.
+InitDragWatch() {
+    global gDragCb, gDragHook
+    gDragCb := CallbackCreate(DragEventProc)
+    gDragHook := DllCall("SetWinEventHook", "UInt", 0x000A, "UInt", 0x000B     ; MOVESIZESTART .. MOVESIZEEND
+        , "Ptr", 0, "Ptr", gDragCb, "UInt", 0, "UInt", 0, "UInt", 0, "Ptr")
+}
+DragEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
+    global gDragHwnd, gDragPlace, gDragPin, MyGui
+    if (idObject != 0 || !CONF["DragToTab"])
+        return
+    if (event = 0x000A) {
+        if (MyGui && hwnd = MyGui.Hwnd)
+            return
+        wp := Buffer(44, 0)
+        NumPut("UInt", 44, wp)
+        DllCall("GetWindowPlacement", "Ptr", hwnd, "Ptr", wp)
+        gDragHwnd := hwnd, gDragPlace := wp
+        gDragPin := PinState(hwnd)                ; einmal zu Beginn: auf allen Desktops?
+        SetTimer(DragTipTick, 40)
+        return
+    }
+    ; Ende des Ziehens
+    SetTimer(DragTipTick, 0)
+    ToolTip(, , , 3)
+    global gDragTipNum := -1
+    if (hwnd != gDragHwnd || !gDragHwnd)
+        return
+    gDragHwnd := 0
+    for it in BTNS                            ; Hover waehrend des Ziehens war geometrisch gesetzt
+        it["hover"] := false
+    RenderBar()
+    num := DropTarget(DragBarX(), gDragPin)
+    if (num = -1)
+        return
+    DllCall("SetWindowPlacement", "Ptr", hwnd, "Ptr", gDragPlace)   ; zurueck an den alten Platz
+    if (num = -2)
+        TogglePinWindow(hwnd)                 ; auf den Griff gezogen: auf allen Desktops (bzw. wieder nur hier)
+    else
+        MoveWindowTo(num, hwnd)
+}
+; X-Position des Mauszeigers in der Leiste (geometrisch, auch wenn gerade ein Fenster
+; daruebergezogen wird), -1 = nicht ueber der Leiste
+DragBarX() {
+    global MyGui, gHidden
+    if (!MyGui || gHidden)
+        return -1
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&mx, &my)
+    wx := 0, wy := 0, ww := 0, wh := 0
+    MyGui.GetPos(&wx, &wy, &ww, &wh)
+    slack := px(6)                            ; die Leiste ist flach: etwas Spielraum ober- und unterhalb
+    if (mx < wx || mx >= wx + ww || my < wy - slack || my >= wy + wh + slack)
+        return -1
+    return mx - wx
+}
+; Was passiert beim Loslassen an Position lx? Desktop-Index, -2 = Griff (auf allen Desktops
+; anzeigen bzw. wieder nur hier), -1 = nichts. pin = PinState des gezogenen Fensters.
+DropTarget(lx, pin) {
+    global gLayout
+    if (lx < 0 || pin = 2)                    ; ganze App auf allen Desktops: nichts anfassen
+        return -1
+    if (lx < gLayout["gripW"])
+        return -2
+    item := ItemAtX(lx)
+    if (!item)
+        return -1
+    ; der eigene Desktop nur, wenn das Fenster auf allen liegt: dann heisst es "nur noch hier"
+    return (item["num"] != GetCurrentDesktop() || pin = 1) ? item["num"] : -1
+}
+; Waehrend des Ziehens: Ziel deutlich markieren und per Kurzinfo sagen, was beim Loslassen passiert.
+; Der normale Hover (HoverTick) pausiert dann: er haengt am Fenster unter dem Mauszeiger
+; und bliebe beim Ziehen auf dem zuletzt beruehrten Tab stehen. Hier gilt nur die Geometrie.
+DragTipTick() {
+    global gDragHwnd, gDragTipNum, gDragPin, BTNS
+    lx := gDragHwnd ? DragBarX() : -1
+    item := (lx >= 0) ? ItemAtX(lx) : 0
+    changed := false
+    for it in BTNS {
+        h := (item && it["num"] = item["num"])
+        if (h != it["hover"])
+            it["hover"] := h, changed := true
+    }
+    num := DropTarget(lx, gDragPin)
+    ; ganze App auf allen Desktops: nichts markieren, aber sagen, warum
+    appTip := (gDragPin = 2 && lx >= 0) ? (item ? item["num"] : -2) : -99
+    key := (appTip != -99) ? "a" appTip : num
+    if (key = gDragTipNum) {
+        if (changed)
+            RenderBar()
+        return
+    }
+    gDragTipNum := key
+    RenderBar()                               ; Ziel deutlich markieren (siehe RenderBar)
+    if (appTip != -99)
+        ShowBarTip(appTip, T("tip.apppinned", TruncName(ProgName(gDragHwnd), 30)), 5000)
+    else if (num = -1)
+        ToolTip(, , , 3)
+    else if (num = -2)
+        ShowBarTip(-2, gDragPin = 1 ? T("tip.dropunpin", GetDesktopNameRaw(GetCurrentDesktop())) : T("tip.droppin"), 5000)
+    else
+        ShowBarTip(num, T(gDragPin = 1 ? "tip.dropmoveunpin" : "tip.dropmove", GetDesktopNameRaw(num)), 5000)
+}
+
+; Anzeigename eines Programms (Dateibeschreibung der exe, z.B. "Microsoft Word"),
+; sonst der Prozessname ohne .exe
+ProgName(hwnd) {
+    path := "", name := ""
+    try path := WinGetProcessPath("ahk_id " hwnd)
+    try name := RegExReplace(WinGetProcessName("ahk_id " hwnd), "i)\.exe$")
+    if (path != "") {
+        size := DllCall("version\GetFileVersionInfoSizeW", "Str", path, "Ptr", 0, "UInt")
+        if (size) {
+            vi := Buffer(size, 0)
+            if DllCall("version\GetFileVersionInfoW", "Str", path, "UInt", 0, "UInt", size, "Ptr", vi) {
+                pt := 0, ln := 0
+                if DllCall("version\VerQueryValueW", "Ptr", vi, "Str", "\VarFileInfo\Translation", "Ptr*", &pt, "UInt*", &ln) && ln >= 4 {
+                    lang := Format("{:04X}{:04X}", NumGet(pt, 0, "UShort"), NumGet(pt, 2, "UShort"))
+                    if DllCall("version\VerQueryValueW", "Ptr", vi, "Str", "\StringFileInfo\" lang "\FileDescription", "Ptr*", &pt, "UInt*", &ln) && ln > 1 {
+                        d := Trim(StrGet(pt, ln, "UTF-16"))
+                        if (d != "")
+                            return d
+                    }
+                }
+            }
+        }
+    }
+    return (name != "") ? name : "?"
+}
+
+; ---------------- Fensterliste im Tab-Menue ("Fenster hierher holen") --------
+; Alle normalen Fenster des aktuellen Desktops, wie sie auch Alt+Tab zeigt.
+WindowsOnDesktop(desk) {
+    global MyGui
+    out := []
+    for hwnd in WinGetList() {
+        if (MyGui && hwnd = MyGui.Hwnd)
+            continue
+        try {
+            if !(WinGetStyle("ahk_id " hwnd) & 0x10000000)                   ; WS_VISIBLE
+                continue
+            ex := WinGetExStyle("ahk_id " hwnd)
+            if ((ex & 0x80) && !(ex & 0x40000))                                ; Werkzeugfenster ohne APPWINDOW
+                continue
+            if (DllCall("GetWindow", "Ptr", hwnd, "UInt", 4, "Ptr"))           ; hat Besitzer (Dialog o. ae.)
+                continue
+            title := WinGetTitle("ahk_id " hwnd)
+            if (title = "" || InStr(",Shell_TrayWnd,Shell_SecondaryTrayWnd,Progman,WorkerW,", "," WinGetClass("ahk_id " hwnd) ","))
+                continue
+            if (VD("GetWindowDesktopNumber", "Ptr", hwnd, "Int") != desk)
+                continue
+            if (PinState(hwnd))                                                ; ohnehin auf allen Desktops
+                continue
+            out.Push(Map("hwnd", hwnd, "title", title, "proc", RegExReplace(WinGetProcessName("ahk_id " hwnd), "i)\.exe$")))
+        }
+        if (out.Length >= 25)
+            break
+    }
+    return out
+}
+
 ; ------------------------ Fremde Desktop-Wechsel ----------------------------
 ; Oeffnet man z.B. eine PDF und laeuft der Reader auf einem anderen Desktop, springt
 ; Windows still dorthin - und die Zeit landet unbemerkt beim falschen Projekt. Wechsel,
@@ -171,6 +487,22 @@ CheckForeignSwitch(from, to) {
         return
     }
     StartSwitchAlert(to)
+}
+
+StartConfirmBlink(num) {
+    global gConfirmNum, gConfirmPhase
+    gConfirmNum := num, gConfirmPhase := 4    ; 4 Phasen x 160 ms = zweimal aufblinken
+    SetTimer(ConfirmTick, 160)
+    RenderBar()
+}
+ConfirmTick() {
+    global gConfirmNum, gConfirmPhase
+    gConfirmPhase -= 1
+    if (gConfirmPhase <= 0) {
+        gConfirmPhase := 0, gConfirmNum := -1
+        SetTimer(ConfirmTick, 0)
+    }
+    RenderBar()
 }
 
 StartSwitchAlert(num) {
@@ -396,6 +728,11 @@ global gBuilding := false    ; Re-Entrancy-Schutz: laeuft gerade ein BuildBar?
 global gSwitching := false   ; laeuft gerade ein Desktop-Wechsel? (gegen Rebuild-Race)
 global gSelfTick := 0, gKeyTick := 0, gTaskViewTick := 0   ; letzte gewollte Wechsel (DeskTabs, Tastatur, Task-Ansicht)
 global gAlertNum := -1, gAlertPhase := 0, gPrevCount := 0  ; Hinweis auf fremden Wechsel
+global gAttention := Map(), gShellMsg := 0  ; Desktops mit blinkendem Programm (Punkt am Tab)
+global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
+global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
+global gDragCb := 0, gDragHook := 0, gDragHwnd := 0, gDragPlace := 0, gDragPin := 0, gDragTipNum := -1   ; Fenster auf Tab ziehen
+global gLastDesk := -1, gDeskSince := A_TickCount   ; zuletzt genutzter Desktop (fuer "zurueck")
 global gCompact := "full"    ; aktuell dargestellte Stufe: "full" | "short" | "icon"
 global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-Budget im auto-Modus)
 
@@ -404,6 +741,29 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "tip.apppinned", "„{1}“ wird auf allen Desktops angezeigt (Einstellung der ganzen App, ändern per Rechtsklick auf ≡)",
+    "tip.movedunpinned", "„{1}“ nach „{2}“ verschoben, jetzt nur noch dort statt auf allen Desktops",
+    "tip.unpinned", "„{1}“ nur noch auf „{2}“",
+    "tip.pinned", "„{1}“ wird jetzt auf allen Desktops angezeigt",
+    "tip.appunpinned", "Fenster von „{1}“ nicht mehr auf allen Desktops",
+    "tip.apppinnednow", "Alle Fenster von „{1}“ jetzt auf allen Desktops",
+    "tip.droppin", "Loslassen: Fenster auf allen Desktops anzeigen",
+    "tip.dropunpin", "Loslassen: Fenster nur noch auf „{1}“ anzeigen",
+    "tip.dropmoveunpin", "Loslassen: Fenster nur noch auf „{1}“ statt auf allen Desktops",
+    "menu.tab.onlyhere", "„{1}“ nur auf diesem Desktop anzeigen",
+    "menu.pin.window", "„{1}“ auf allen Desktops anzeigen",
+    "menu.pin.app", "Alle Fenster von „{1}“ auf allen Desktops",
+    "menu.hotkeys.ctrlshiftclick", "Strg + Umschalt + Klick auf einen Tab: aktives Fenster mitnehmen und dorthin wechseln",
+    "menu.hotkeys.shiftclick", "Umschalt + Klick auf einen Tab: aktives Fenster dorthin schicken",
+    "tip.dropmove", "Loslassen: Fenster nach „{1}“ verschieben",
+    "menu.dragtotab", "Fenster an der Titelleiste auf einen Tab ziehen = dorthin verschieben",
+    "menu.tab.fetch", "Fenster hierher holen",
+    "key.backspace", "Rücktaste",
+    "menu.hotkeys.back", "{1}: zurück zum letzten Desktop (auch Mittelklick auf die Leiste)",
+    "menu.hotkeys.move", "{1}: aktives Fenster dorthin schicken",
+    "menu.attention", "Punkt am Tab, wenn ein Programm auf einem anderen Desktop blinkt",
+    "tip.moved", "„{1}“ verschoben nach „{2}“",
+    "menu.tab.movehere", "„{1}“ hierher verschieben",
     "alert.switched.noproc", "Desktop gewechselt zu „{1}“, nicht von Dir",
     "alert.switched", "Desktop gewechselt zu „{1}“, im Vordergrund: {2}",
     "menu.switchalert", "Desktop-Wechsel durch andere Programme melden",
@@ -541,6 +901,29 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "tip.apppinned", "“{1}” is shown on all desktops (setting of the whole app, change it with a right-click on ≡)",
+    "tip.movedunpinned", "Moved “{1}” to “{2}”, now only there instead of on all desktops",
+    "tip.unpinned", "“{1}” now only on “{2}”",
+    "tip.pinned", "“{1}” is now shown on all desktops",
+    "tip.appunpinned", "Windows of “{1}” no longer on all desktops",
+    "tip.apppinnednow", "All windows of “{1}” now on all desktops",
+    "tip.droppin", "Release to show the window on all desktops",
+    "tip.dropunpin", "Release to show the window only on “{1}”",
+    "tip.dropmoveunpin", "Release to show the window only on “{1}” instead of all desktops",
+    "menu.tab.onlyhere", "Show “{1}” only on this desktop",
+    "menu.pin.window", "Show “{1}” on all desktops",
+    "menu.pin.app", "All windows of “{1}” on all desktops",
+    "menu.hotkeys.ctrlshiftclick", "Ctrl + Shift + click a tab: take the active window along and switch there",
+    "menu.hotkeys.shiftclick", "Shift + click a tab: send the active window there",
+    "tip.dropmove", "Release to move the window to “{1}”",
+    "menu.dragtotab", "Drag a window by its title bar onto a tab to move it there",
+    "menu.tab.fetch", "Bring a window here",
+    "key.backspace", "Backspace",
+    "menu.hotkeys.back", "{1}: back to the last desktop (or middle-click the bar)",
+    "menu.hotkeys.move", "{1}: send the active window there",
+    "menu.attention", "Dot on the tab when an app on another desktop wants attention",
+    "tip.moved", "Moved “{1}” to “{2}”",
+    "menu.tab.movehere", "Move “{1}” here",
     "alert.switched.noproc", "Switched to “{1}”, not by you",
     "alert.switched", "Switched to “{1}”, now in front: {2}",
     "menu.switchalert", "Flag desktop switches made by other apps",
@@ -742,6 +1125,7 @@ Main() {
     if (CONF["WheelSwitch"])
         OnMessage(0x020A, OnWheel)          ; WM_MOUSEWHEEL
     OnMessage(0x0205, OnRButtonUp)          ; WM_RBUTTONUP -> Kontextmenue
+    OnMessage(0x0208, OnMButtonUp)          ; WM_MBUTTONUP -> zurueck zum letzten Desktop
     ; Fallback-Timer (falls Hook mal nichts meldet) + Namen + Desktop-Anzahl frisch halten
     SetTimer(Refresh, 1200)
     ; Backstop: im Vordergrund halten (gegen z-Order-Verdraengung)
@@ -766,6 +1150,8 @@ Main() {
     SetTimer(FirstRunHint, -1500)            ; beim allerersten Start kurz erklaeren, wo die Einstellungen sind
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
+    InitAttentionWatch()                     ; blinkende Programme auf anderen Desktops
+    InitDragWatch()                          ; Fenster per Titelleiste auf einen Tab ziehen
 }
 
 ; Beim allerersten Start (noch keine settings.ini) einmalig erklaeren, wie man
@@ -800,7 +1186,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "SwitchAlert"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "SwitchAlert", "AttentionDot", "DragToTab"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -1615,7 +2001,10 @@ OnRButtonUp(wParam, lParam, msg, hwnd) {
     if (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd)
         return
     item := ItemAtX(BarMouseX())
-    ShowContextMenu(item ? item["num"] : -1)
+    ; Menue nicht hier im Handler oeffnen: m.Show() blockiert, bis das Menue zu ist. Ein
+    ; Rechtsklick auf den naechsten Tab kam sonst an, solange dieser Handler noch lief, und
+    ; wurde verworfen (Menue ging erst beim zweiten Klick auf). So ist der Handler sofort frei.
+    SetTimer(ShowContextMenu.Bind(item ? item["num"] : -1), -1)
     return 0
 }
 
@@ -1653,7 +2042,9 @@ HeadFonts() {
     NumPut("Int", Round(h * 0.85), lf, 0)
     NumPut("Int", 400, lf, 16)
     small := DllCall("CreateFontIndirectW", "Ptr", lf, "Ptr")
-    fonts := [bold, small]
+    NumPut("Int", h, lf, 0)
+    normal := DllCall("CreateFontIndirectW", "Ptr", lf, "Ptr")
+    fonts := [bold, small, normal]
     return fonts
 }
 
@@ -1666,9 +2057,27 @@ HeadTextW(hdc, font, s) {
 }
 
 HeadMeasure(wParam, lParam, msg, hwnd) {
-    if (NumGet(lParam, 0, "UInt") != 1 || NumGet(lParam, 24, "UPtr") != 0xDE5C)   ; ODT_MENU + unsere Kennung
+    global gMenuCaption, gMenuAction
+    kind := NumGet(lParam, 24, "UPtr")
+    if (NumGet(lParam, 0, "UInt") != 1 || (kind != 0xDE5C && kind != 0xDE5D && kind != 0xDE5E))   ; ODT_MENU + unsere Kennung
         return
     f := HeadFonts(), s := A_ScreenDPI / 96
+    if (kind = 0xDE5E) {                    ; Hauptaktion "Fenster hierher": hoch und breit
+        hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
+        w := HeadTextW(hdc, f[1], gMenuAction)
+        DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
+        NumPut("UInt", w + Round(52 * s), lParam, 12)
+        NumPut("UInt", Round(38 * s), lParam, 16)
+        return 1
+    }
+    if (kind = 0xDE5D) {                    ; Zwischenzeile mit dem Desktop-Namen
+        hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
+        w := HeadTextW(hdc, f[3], gMenuCaption)
+        DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
+        NumPut("UInt", w + Round(16 * s), lParam, 12)
+        NumPut("UInt", Round(24 * s), lParam, 16)
+        return 1
+    }
     hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
     w := HeadTextW(hdc, f[1], "DeskTabs") + Round(7 * s) + HeadTextW(hdc, f[2], APP_VERSION)
     DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
@@ -1678,7 +2087,9 @@ HeadMeasure(wParam, lParam, msg, hwnd) {
 }
 
 HeadDraw(wParam, lParam, msg, hwnd) {
-    if (NumGet(lParam, 0, "UInt") != 1 || NumGet(lParam, 56, "UPtr") != 0xDE5C)
+    global gMenuCaption, gMenuAction, gMenuActionCol
+    kind := NumGet(lParam, 56, "UPtr")
+    if (NumGet(lParam, 0, "UInt") != 1 || (kind != 0xDE5C && kind != 0xDE5D && kind != 0xDE5E))
         return
     static icon := 0
     f := HeadFonts(), s := A_ScreenDPI / 96
@@ -1693,6 +2104,45 @@ HeadDraw(wParam, lParam, msg, hwnd) {
     NumPut("Int", l, "Int", t, "Int", r, "Int", b, rc)
     DllCall("FillRect", "Ptr", hdc, "Ptr", rc, "Ptr", br)
     DllCall("DeleteObject", "Ptr", br)
+    if (kind = 0xDE5E) {                    ; Hauptaktion: Flaeche in der Farbe des Ziel-Desktops
+        sel := NumGet(lParam, 16, "UInt") & 1           ; ODS_SELECTED = Maus darueber
+        fill := sel ? Mix(0x000000, gMenuActionCol, 22) : gMenuActionCol
+        fg := ReadableOn(fill)
+        bgr := (v) => ((v & 0xFF) << 16) | (v & 0xFF00) | ((v >> 16) & 0xFF)   ; GDI will BGR
+        br := DllCall("CreateSolidBrush", "UInt", bgr(fill), "Ptr")
+        oldB := DllCall("SelectObject", "Ptr", hdc, "Ptr", br, "Ptr")
+        oldP := DllCall("SelectObject", "Ptr", hdc, "Ptr", DllCall("GetStockObject", "Int", 8, "Ptr"), "Ptr")   ; NULL_PEN
+        DllCall("RoundRect", "Ptr", hdc, "Int", l + Round(4 * s), "Int", t + Round(3 * s), "Int", r - Round(4 * s)
+            , "Int", b - Round(3 * s), "Int", Round(8 * s), "Int", Round(8 * s))
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", oldB)
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", oldP)
+        DllCall("DeleteObject", "Ptr", br)
+        DllCall("SetBkMode", "Ptr", hdc, "Int", 1)
+        DllCall("SetTextColor", "Ptr", hdc, "UInt", bgr(fg))
+        static ifont := 0
+        if (!ifont)
+            ifont := DllCall("CreateFontW", "Int", -Round(15 * s), "Int", 0, "Int", 0, "Int", 0, "Int", 400, "UInt", 0, "UInt", 0, "UInt", 0
+                , "UInt", 1, "UInt", 0, "UInt", 0, "UInt", 5, "UInt", 0, "Str", CONF["IconFont"], "Ptr")
+        old := DllCall("SelectObject", "Ptr", hdc, "Ptr", ifont, "Ptr")
+        rt := Buffer(16, 0)
+        NumPut("Int", l + Round(14 * s), "Int", t, "Int", l + Round(34 * s), "Int", b, rt)
+        DllCall("DrawTextW", "Ptr", hdc, "Str", Chr(0xE72A), "Int", 1, "Ptr", rt, "UInt", 0x24)   ; Pfeil
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", f[1])
+        NumPut("Int", l + Round(38 * s), "Int", t, "Int", r - Round(8 * s), "Int", b, rt)
+        DllCall("DrawTextW", "Ptr", hdc, "Str", gMenuAction, "Int", -1, "Ptr", rt, "UInt", 0x24)
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+        return 1
+    }
+    if (kind = 0xDE5D) {                    ; Desktop-Name: gut lesbares Mittelgrau statt blassem "deaktiviert"
+        DllCall("SetBkMode", "Ptr", hdc, "Int", 1)
+        old := DllCall("SelectObject", "Ptr", hdc, "Ptr", f[3], "Ptr")
+        DllCall("SetTextColor", "Ptr", hdc, "UInt", 0x5C5C5C)
+        rt := Buffer(16, 0)
+        NumPut("Int", l + Round(20 * s), "Int", t, "Int", r, "Int", b, rt)
+        DllCall("DrawTextW", "Ptr", hdc, "Str", gMenuCaption, "Int", -1, "Ptr", rt, "UInt", 0x24)   ; VCENTER|SINGLELINE
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+        return 1
+    }
     ; Symbol in der Spalte, in der auch die anderen Menue-Symbole stehen
     isz := Round(14 * s)                       ; so gross wie die Symbole der anderen Eintraege
     if (!icon && FileExist(AppIconPath()))
@@ -1721,6 +2171,7 @@ HeadDraw(wParam, lParam, msg, hwnd) {
 }
 
 ShowContextMenu(num, *) {
+    fgw := WorkWindow()                     ; vor dem Menue merken, an welchem Fenster gearbeitet wird
     m := Menu()
     AddAppHeader(m)
     if (num >= 0) {
@@ -1728,6 +2179,40 @@ ShowContextMenu(num, *) {
         head := (num + 1) " · " raw
         m.Add(head, (*) => 0)
         m.Disable(head)
+        global gMenuCaption := head             ; selbst gezeichnet, siehe HeadDraw
+        mii := Buffer(80, 0)
+        NumPut("UInt", 80, "UInt", 0x100 | 0x20, "UInt", 0x100, mii)
+        NumPut("UPtr", 0xDE5D, mii, 48)
+        DllCall("SetMenuItemInfoW", "Ptr", m.Handle, "UInt", 2, "Int", 1, "Ptr", mii)   ; Position 2: nach Kopf und Linie
+        fpin := PinState(fgw)
+        ; Aktion nur, wenn sie etwas bewirkt: nicht fuer Apps auf allen Desktops (siehe MoveWindowTo),
+        ; auf dem eigenen Desktop nur fuer ein Fenster auf allen Desktops ("nur noch hier")
+        if (fgw && fpin != 2 && (num != GetCurrentDesktop() || fpin = 1)) {
+            mv := T(num = GetCurrentDesktop() ? "menu.tab.onlyhere" : "menu.tab.movehere", TruncName(ProgName(fgw), 24))   ; Programmname, nicht der (oft lange) Fenstertitel
+            m.Add(mv, MoveWindowTo.Bind(num, fgw))
+            ; Hauptaktion des Tab-Menues: selbst gezeichnet, gross und in der Desktop-Farbe
+            global gMenuAction := mv, gMenuActionCol := DesktopColor(num)
+            mii := Buffer(80, 0)
+            NumPut("UInt", 80, "UInt", 0x100 | 0x20, "UInt", 0x100, mii)
+            NumPut("UPtr", 0xDE5E, mii, 48)
+            DllCall("SetMenuItemInfoW", "Ptr", m.Handle, "UInt", 3, "Int", 1, "Ptr", mii)   ; Position 3: nach Kopf, Linie, Name
+        }
+        if (num != GetCurrentDesktop()) {
+            wl := Menu()
+            seen := Map()
+            for , w in WindowsOnDesktop(GetCurrentDesktop()) {
+                lbl := TruncName(w["title"], 48) "  (" w["proc"] ")"
+                while seen.Has(lbl)
+                    lbl .= " "                      ; gleiche Titel: Menuepunkte muessen eindeutig sein
+                seen[lbl] := true
+                wl.Add(lbl, MoveWindowTo.Bind(num, w["hwnd"]))
+            }
+            if (seen.Count) {
+                m.Add(T("menu.tab.fetch"), wl)
+                MenuGlyph(m, T("menu.tab.fetch"), "E8A7")
+            }
+            m.Add()                                 ; Aktionen oben, Einstellungen des Tabs darunter
+        }
         cm := Menu()
         cur := DesktopColor(num)
         hit := false
@@ -1772,6 +2257,21 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.tab.color"), "E790")
         m.Add(T("menu.tab.short"), PromptShort.Bind(num))
         MenuGlyph(m, T("menu.tab.short"), "E8AC")
+        m.Add()
+    }
+    ; Griff bzw. Luecke: gehoert keinem Desktop, also der Ort fuer "auf allen Desktops"
+    if (num < 0 && fgw) {
+        prog := TruncName(ProgName(fgw), 24)
+        fpin := PinState(fgw)
+        pw := T("menu.pin.window", prog), pa := T("menu.pin.app", prog)
+        m.Add(pw, TogglePinWindow.Bind(fgw))
+        m.Add(pa, TogglePinApp.Bind(fgw))
+        if (fpin >= 1)
+            m.Check(pw)
+        if (fpin = 2) {
+            m.Check(pa)
+            m.Disable(pw)                          ; gilt schon ueber die App
+        }
         m.Add()
     }
     FillSettingsMenu(m)
@@ -1865,6 +2365,18 @@ FillSettingsMenu(m) {
         if (InStr(CONF["HotkeyMod"], it[1]))
             km.Check(it[2])
     }
+    km.Add()
+    modTxt := StrReplace(HotkeyLabel(CONF["HotkeyMod"]), " + 1 … 0", "")
+    if (!InStr(CONF["HotkeyMod"], "+")) {
+        km.Add(T("menu.hotkeys.move", HotkeyLabel(CONF["HotkeyMod"] "+")), (*) => 0)
+        km.Disable(T("menu.hotkeys.move", HotkeyLabel(CONF["HotkeyMod"] "+")))
+    }
+    km.Add(T("menu.hotkeys.shiftclick"), (*) => 0)
+    km.Disable(T("menu.hotkeys.shiftclick"))
+    km.Add(T("menu.hotkeys.ctrlshiftclick"), (*) => 0)
+    km.Disable(T("menu.hotkeys.ctrlshiftclick"))
+    km.Add(T("menu.hotkeys.back", modTxt " + " T("key.backspace")), (*) => 0)
+    km.Disable(T("menu.hotkeys.back", modTxt " + " T("key.backspace")))
     hkHead := T("menu.hotkeys") ": " (CONF["Hotkeys"] ? HotkeyLabel(CONF["HotkeyMod"]) : T("menu.hotkeys.off"))
     m.Add(hkHead, km)
     MenuGlyph(m, hkHead, "E961")
@@ -1883,6 +2395,12 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
     if (CONF["SwitchMethod"] = "dll")
         xm.Check(T("menu.directjump"))
+    xm.Add(T("menu.dragtotab"), ToggleView.Bind("DragToTab"))
+    if (CONF["DragToTab"])
+        xm.Check(T("menu.dragtotab"))
+    xm.Add(T("menu.attention"), ToggleView.Bind("AttentionDot"))
+    if (CONF["AttentionDot"])
+        xm.Check(T("menu.attention"))
     xm.Add(T("menu.switchalert"), ToggleView.Bind("SwitchAlert"))
     if (CONF["SwitchAlert"])
         xm.Check(T("menu.switchalert"))
@@ -2793,10 +3311,10 @@ FillRoundRect(g, x, y, w, h, r, argb) {
 ; Ohne force nur, wenn sich der sichtbare Zustand geaendert hat.
 RenderBar(force := false) {
     global BTNS, GUIW, GUIH, MyGui, gCurrent, gTheme, gLayout, gBarDC, gBarBmp, gRenderSig, gGripHover
-    global gAlertNum, gAlertPhase
+    global gAlertNum, gAlertPhase, gAttention, gDragTipNum, gDragHwnd, gConfirmNum, gConfirmPhase
     if (!MyGui || !gLayout)
         return
-    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase
+    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
@@ -2820,6 +3338,10 @@ RenderBar(force := false) {
     if (gGripHover)
         FillRoundRect(g, px(1), y, L["gripW"] - px(2), h, L["radius"]
             , ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])))
+    ; Fenster wird auf den Griff gezogen (= auf allen Desktops anzeigen) bzw. gerade dort angeheftet
+    if ((gDragHwnd && gDragTipNum = -2) || (gConfirmNum = -2 && (gConfirmPhase & 1)))
+        FillRoundRect(g, px(1), y, L["gripW"] - px(2), h, L["radius"]
+            , ((gDragHwnd ? 0x90 : 0xC0) << 24) | CONF["ColActiveBg"])
     DrawText(g, font, sf, "≡", 0, y, L["gripW"], h
         , ARGB(gGripHover ? CONF["ColInactiveTx"] : CONF["ColGripTx"]))
 
@@ -2845,6 +3367,12 @@ RenderBar(force := false) {
             ; wie der Windows-Taskleisten-Hover: der Tab wird HELLER, mit leichtem Verlauf
             FillRoundRectGrad(g, x, y, w, h, r, ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])), grad)
         }
+        ; Fenster wird auf diesen Tab gezogen (Rahmen folgt weiter unten) bzw. wurde gerade
+        ; hierher verschoben (kurzes Bestaetigungsblinken): Flaeche in der Desktop-Farbe
+        if (gDragHwnd && item["num"] = gDragTipNum)
+            FillRoundRect(g, x, y, w, h, r, 0x70000000 | col)
+        if (item["num"] = gConfirmNum && (gConfirmPhase & 1))
+            FillRoundRect(g, x, y, w, h, r, 0xC0000000 | col)
         ; Symbol links, Text daneben (bzw. nur eins von beidem)
         iw := item["iw"]
         tx0 := x + px(CONF["PadX"]), tw := w - 2 * px(CONF["PadX"])
@@ -2906,6 +3434,15 @@ RenderBar(force := false) {
             FillRoundRect(g, x + inset, y + h - ah - px(3), w - 2 * inset, ah, ah / 2
                 , (active && style = "soliddesk") ? (0xB0000000 | tx) : ARGB(col))   ; auf eigener Farbe unsichtbar -> in Textfarbe
         }
+        ; Fenster wird auf diesen Tab gezogen: kraeftig getoent mit Rahmen in der Desktop-Farbe
+        if (gDragHwnd && item["num"] = gDragTipNum)
+            StrokeRoundRect(g, x, y, w, h, r, ARGB(col), Max(2, px(2)))
+        ; Programm auf diesem Desktop blinkt: oranger Punkt oben rechts (wie in der Taskleiste)
+        if (gAttention.Has(item["num"]) && !active) {
+            dr := Max(3, px(4)), dcx := x + w - px(9), dcy := y + px(9), rg := Max(1, px(1.5))
+            FillRoundRect(g, dcx - dr - rg, dcy - dr - rg, 2 * (dr + rg), 2 * (dr + rg), dr + rg, ARGB(item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg))
+            FillRoundRect(g, dcx - dr, dcy - dr, 2 * dr, 2 * dr, dr, ARGB(0xF7630C))
+        }
         ; fremder Wechsel: Tab blinkt orange, danach bleibt ein oranger Rahmen
         if (item["num"] = gAlertNum) {
             if (gAlertPhase & 1)
@@ -2928,6 +3465,13 @@ RenderBar(force := false) {
     if (gBarBmp)
         DllCall("DeleteObject", "Ptr", gBarBmp)
     gBarBmp := hbm
+    ; Zweigleisig auf den Bildschirm: sofort direkt zeichnen (ein Neuzeichnen-Wunsch aus
+    ; einem Timer ging sonst manchmal verloren, sichtbar als haengende Markierung beim
+    ; Ziehen eines Fensters auf einen Tab) UND Windows neu zeichnen lassen - waehrend
+    ; eines Desktop-Wechsels landet das direkte Zeichnen im Leeren, dann greift WM_PAINT.
+    wdc := DllCall("GetDC", "Ptr", MyGui.Hwnd, "Ptr")
+    DllCall("BitBlt", "Ptr", wdc, "Int", 0, "Int", 0, "Int", W, "Int", H, "Ptr", gBarDC, "Int", 0, "Int", 0, "UInt", 0x00CC0020)
+    DllCall("ReleaseDC", "Ptr", MyGui.Hwnd, "Ptr", wdc)
     DllCall("InvalidateRect", "Ptr", MyGui.Hwnd, "Ptr", 0, "Int", 0)   ; ohne Loeschen
     DllCall("UpdateWindow", "Ptr", MyGui.Hwnd)
     DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
@@ -3173,6 +3717,14 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
         return
     item := ItemAtX(BarMouseX())
+    if (item && GetKeyState("Shift") && item["num"] != GetCurrentDesktop()) {
+        if (GetKeyState("Ctrl")) {
+            TakeActiveTo(item["num"])          ; Strg+Umschalt+Klick: Fenster mitnehmen und selbst mitgehen
+            return 0
+        }
+        MoveActiveTo(item["num"])              ; Umschalt+Klick: aktives Fenster dorthin schicken, selbst bleiben
+        return 0
+    }
     if (item)
         BtnClick(item["num"])
     return 0
@@ -3182,16 +3734,25 @@ UpdateHighlight() {
     global BTNS, gCurrent
     prev := gCurrent
     gCurrent := GetCurrentDesktop()
-    if (prev >= 0 && gCurrent >= 0 && gCurrent != prev)
+    if (prev >= 0 && gCurrent >= 0 && gCurrent != prev) {
         CheckForeignSwitch(prev, gCurrent)
+        global gLastDesk, gDeskSince, gAttention
+        if (A_TickCount - gDeskSince >= Max(1, CONF["TimeLogMinSec"]) * 1000)
+            gLastDesk := prev                  ; nur echte Aufenthalte, keine Durchfahrten
+        gDeskSince := A_TickCount
+        if (gAttention.Has(gCurrent))
+            gAttention.Delete(gCurrent)        ; angekommen: Punkt erledigt
+    }
     LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
     RenderBar()
 }
 
 ; Hover: Tab unter dem Mauszeiger leicht hervorheben
 HoverTick() {
-    global BTNS, gHidden, gBuilding, gGripHover, gLayout, gAlertNum, gAlertPhase
+    global BTNS, gHidden, gBuilding, gGripHover, gLayout, gAlertNum, gAlertPhase, gDragHwnd
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
+        return
+    if (gDragHwnd)                  ; beim Ziehen eines Fensters uebernimmt DragTipTick
         return
     lx := BarMouseX()
     over := ItemAtX(lx)
@@ -3409,6 +3970,23 @@ ApplyHotkeys() {
             }
         }
     }
+    ; Umschalt dazu: aktives Fenster auf diesen Desktop schicken (nur, wenn Umschalt
+    ; nicht schon Teil des Grund-Kuerzels ist). Ruecktaste: zurueck zum letzten Desktop.
+    if (!InStr(mk, "+")) {
+        Loop 10 {
+            digit := (A_Index = 10) ? "0" : String(A_Index)
+            for , key in [mk "+" digit, mk "+" NumpadScan(digit)] {
+                try {
+                    Hotkey(key, MoveActiveTo.Bind(A_Index - 1), "On")
+                    gHotkeys.Push(key)
+                }
+            }
+        }
+    }
+    try {
+        Hotkey(mk "Backspace", GoBack, "On")
+        gHotkeys.Push(mk "Backspace")
+    }
     if (failed && gHotkeys.Length = 0) {
         MsgBox(T("err.hotkeys"), "DeskTabs", 0x30)
         CONF["Hotkeys"] := 0
@@ -3585,7 +4163,7 @@ IniDel(sec, key) {
 }
 
 OnExitCleanup(*) {
-    global VDA, gWinEventHook, gWinEventCb
+    global VDA, gWinEventHook, gWinEventCb, gDragHook, gDragCb
     LogClose()                                  ; Zeit-Log: letztes Segment abschliessen
     if (CONF["TimeLog"])
         try DllCall("Wtsapi32\WTSUnRegisterSessionNotification", "Ptr", A_ScriptHwnd)
@@ -3593,6 +4171,10 @@ OnExitCleanup(*) {
         DllCall("UnhookWinEvent", "Ptr", gWinEventHook)
     if (gWinEventCb)
         CallbackFree(gWinEventCb)
+    if (gDragHook)
+        DllCall("UnhookWinEvent", "Ptr", gDragHook)
+    if (gDragCb)
+        CallbackFree(gDragCb)
     if (VDA)
         DllCall("FreeLibrary", "Ptr", VDA)
 }

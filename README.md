@@ -53,6 +53,10 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Dynamic:** add or remove a desktop in Windows → the bar adapts automatically within ~1.2 s (or via Tray → "Rebuild bar").
 - **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via *More settings › Jump directly instead of stepping through*.
 - **Unexpected switches are flagged:** when another app pulls you to a different desktop (say, a PDF opens in a reader that lives elsewhere), the new tab flashes orange and keeps a frame until you hover it, and a hint tells you which app is now in front. Your own switches (tabs, wheel, number keys, Ctrl+Win+Arrow, Task View) stay quiet.
+- **Send windows to another desktop:** right-click a tab and choose *Move “…” here* to send the window you are working in to that desktop, or press Ctrl+Win+Shift+1 … 0 (with the keyboard shortcuts on). Quickest: **Shift + click** a tab; **Ctrl + Shift + click** takes the window along and switches there too. *Bring a window here ›* lists every window of your current desktop. Or simply drag a window by its title bar onto a tab and let go: it moves there and keeps its size and position. You stay where you are.
+- **Show a window on all desktops:** right-click the grip ≡ and tick *Show “…” on all desktops* (or *All windows of “…” on all desktops* for the whole app), or drag the window by its title bar onto ≡. Drag it onto ≡ again, or onto a tab, and it lives on one desktop only again. DeskTabs respects the Windows setting: a window shown on all desktops that you move to a tab loses that setting openly (the tip says so); an app set to all desktops is left untouched.
+- **Back to the last desktop:** middle-click the bar or press Ctrl+Win+Backspace to return to the desktop you last worked on (quick pass-throughs don't count).
+- **Attention dot:** when an app on another desktop flashes for attention, its tab gets a small orange dot until you go there.
 - **Visible on all desktops:** the window is pinned to every desktop.
 - **Light/Dark automatic:** follows the Windows theme (taskbar brightness), switchable or fixed.
 - **Index prefix:** "3 · ProjectName" (can be disabled).
@@ -207,6 +211,8 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ShowDividers` | 0 | Thin separators between the tabs. |
 | `Hotkeys` | 0 | 1 = register the number-key shortcuts for jumping to a desktop. |
 | `SwitchAlert` | 1 | Flag desktop switches that other apps cause (the new tab flashes orange, then keeps an orange frame until you hover it, plus a short hint). Also under *More settings*. |
+| `AttentionDot` | 1 | Orange dot on a tab when an app on that desktop flashes for attention. Also under *More settings*. |
+| `DragToTab` | 1 | Dragging a window by its title bar onto a tab moves it to that desktop, onto the grip ≡ shows it on all desktops. Also under *More settings*. |
 | `HotkeyMod` | `^#` | Modifier for those shortcuts, in AutoHotkey notation: `^#` Ctrl+Win, `^!` Ctrl+Alt, `#!` Win+Alt, `^+` Ctrl+Shift. |
 | `SwitchMethod` | `dll` | `dll` = jump straight to the desktop, `native` = emulate `Win+Ctrl+Arrow` step by step. |
 | `Language` | `auto` | UI language: `auto` follows the Windows display language (German → `de`, everything else → `en`), or `de` / `en` fixed. Any other code loads `lang\<code>.ini`. Can also be set in `settings.ini` `[View] Language=`. Takes effect on restart. |
