@@ -51,7 +51,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 
 - **Live-Namen aus Windows:** die Button-Beschriftung kommt direkt aus den in Windows benannten Desktops (Task-Ansicht). Nichts wird doppelt gepflegt.
 - **Dynamisch:** Desktop hinzufügen/entfernen in Windows → die Leiste passt sich innerhalb ~1,2 s automatisch an (oder Tray → „Leiste neu aufbauen").
-- **Desktops direkt in der Leiste anlegen, umbenennen, entfernen:** *Neuer Desktop…* im Griff-Menü ≡ (fragt nach dem Namen und wechselt hin), *Umbenennen…* und *Desktop entfernen…* im Menü eines Tabs. Entfernen fragt vorher und sagt, wie viele Fenster auf welchen Desktop wandern, denn Windows schließt keins davon. Farbe, Symbol, Kürzel und Kompakt-Einstellung ziehen beim Umbenennen mit, hier wie in der Windows-Aufgabenansicht (DeskTabs erkennt jeden Desktop an seiner Windows-Kennung).
+- **Desktops direkt in der Leiste anlegen, umbenennen, entfernen und umsortieren:** *Neuer Desktop…* im Griff-Menü ≡ (fragt nach dem Namen und wechselt hin), *Umbenennen…* und *Desktop entfernen…* im Menü eines Tabs. Zum Umsortieren **einen Tab seitlich ziehen**, wie einen Browser-Tab: Die anderen Tabs gleiten beim Ziehen zur Seite, und Windows übernimmt die neue Reihenfolge (auch in der Aufgabenansicht). Ein einfacher Klick wechselt weiterhin, Umschalt + Klick schickt weiterhin das aktive Fenster. Entfernen fragt vorher und sagt, wie viele Fenster auf welchen Desktop wandern, denn Windows schließt keins davon. Farbe, Symbol, Kürzel und Kompakt-Einstellung ziehen beim Umbenennen mit, hier wie in der Windows-Aufgabenansicht (DeskTabs erkennt jeden Desktop an seiner Windows-Kennung).
 - **Direktsprung:** Ein Klick springt in einem Schritt zum Ziel-Desktop (~100 ms), ohne die Desktops dazwischen durchzuschalten. Auf 25H2 (26200) gemessen: Das fokussierte Fenster bleibt liegen; nimmt ein Build es doch mit, schiebt DeskTabs es sofort zurück. Der schrittweise Wechsel (`Win+Strg+Pfeil`) bleibt über *Weitere Einstellungen › Direkt springen statt durchblättern* verfügbar.
 - **Ungewollte Wechsel werden gemeldet:** Zieht ein anderes Programm Dich auf einen anderen Desktop (etwa eine PDF, deren Reader woanders offen ist), blinkt der neue Tab orange und behält einen Rahmen, bis Du mit der Maus darüberfährst; ein Hinweis nennt das Programm im Vordergrund. Eigene Wechsel (Tabs, Mausrad, Zifferntasten, Strg+Win+Pfeil, Task-Ansicht) bleiben still.
 - **Fenster auf einen anderen Desktop schicken:** Rechtsklick auf einen Tab, *„…“ hierher verschieben*, schickt das Fenster, an dem Du gerade arbeitest, auf diesen Desktop; alternativ Strg+Win+Umschalt+1 … 0 (bei eingeschalteten Tastenkürzeln). Am schnellsten: **Umschalt + Klick** auf einen Tab; **Strg + Umschalt + Klick** nimmt das Fenster mit und wechselt gleich dorthin. *Fenster hierher holen ›* listet alle Fenster Deines aktuellen Desktops. Oder Du ziehst ein Fenster an der Titelleiste auf einen Tab und lässt los: Es wandert dorthin und behält Größe und Position. Du selbst bleibst, wo Du bist.
@@ -121,7 +121,7 @@ Andere Werkzeuge decken Teile davon ab: Tastenkürzel-Skripte zum Wechseln, Tray
 
 - **Windows 11:** entwickelt und getestet auf **25H2 (Build 26200)**. Funktioniert ab 24H2 (26100).
 - **AutoHotkey v2** (getestet mit 2.0.29), Standardpfad `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
-- **VirtualDesktopAccessor.dll** (liegt im Repo bei), von [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), Release `2024-12-16-windows11`.
+- **VirtualDesktopAccessor.dll** (liegt im Repo bei), gebaut aus dem Quellcode von [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), Stand Commit `7ff9ef8` (Oktober 2026), mit einem zusätzlichen Export `MoveDesktop` (siehe [`vda/`](vda/move_desktop.rs) und den Workflow [`build-dll.yml`](.github/workflows/build-dll.yml)).
 
 ---
 
@@ -300,14 +300,13 @@ start,end,seconds,desktop_index,desktop_name
 - **Platz auf der Taskleiste:** Die Leiste kämpft mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). Bis v1.1.4 gab es `DockMode=above`, das die Leiste knapp über der Taskleiste parkte: flackerfrei, lag aber über der Unterkante jedes Fensters (Statuszeilen, Bildlaufleisten, Eingabefelder) und war damit im Alltag unbrauchbar; in v1.1.5 entfernt. Ein altes `DockMode=above` in der `settings.ini` wird beim Start gelöscht, die Leiste kehrt auf die Taskleiste zurück.
 - **Multi-Monitor:** Die Leiste sitzt immer auf der **Primär-Taskleiste** (`Shell_TrayWnd`) und folgt automatisch, wenn sich der Primärmonitor in Windows ändert. Sekundäre Taskleisten (`Shell_SecondaryTrayWnd`) werden nicht bespielt.
 - **Einstellungen am Namen, erkannt an der Kennung:** Die `settings.ini` führt Einstellungen je Desktop unter dem lesbaren Namen. `[Ids]` merkt sich je Desktop-GUID den zuletzt gesehenen Namen (`GetDesktopIdByNumber`); ändert sich der Name, zieht `SyncDesktopIds()` `[Colors]`, `[Icons]`, `[Short]` und `[Compact]` auf den neuen Namen um. Windows-Ersatznamen („Desktop 3“) gelten nicht als Namen, Umsortieren unbenannter Desktops verschiebt also nichts.
-- **DLL-Funktionsumfang:** `VirtualDesktopAccessor.dll` bietet KEINE Funktion zum Umsortieren von Desktops (geprüfte Exports u.a. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook`, aber kein `MoveDesktop`). Fürs Umsortieren müsste [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop) her.
+- **Desktops umsortieren:** Das offizielle DLL-Release (`2024-12-16-windows11`) kann es nicht. Die zugrunde liegende Bibliothek `winvd` hat `move_desktop` seit Oktober 2026 (PR #114), die DLL reichte es aber nicht nach außen. Deshalb baut DeskTabs die DLL aus diesem Quellcode selbst, mit dem zusätzlichen Export `MoveDesktop(desktop, neuerIndex)`. `CanMoveDesktop()` prüft den Export; mit einer von Hand eingesetzten offiziellen DLL ist das Umsortieren per Ziehen einfach aus.
 
 ---
 
 ## Ideen für die Zukunft
 
 - **Rest-Flackern auf der Taskleiste final lösen:** dauerhaft auf der Taskleiste ohne Zucken beim Fensterwechsel. Ansätze: zusätzliche WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), dichterer Burst, oder die Leiste als Kind der Taskleiste (`SetParent`).
-- **Drag-to-Reorder** der Buttons mit echter Windows-Umsortierung über [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
 ---
 
@@ -335,7 +334,7 @@ Für die Nutzung von DeskTabs, auch im Beruf, ändert sich dadurch nichts. Versi
 
 ### Drittkomponenten
 
-- **VirtualDesktopAccessor.dll** ([Ciantic](https://github.com/Ciantic/VirtualDesktopAccessor)) ist unter der **MIT-Lizenz** beigelegt.
+- **VirtualDesktopAccessor.dll** ([Ciantic](https://github.com/Ciantic/VirtualDesktopAccessor)) ist unter der **MIT-Lizenz** beigelegt, aus dem Quellcode gebaut mit einem zusätzlichen Export (`MoveDesktop`).
 - Die kompilierte **`DeskTabs.exe`** (in den Releases) bettet den **AutoHotkey**-Interpreter ein, der unter **GPL-2.0** steht. Die kompilierte exe wird daher unter GPL-2.0 verteilt; der Skript-Quellcode liegt in diesem Repo, der AutoHotkey-Quellcode auf der [Projektseite](https://github.com/AutoHotkey/AutoHotkey). Beim Start aus dem Quellcode (`DeskTabs.ahk`) wird AutoHotkey nicht mitgeliefert.
 
 Vollständige Hinweise: [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).

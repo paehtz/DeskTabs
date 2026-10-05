@@ -51,7 +51,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 
 - **Live names from Windows:** the button labels come straight from the desktops you named in Windows (Task View). Nothing is maintained twice.
 - **Dynamic:** add or remove a desktop in Windows → the bar adapts automatically within ~1.2 s (or via Tray → "Rebuild bar").
-- **Create, rename, remove desktops right from the bar:** *New desktop…* in the grip menu ≡ (asks for the name and switches there), *Rename…* and *Remove desktop…* in a tab's menu. Removing asks first and says how many windows move to which desktop, because Windows closes none of them. Colour, icon, abbreviation and the compact setting follow a desktop when you rename it, here or in Windows Task View (DeskTabs recognises each desktop by its Windows ID).
+- **Create, rename, remove and reorder desktops right from the bar:** *New desktop…* in the grip menu ≡ (asks for the name and switches there), *Rename…* and *Remove desktop…* in a tab's menu. To reorder, **drag a tab sideways** like a browser tab: the other tabs glide aside while you drag, and Windows (Task View included) takes over the new order. A plain click still switches, Shift + click still sends the active window. Removing asks first and says how many windows move to which desktop, because Windows closes none of them. Colour, icon, abbreviation and the compact setting follow a desktop when you rename it, here or in Windows Task View (DeskTabs recognises each desktop by its Windows ID).
 - **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via *More settings › Jump directly instead of stepping through*.
 - **Unexpected switches are flagged:** when another app pulls you to a different desktop (say, a PDF opens in a reader that lives elsewhere), the new tab flashes orange and keeps a frame until you hover it, and a hint tells you which app is now in front. Your own switches (tabs, wheel, number keys, Ctrl+Win+Arrow, Task View) stay quiet.
 - **Send windows to another desktop:** right-click a tab and choose *Move “…” here* to send the window you are working in to that desktop, or press Ctrl+Win+Shift+1 … 0 (with the keyboard shortcuts on). Quickest: **Shift + click** a tab; **Ctrl + Shift + click** takes the window along and switches there too. *Bring a window here ›* lists every window of your current desktop. Or simply drag a window by its title bar onto a tab and let go: it moves there and keeps its size and position. You stay where you are.
@@ -121,7 +121,7 @@ Other tools cover parts of this: hotkey scripts for switching, tray icons that s
 
 - **Windows 11:** developed and tested on **25H2 (build 26200)**. Works from 24H2 (26100).
 - **AutoHotkey v2** (tested with 2.0.29), default path `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
-- **VirtualDesktopAccessor.dll** (bundled in this repo), from [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), release `2024-12-16-windows11`.
+- **VirtualDesktopAccessor.dll** (bundled in this repo), built from the source of [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor) at commit `7ff9ef8` (October 2026) with one added export, `MoveDesktop` (see [`vda/`](vda/move_desktop.rs) and the workflow [`build-dll.yml`](.github/workflows/build-dll.yml)).
 
 ---
 
@@ -300,14 +300,13 @@ start,end,seconds,desktop_index,desktop_name
 - **Sitting on the taskbar:** the bar fights the taskbar over z-order (a brief flicker on window switch despite the WinEvent hook + burst). Up to v1.1.4 there was a `DockMode=above` that parked the bar just above the taskbar instead: flicker-free, but it covered the bottom edge of every window (status bars, scroll bars, input fields), so it was useless in daily work and was removed in v1.1.5. An old `DockMode=above` in `settings.ini` is cleared on start and the bar returns to the taskbar.
 - **Multi-monitor:** the bar always sits on the **primary taskbar** (`Shell_TrayWnd`) and follows automatically when the primary monitor changes in Windows. Secondary taskbars (`Shell_SecondaryTrayWnd`) are not served.
 - **Settings by name, recognised by ID:** `settings.ini` keys per-desktop settings by the readable desktop name. `[Ids]` remembers the last name seen for each desktop GUID (`GetDesktopIdByNumber`); when a name changes, `SyncDesktopIds()` moves `[Colors]`, `[Icons]`, `[Short]` and `[Compact]` to the new name. Windows' fallback names ("Desktop 3") are not treated as names, so reordering unnamed desktops moves nothing.
-- **DLL feature scope:** `VirtualDesktopAccessor.dll` offers NO function to reorder desktops (exports checked, incl. `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `GoToDesktopNumber`, `MoveWindowToDesktopNumber`, `PinWindow`, `RegisterPostMessageHook`, but no `MoveDesktop`). Reordering would require [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
+- **Reordering desktops:** the official DLL release (`2024-12-16-windows11`) has no function for it. The underlying `winvd` crate gained `move_desktop` in October 2026 (PR #114), but the DLL did not export it, so DeskTabs builds the DLL itself from that source with one extra export, `MoveDesktop(desktop, newIndex)`. `CanMoveDesktop()` checks for the export, so an official DLL dropped in by hand simply disables reordering by drag.
 
 ---
 
 ## Ideas for the future
 
 - **Finally solve the residual flicker on the taskbar:** stay permanently on the taskbar without the twitch on window switch. Approaches: additional WinEvents (`EVENT_OBJECT_REORDER`, `EVENT_SYSTEM_MINIMIZEEND`), a denser burst, or making the bar a child of the taskbar (`SetParent`).
-- **Drag-to-reorder** the buttons with real Windows reordering via [MScholtes/VirtualDesktop](https://github.com/MScholtes/VirtualDesktop).
 
 ---
 
@@ -335,7 +334,7 @@ Using DeskTabs, also at work, is not affected by any of this. Versions up to and
 
 ### Third-party components
 
-- **VirtualDesktopAccessor.dll** ([Ciantic](https://github.com/Ciantic/VirtualDesktopAccessor)) is bundled under the **MIT License**.
+- **VirtualDesktopAccessor.dll** ([Ciantic](https://github.com/Ciantic/VirtualDesktopAccessor)) is bundled under the **MIT License**, built from its source with one added export (`MoveDesktop`).
 - The compiled **`DeskTabs.exe`** (in the releases) embeds the **AutoHotkey** interpreter, which is licensed under **GPL-2.0 or later**. The compiled executable as a whole is distributed under GPL v3; the script source is in this repository and AutoHotkey's source is at its [project page](https://github.com/AutoHotkey/AutoHotkey). Running from source (`DeskTabs.ahk`) does not bundle AutoHotkey.
 
 Full notices: [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).

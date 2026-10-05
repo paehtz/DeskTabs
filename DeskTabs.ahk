@@ -748,7 +748,9 @@ global gAlertNum := -1, gAlertPhase := 0, gPrevCount := 0  ; Hinweis auf fremden
 global gAttention := Map(), gShellMsg := 0  ; Desktops mit blinkendem Programm (Punkt am Tab)
 global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
-global gPadX := 18           ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
+global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
+global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
+global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
 global gHoverTipNum := -1    ; Tab, dessen voller Name gerade als Kurzinfo ansteht/erscheint
 global gDragCb := 0, gDragHook := 0, gDragHwnd := 0, gDragPlace := 0, gDragPin := 0, gDragTipNum := -1   ; Fenster auf Tab ziehen
 global gLastDesk := -1, gDeskSince := A_TickCount   ; zuletzt genutzter Desktop (fuer "zurueck")
@@ -760,6 +762,7 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.hotkeys.shiftdrag", "Tab seitlich ziehen: Desktops umsortieren (wie Browser-Tabs)",
     "menu.newdesk", "Neuer Desktop…",
     "prompt.newdesk.title", "Neuer Desktop",
     "prompt.newdesk.text", "Name des neuen Desktops (leer lassen: Windows vergibt „Desktop N“):",
@@ -932,6 +935,7 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.hotkeys.shiftdrag", "Drag a tab sideways: reorder desktops (like browser tabs)",
     "menu.newdesk", "New desktop…",
     "prompt.newdesk.title", "New desktop",
     "prompt.newdesk.text", "Name of the new desktop (leave empty and Windows calls it “Desktop N”):",
@@ -1667,7 +1671,7 @@ SetGlyphIcon(num, code, g, closeFn := 0, *) {
 ; settings.ini steht nichts, jede eigene Zuweisung sticht das hier sofort aus.
 DefaultGlyph(num) {
     static set := StrSplit("E7F4 E838 E715 E787 E9D2 E90F E8F1 E77B E912 E774 E8EF E8AE", " ")
-    return "glyph:" set[Mod(num, set.Length) + 1]
+    return "glyph:" set[Mod(DeskOrdinal(num), set.Length) + 1]
 }
 
 IconsDir() => A_ScriptDir "\icons"
@@ -2486,6 +2490,10 @@ FillSettingsMenu(m) {
     km.Disable(T("menu.hotkeys.shiftclick"))
     km.Add(T("menu.hotkeys.ctrlshiftclick"), (*) => 0)
     km.Disable(T("menu.hotkeys.ctrlshiftclick"))
+    if (CanMoveDesktop()) {
+        km.Add(T("menu.hotkeys.shiftdrag"), (*) => 0)
+        km.Disable(T("menu.hotkeys.shiftdrag"))
+    }
     km.Add(T("menu.hotkeys.back", modTxt " + " T("key.backspace")), (*) => 0)
     km.Disable(T("menu.hotkeys.back", modTxt " + " T("key.backspace")))
     hkHead := T("menu.hotkeys") ": " (CONF["Hotkeys"] ? HotkeyLabel(CONF["HotkeyMod"]) : T("menu.hotkeys.off"))
@@ -2930,7 +2938,42 @@ MoveDesktopSettings(oldName, newName) {
         IniDelLoose(sec, oldName)
     }
 }
+; Feste laufende Nummer eines Desktops: seine Stelle in [Ids] (Reihenfolge, in der DeskTabs
+; die Desktops kennengelernt hat). Palette und Vorschlags-Symbole haengen daran, damit ein
+; Desktop beim Umsortieren seine Farbe behaelt. Ohne Eintrag: die Position.
+DeskOrdinal(num) {
+    global gOrdCache
+    if (gOrdCache.Has(num))
+        return gOrdCache[num]
+    ord := num, id := DesktopGuid(num)
+    if (id != "") {
+        for i, gid in IdsInFileOrder() {
+            if (gid = id) {
+                ord := i - 1
+                break
+            }
+        }
+    }
+    gOrdCache[num] := ord
+    return ord
+}
+; Schluessel von [Ids] in der Reihenfolge der Datei (eine Map wuerde sie sortieren)
+IdsInFileOrder() {
+    out := [], inSec := false
+    Loop Parse, ReadIniText(), "`n", "`r" {
+        line := Trim(A_LoopField)
+        if (SubStr(line, 1, 1) = "[") {
+            inSec := (Trim(line, "[]") = "Ids")
+            continue
+        }
+        if (inSec && (eq := InStr(line, "=")) > 1)
+            out.Push(Trim(SubStr(line, 1, eq - 1)))
+    }
+    return out
+}
 SyncDesktopIds() {
+    global gOrdCache
+    gOrdCache := Map()
     ids := ReadIniSection("Ids")
     Loop GetDesktopCount() {
         num := A_Index - 1
@@ -3040,7 +3083,7 @@ DesktopColor(num) {
     if (ov != "")
         return Integer("0x" StrReplace(ov, "0x", ""))
     pal := CONF["Palette"]
-    return pal[Mod(num, pal.Length) + 1]
+    return pal[Mod(DeskOrdinal(num), pal.Length) + 1]     ; am Desktop, nicht an der Position
 }
 
 px(v) => Round(v * SCALE)     ; logische px -> physische px
@@ -3083,7 +3126,8 @@ BuildBar() {
 }
 
 BuildBarAt() {
-    global MyGui, BTNS, GUIW, GUIH, gTaskbarW, gLayout
+    global MyGui, BTNS, GUIW, GUIH, gTaskbarW, gLayout, gOrdCache
+    gOrdCache := Map()
     if (MyGui) {
         try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
         try MyGui.Destroy()
@@ -3550,7 +3594,8 @@ RenderBar(force := false) {
     global gAlertNum, gAlertPhase, gAttention, gDragTipNum, gDragHwnd, gConfirmNum, gConfirmPhase
     if (!MyGui || !gLayout)
         return
-    sig := gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
+    global gReorderFrom
+    sig := gReorderFrom "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
@@ -3583,7 +3628,7 @@ RenderBar(force := false) {
 
     style := CONF["ActiveStyle"]
     grad := CONF["GradientPct"]
-    for item in BTNS {
+    for item in RenderOrder() {
         x := item["x"], w := item["w"]
         col := DesktopColor(item["num"])
         active := (item["num"] = gCurrent)
@@ -3688,12 +3733,15 @@ RenderBar(force := false) {
             StrokeRoundRect(g, x, y, w, h, r, ARGB(0xF5A524), Max(2, px(2)))
         }
         ; optionaler Trennstrich in der Luecke danach
-        if (CONF["ShowDividers"] && A_Index < BTNS.Length) {
+        if (CONF["ShowDividers"] && A_Index < BTNS.Length && gReorderFrom < 0) {
             dw := Max(1, px(1)), divH := h - 2 * px(CONF["DividerInsetY"])
             if (divH < px(8))
                 divH := h
             FillRoundRect(g, x + w + (L["gap"] - dw) / 2, y + (h - divH) / 2, dw, divH, 0, ARGB(CONF["ColDivider"]))
         }
+        ; Umsortieren: der gegriffene Tab haengt obenauf an der Maus, mit Rahmen in der Akzentfarbe
+        if (item["num"] = gReorderFrom)
+            StrokeRoundRect(g, x, y, w, h, r, ARGB(CONF["ColActiveBg"]), Max(2, px(2)))
     }
     hbm := 0
     DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", "Ptr", pBmp, "Ptr*", &hbm, "UInt", ARGB(bg))
@@ -3908,8 +3956,8 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
     global MyGui, GUIW, GUIH, gLayout
     if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
         return
-    if (BarMouseX() >= gLayout["gripW"])   ; nur der Griff zieht
-        return
+    if (BarMouseX() >= gLayout["gripW"])     ; nur der Griff zieht die Leiste; ein Tab wird - wie
+        return ReorderDrag()                 ; ein Browser-Tab - beim Ziehen umsortiert, ein Klick bleibt ein Klick
     CoordMode("Mouse", "Screen")
     MouseGetPos(&sx, &sy)
     wx := 0, wy := 0, ww := 0, wh := 0
@@ -3950,10 +3998,135 @@ SavePosDeferred() {
 
 ; ---------------------------- Hervorhebung ----------------------------------
 ; Tab-Klick (beim Loslassen, wie ein Button)
+; Desktops umsortieren wie Browser-Tabs: Tab greifen und seitlich ziehen. Erst ab ein paar
+; Pixeln Weg gilt es als Ziehen - ein Klick (auch Umschalt+Klick) bleibt ein Klick.
+; Braucht die selbst gebaute DLL mit dem Export MoveDesktop (siehe vda\move_desktop.rs).
+ReorderDrag() {
+    global BTNS, gLayout, gReorderFrom, gSkipUpUntil, MyGui
+    item := ItemAtX(BarMouseX())
+    if (!item || !CanMoveDesktop())
+        return
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&sx)
+    wx := 0
+    MyGui.GetPos(&wx)
+    grab := (sx - wx) - item["x"]                  ; wo im Tab gegriffen wurde
+    gap := gLayout["gap"], x0 := BTNS[1]["x"]
+    last := BTNS[BTNS.Length], xEnd := last["x"] + last["w"]
+    for it in BTNS
+        it["x0"] := it["x"]
+    dragging := false, target := item["num"]
+    while GetKeyState("LButton", "P") {
+        MouseGetPos(&mx)
+        if (!dragging && Abs(mx - sx) > px(6)) {
+            dragging := true
+            gReorderFrom := item["num"], item["hover"] := true
+            ToolTip(, , , 4)
+        }
+        if (dragging) {
+            ; Das Loslassen kommt als WM_LBUTTONUP oft an, bevor diese Schleife es merkt - und
+            ; wurde dann als Klick verarbeitet (Umschalt+Klick schickte das aktive Fenster weg,
+            ; ein Klick wechselte den Desktop). Deshalb ab jetzt jeden Klick verschlucken.
+            gSkipUpUntil := A_TickCount + 600
+            ; der gegriffene Tab haengt an der Maus, die anderen gleiten zur Seite
+            item["x"] := Max(x0, Min((mx - wx) - grab, xEnd - item["w"]))
+            target := ReorderSlots(item, x0, gap)
+            for it in BTNS
+                if (it != item)
+                    it["x"] := Glide(it["x"], it["tx"])
+            RenderBar(true)
+        }
+        Sleep(15)
+    }
+    if (!dragging)
+        return                                       ; nur geklickt: OnLButtonUp entscheidet wie immer
+    gSkipUpUntil := A_TickCount + 600                ; das WM_LBUTTONUP gehoert zum Ziehen
+    ReorderSlots(item, x0, gap)
+    Loop 10 {                                        ; beim Loslassen in die Luecke gleiten
+        for it in BTNS
+            it["x"] := Glide(it["x"], it["tx"])
+        RenderBar(true)
+        Sleep(15)
+    }
+    from := gReorderFrom
+    gReorderFrom := -1
+    if (target != from) {
+        VD("MoveDesktop", "Int", from, "Int", target, "Int")
+        SyncDesktopIds()
+        RebuildAll()
+        StartConfirmBlink(target)
+    } else {
+        for it in BTNS
+            it["x"] := it["x0"]
+        RenderBar(true)
+    }
+    return 0
+}
+; weiches Annaehern: pro Schritt gut ein Drittel des Restwegs
+Glide(cur, to) => (Abs(to - cur) < 1) ? to : cur + (to - cur) * 0.35
+; Zielplatz des gezogenen Tabs (0-basiert) und die Gleit-Ziele (tx) aller Tabs
+ReorderSlots(drag, x0, gap) {
+    global BTNS
+    others := []
+    for it in BTNS
+        if (it != drag)
+            others.Push(it)
+    ; Ziel wie bei Browser-Tabs: es zaehlt die Kante in Zugrichtung. Ein Nachbar rechts weicht
+    ; nach links aus, sobald die rechte Kante des gezogenen Tabs seine Mitte (an seinem
+    ; Ausgangsplatz) ueberquert; ein Nachbar links entsprechend mit der linken Kante.
+    ; (Vorher: Mitte gegen Mitte - bei breiten Tabs sprangen schmale Nachbarn zu frueh
+    ; unter den gezogenen, bei schmalen kam das Ausweichen zu spaet.)
+    L := drag["x"], R := drag["x"] + drag["w"], t := 0
+    for it in others {
+        c := it["x0"] + it["w"] / 2
+        if (it["num"] < drag["num"] ? (L > c) : (R > c))
+            t += 1
+    }
+    ; Gleit-Ziele: dicht gepackt, mit einer Luecke fuer den gezogenen an Stelle t
+    x := x0
+    for i, it in others {
+        if (i - 1 = t)
+            drag["tx"] := x, x += drag["w"] + gap
+        it["tx"] := x, x += it["w"] + gap
+    }
+    if (t = others.Length)
+        drag["tx"] := x
+    return t
+}
+; Zeichenreihenfolge: beim Umsortieren kommt der gezogene Tab zuletzt, also obenauf
+RenderOrder() {
+    global BTNS, gReorderFrom
+    if (gReorderFrom < 0)
+        return BTNS
+    out := [], top := 0
+    for it in BTNS {
+        if (it["num"] = gReorderFrom)
+            top := it
+        else
+            out.Push(it)
+    }
+    if (top)
+        out.Push(top)
+    return out
+}
+; Kann die geladene DLL Desktops verschieben? (die offizielle exportiert MoveDesktop nicht)
+CanMoveDesktop() {
+    static ok := ""
+    if (ok = "") {
+        h := DllCall("GetModuleHandle", "Str", "VirtualDesktopAccessor", "Ptr")
+        ok := (h && DllCall("GetProcAddress", "Ptr", h, "AStr", "MoveDesktop", "Ptr")) ? 1 : 0
+    }
+    return ok
+}
+
 OnLButtonUp(wParam, lParam, msg, hwnd) {
-    global MyGui
+    global MyGui, gSkipUpUntil, gReorderFrom
     if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
         return
+    if (gReorderFrom >= 0 || A_TickCount < gSkipUpUntil) {   ; Ende eines Umsortier-Ziehens, kein Klick
+        gSkipUpUntil := 0
+        return 0
+    }
     item := ItemAtX(BarMouseX())
     if (item && GetKeyState("Shift") && item["num"] != GetCurrentDesktop()) {
         if (GetKeyState("Ctrl")) {
@@ -3991,6 +4164,9 @@ HoverTick() {
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
     if (gDragHwnd)                  ; beim Ziehen eines Fensters uebernimmt DragTipTick
+        return
+    global gReorderFrom
+    if (gReorderFrom >= 0)          ; beim Umsortieren steuert ReorderDrag die Darstellung
         return
     lx := BarMouseX()
     over := ItemAtX(lx)
