@@ -64,6 +64,7 @@ global CONF := Map(
     "ShowIndex",      0,       ; 1 = Nummer vor dem Namen ("3 · Acme Bakery")
     "ColorCoding",    1,       ; 1 = farbiger Akzentbalken pro Desktop unten am Button
     "AccentBarH",     3,       ; Hoehe des Farbbalkens (px @100%)
+    "TabShape",       "tabs",  ; Form: "tabs" = freistehende Tabs | "register" = aktiver Tab haengt an einer farbigen Kante ueber die ganze Taskleiste
     "ActiveStyle",    "desktop", ; aktiver Tab: "desktop" = eigene Desktop-Farbe, getoent | "accent" = Windows-Akzentfarbe, getoent | "solid" = kraeftig gefuellt
     "TintL",          86,      ; Helligkeit (%) des getoenten aktiven Tabs - Farbton bleibt, nur heller (je Theme ueberschrieben)
     "TintS",          100,     ; Anteil (%) der Original-Saettigung im getoenten Tab
@@ -274,6 +275,9 @@ OnShellHook(wParam, lParam, msg, hwnd) {
     global gAttention, gCurrent
     if (!CONF["AttentionDot"] || wParam != 0x8006)      ; HSHELL_FLASH
         return
+    global gSelfTick
+    if (A_TickCount - gSelfTick < 2000)   ; Blinken direkt nach einem eigenen Wechsel ist Windows'
+        return                            ; Fokus-Gerangel (siehe FocusTopWindow), kein echter Ruf
     desk := -1
     try desk := VD("GetWindowDesktopNumber", "Ptr", lParam, "Int")
     if (desk >= 0 && desk != gCurrent && !gAttention.Has(desk)) {
@@ -749,6 +753,7 @@ global gAttention := Map(), gShellMsg := 0  ; Desktops mit blinkendem Programm (
 global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
+global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
 global gHoverTipNum := -1    ; Tab, dessen voller Name gerade als Kurzinfo ansteht/erscheint
@@ -762,6 +767,9 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.shape", "Form:",
+    "menu.shape.tabs", "Tabs",
+    "menu.shape.register", "Register (Tab hängt an der Taskleiste)",
     "menu.hotkeys.shiftdrag", "Tab seitlich ziehen: Desktops umsortieren (wie Browser-Tabs)",
     "menu.newdesk", "Neuer Desktop…",
     "prompt.newdesk.title", "Neuer Desktop",
@@ -935,6 +943,9 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.shape", "Shape:",
+    "menu.shape.tabs", "Tabs",
+    "menu.shape.register", "Register (tab hangs from the taskbar)",
     "menu.hotkeys.shiftdrag", "Drag a tab sideways: reorder desktops (like browser tabs)",
     "menu.newdesk", "New desktop…",
     "prompt.newdesk.title", "New desktop",
@@ -1224,7 +1235,7 @@ ApplyIniOverrides() {
         IniDel("Position", "Y")
     }
     for key, allowed in Map("CompactMode", "auto,full,short,icon,big,bigtext", "ThemeMode", "auto,light,dark"
-                          , "Language", "*", "ActiveStyle", "desktop,accent,soliddesk,solid"
+                          , "Language", "*", "ActiveStyle", "desktop,accent,soliddesk,solid", "TabShape", "tabs,register"
                           , "SwitchMethod", "native,dll", "NumberBadge", "auto,on,off") {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v != "" && (allowed = "*" || InStr("," allowed ",", "," v ",")))
@@ -2449,6 +2460,14 @@ FillSettingsMenu(m) {
             am.Check(it[2])
     }
     am.Add()
+    am.Add(T("menu.shape"), (*) => 0)
+    am.Disable(T("menu.shape"))
+    for , it in [["tabs", T("menu.shape.tabs")], ["register", T("menu.shape.register")]] {
+        am.Add(it[2], SetViewStr.Bind("TabShape", it[1]))
+        if (CONF["TabShape"] = it[1])
+            am.Check(it[2])
+    }
+    am.Add()
     am.Add(T("menu.activebold"), ToggleView.Bind("ActiveBold"))
     if (CONF["ActiveBold"])
         am.Check(T("menu.activebold"))
@@ -3227,6 +3246,7 @@ BuildBarAt() {
     OnMessage(0x0014, OnEraseBkgnd)   ; WM_ERASEBKGND
     RenderBar(true)
     MyGui.Show(Format("x{1} y{2} w{3} h{4} NoActivate", posX, posY, GUIW, GUIH))
+    UpdateStripe()
 
     ; Maus: Ziehen am Griff (LBUTTONDOWN), Tab-Klick (LBUTTONUP)
     OnMessage(0x0201, OnLButtonDown)  ; WM_LBUTTONDOWN
@@ -3595,14 +3615,15 @@ RenderBar(force := false) {
     if (!MyGui || !gLayout)
         return
     global gReorderFrom
-    sig := gReorderFrom "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
+    sig := gReorderFrom "|" RegisterOn() "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
         return
     gRenderSig := sig
     L := gLayout
-    W := GUIW, H := GUIH
+    W := GUIW, H := GUIH     ; Achtung: AHK-Namen sind case-insensitiv - die Tab-Schleife unten ueberschreibt
+                             ; W/H mit w/h des jeweiligen Tabs. Nach der Schleife GUIW/GUIH nehmen!
     pBmp := 0, g := 0
     DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", W, "Int", H, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &pBmp)
     DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", pBmp, "Ptr*", &g)
@@ -3628,6 +3649,7 @@ RenderBar(force := false) {
 
     style := CONF["ActiveStyle"]
     grad := CONF["GradientPct"]
+    reg := RegisterOn()
     for item in RenderOrder() {
         x := item["x"], w := item["w"]
         col := DesktopColor(item["num"])
@@ -3637,12 +3659,15 @@ RenderBar(force := false) {
         solid := (style = "solid" || style = "soliddesk")
         solidBg := (style = "soliddesk") ? col : CONF["ColActiveBg"]
         if (active) {
+            ; Register: der Tab reicht bis zur Oberkante (die oberen Ecken liegen ausserhalb
+            ; und werden abgeschnitten) und haengt so glatt an der farbigen Kante
+            ay := reg ? -r : y, ah := reg ? y + h + r : h
             if (solid) {
-                FillRoundRectGrad(g, x, y, w, h, r, ARGB(solidBg), grad)
+                FillRoundRectGrad(g, x, ay, w, ah, r, ARGB(solidBg), grad)
                 tx := (style = "soliddesk") ? ReadableOn(col) : CONF["ColActiveTx"]
             } else {
                 base := (style = "accent") ? CONF["ColActiveBg"] : col
-                FillRoundRectGrad(g, x, y, w, h, r, ARGB(TintFill(base)), grad)
+                FillRoundRectGrad(g, x, ay, w, ah, r, ARGB(TintFill(base)), grad)
             }
         } else if (item["hover"]) {
             ; wie der Windows-Taskleisten-Hover: der Tab wird HELLER, mit leichtem Verlauf
@@ -3743,6 +3768,8 @@ RenderBar(force := false) {
         if (item["num"] = gReorderFrom)
             StrokeRoundRect(g, x, y, w, h, r, ARGB(CONF["ColActiveBg"]), Max(2, px(2)))
     }
+    if (reg)                                       ; die Kante laeuft auch ueber die Leiste
+        FillRoundRect(g, 0, 0, GUIW, StripeH(), 0, ARGB(ActiveEdgeColor()))
     hbm := 0
     DllCall("gdiplus\GdipCreateHBITMAPFromBitmap", "Ptr", pBmp, "Ptr*", &hbm, "UInt", ARGB(bg))
     if (!gBarDC)
@@ -3756,7 +3783,7 @@ RenderBar(force := false) {
     ; Ziehen eines Fensters auf einen Tab) UND Windows neu zeichnen lassen - waehrend
     ; eines Desktop-Wechsels landet das direkte Zeichnen im Leeren, dann greift WM_PAINT.
     wdc := DllCall("GetDC", "Ptr", MyGui.Hwnd, "Ptr")
-    DllCall("BitBlt", "Ptr", wdc, "Int", 0, "Int", 0, "Int", W, "Int", H, "Ptr", gBarDC, "Int", 0, "Int", 0, "UInt", 0x00CC0020)
+    DllCall("BitBlt", "Ptr", wdc, "Int", 0, "Int", 0, "Int", GUIW, "Int", GUIH, "Ptr", gBarDC, "Int", 0, "Int", 0, "UInt", 0x00CC0020)
     DllCall("ReleaseDC", "Ptr", MyGui.Hwnd, "Ptr", wdc)
     DllCall("InvalidateRect", "Ptr", MyGui.Hwnd, "Ptr", 0, "Int", 0)   ; ohne Loeschen
     DllCall("UpdateWindow", "Ptr", MyGui.Hwnd)
@@ -3869,6 +3896,41 @@ SwitchToDesktop(target) {
     gSwitching := false
     gSelfTick := A_TickCount
     UpdateHighlight()
+    SetTimer(FocusTopWindow, -80)     ; kurz warten, bis Windows den Wechsel abgeschlossen hat
+}
+
+; Nach einem Wechsel das oberste Fenster des Ziel-Desktops nach vorne holen. Windows laesst
+; den Fokus sonst gern an einem unsichtbaren Fenster des alten Desktops haengen; Programme
+; mit Fenstern auf mehreren Desktops (Firefox, Chrome) versuchen dann nach vorne zu kommen,
+; werden abgewiesen und blinken - samt Taskleisten-Knopf auf fremden Desktops.
+FocusTopWindow() {
+    global MyGui, gStripe
+    fg := DllCall("GetForegroundWindow", "Ptr")
+    if (fg && (!MyGui || fg != MyGui.Hwnd)) {
+        onCur := 0
+        try onCur := VD("IsWindowOnCurrentVirtualDesktop", "Ptr", fg, "Int")
+        if (onCur = 1 && !VD("IsPinnedWindow", "Ptr", fg, "Int"))
+            return                        ; Fokus liegt schon auf einem Fenster dieses Desktops
+    }
+    for hwnd in WinGetList() {            ; Z-Reihenfolge, oberstes zuerst
+        if ((MyGui && hwnd = MyGui.Hwnd) || (gStripe && hwnd = gStripe.Hwnd))
+            continue
+        try {
+            if !(WinGetStyle("ahk_id " hwnd) & 0x10000000) || WinGetMinMax("ahk_id " hwnd) = -1
+                continue
+            ex := WinGetExStyle("ahk_id " hwnd)
+            if ((ex & 0x80) && !(ex & 0x40000)) || (ex & 0x08000000)     ; Werkzeug-/Nicht-aktivierbare Fenster
+                continue
+            if (DllCall("GetWindow", "Ptr", hwnd, "UInt", 4, "Ptr"))         ; Dialog mit Besitzer
+                continue
+            if (WinGetTitle("ahk_id " hwnd) = "" || InStr(",Shell_TrayWnd,Shell_SecondaryTrayWnd,Progman,WorkerW,", "," WinGetClass("ahk_id " hwnd) ","))
+                continue
+            if (VD("IsWindowOnCurrentVirtualDesktop", "Ptr", hwnd, "Int") != 1 || VD("IsPinnedWindow", "Ptr", hwnd, "Int") = 1)
+                continue
+            WinActivate("ahk_id " hwnd)
+            return
+        }
+    }
 }
 
 BtnClick(num, *) {
@@ -3985,6 +4047,8 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
         Sleep(10)
     }
     SavePosDeferred()
+    RenderBar(true)                  ; auf die Taskleiste gezogen oder davon weg: Register an/aus
+    UpdateStripe()
     return 0
 }
 
@@ -4214,6 +4278,7 @@ UpdateHighlight() {
     }
     LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
     RenderBar()
+    UpdateStripe()                   ; Register-Kante in der Farbe des neuen Desktops
 }
 
 ; Hover: Tab unter dem Mauszeiger leicht hervorheben
@@ -4283,6 +4348,7 @@ FullscreenTick() {
     if (fs && !gHidden) {
         gHidden := true
         MyGui.Hide()
+        UpdateStripe()
     } else if (!fs && gHidden) {
         gHidden := false
         MyGui.Show("NoActivate")
@@ -4346,12 +4412,87 @@ IsForegroundFullscreen() {
     return false
 }
 
+; ---------------- Register-Form: farbige Kante ueber der Taskleiste -----------------
+; Die aktive Taskleiste gehoert sichtbar zum aktiven Tab: an ihrer Oberkante laeuft eine
+; schmale Linie in dessen Farbe, der Tab haengt daran (RenderBar). Die Linie ist ein eigenes
+; Fenster, durch das alle Klicks hindurchgehen (WS_EX_TRANSPARENT|LAYERED|NOACTIVATE).
+StripeH() => Max(2, px(3))
+ActiveEdgeColor() {
+    global gCurrent
+    s := CONF["ActiveStyle"]
+    return (s = "accent" || s = "solid") ? CONF["ColActiveBg"] : DesktopColor(Max(gCurrent, 0))
+}
+; Taskleisten-Rechteck [x, y, w, h], 0 wenn keine da ist
+TaskbarRect() {
+    hTray := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
+    if (!hTray)
+        return 0
+    rc := Buffer(16, 0)
+    DllCall("GetWindowRect", "Ptr", hTray, "Ptr", rc)
+    x := NumGet(rc, 0, "Int"), y := NumGet(rc, 4, "Int")
+    return [x, y, NumGet(rc, 8, "Int") - x, NumGet(rc, 12, "Int") - y]
+}
+; Register nur, wenn die Leiste wirklich auf der (sichtbaren) Taskleiste sitzt; frei
+; verschoben oder bei ausgeblendeter Taskleiste bleibt es bei normalen Tabs
+RegisterOn() {
+    global MyGui
+    if (CONF["TabShape"] != "register" || !MyGui)
+        return false
+    tb := TaskbarRect()
+    if (!tb || tb[2] >= A_ScreenHeight - px(4))
+        return false
+    bx := 0, by := 0
+    try MyGui.GetPos(&bx, &by)
+    return Abs(by - tb[2]) <= px(3)
+}
+UpdateStripe() {
+    global gStripe, gHidden
+    on := !gHidden && RegisterOn()
+    if (!on) {
+        if (gStripe && DllCall("IsWindowVisible", "Ptr", gStripe.Hwnd))
+            DllCall("ShowWindow", "Ptr", gStripe.Hwnd, "Int", 0)    ; SW_HIDE
+        return
+    }
+    ; Bei einem Desktop-Wechsel nur die Farbe setzen und das Fenster sonst nicht anfassen:
+    ; ein Show() mitten im Umschalten wertete Windows als Griff nach dem Vordergrund, das
+    ; Programm auf dem Ziel-Desktop wurde abgewiesen und blinkte (Punkt am Tab, Taskleisten-
+    ; Knopf auf fremden Desktops). Lage/Groesse nur per SetWindowPos ohne Aktivierung.
+    static geo := "", colSet := -1
+    tb := TaskbarRect(), col := ActiveEdgeColor()
+    g := tb[1] "|" tb[2] "|" tb[3]
+    if (!gStripe) {
+        gStripe := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08080020 -DPIScale")   ; NOACTIVATE|LAYERED|TRANSPARENT
+        gStripe.BackColor := Format("{:06X}", col), colSet := col
+        gStripe.Show("NoActivate x" tb[1] " y" tb[2] " w" tb[3] " h" StripeH())
+        WinSetTransparent(255, gStripe)
+        try DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", gStripe.Hwnd)
+        geo := g
+    }
+    if (col != colSet)
+        gStripe.BackColor := Format("{:06X}", col), colSet := col
+    if (g != geo) {
+        DllCall("SetWindowPos", "Ptr", gStripe.Hwnd, "Ptr", 0, "Int", tb[1], "Int", tb[2], "Int", tb[3], "Int", StripeH(), "UInt", 0x0014)   ; NOZORDER|NOACTIVATE
+        geo := g
+    }
+    if (!DllCall("IsWindowVisible", "Ptr", gStripe.Hwnd))
+        DllCall("ShowWindow", "Ptr", gStripe.Hwnd, "Int", 4)        ; SW_SHOWNOACTIVATE
+    StripeBelowBar()
+}
+
 AssertTop() {
-    global MyGui, gHidden, gBuilding
+    global MyGui, gHidden, gBuilding, gStripe
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
     ; HWND_TOPMOST(-1), SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE = 0x0013
     DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
+    StripeBelowBar()
+}
+; Register-Kante direkt UNTER die Leiste einsortieren (beide bleiben ueber der Taskleiste).
+; Vorher kam sie als eigenes "ganz nach oben" kurz ueber die Leiste - sichtbar als Aufblitzen.
+StripeBelowBar() {
+    global gStripe, MyGui
+    if (gStripe && MyGui && DllCall("IsWindowVisible", "Ptr", gStripe.Hwnd))
+        DllCall("SetWindowPos", "Ptr", gStripe.Hwnd, "Ptr", MyGui.Hwnd, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
 }
 
 ; Wird bei jedem Vordergrund-Wechsel aufgerufen -> Leiste sofort wieder nach oben
