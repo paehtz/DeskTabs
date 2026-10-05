@@ -15,3 +15,6 @@ repo.zip
 dist/
 *.exe
 *.zip
+
+# Symbol-Zwischenspeicher (von Webseiten geladene Logos der eigenen Desktops, persoenlich)
+icons/
