@@ -760,6 +760,15 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.newdesk", "Neuer Desktop…",
+    "prompt.newdesk.title", "Neuer Desktop",
+    "prompt.newdesk.text", "Name des neuen Desktops (leer lassen: Windows vergibt „Desktop N“):",
+    "menu.tab.rename", "Umbenennen…",
+    "prompt.rename.title", "„{1}“ umbenennen",
+    "prompt.rename.text", "Neuer Name. Farbe, Symbol, Kürzel und Kompakt-Einstellung ziehen mit:",
+    "menu.tab.remove", "Desktop entfernen…",
+    "ask.remove.windows", "Desktop „{1}“ entfernen?`n`nWindows schließt dabei keine Fenster: Die {2} Fenster darauf wandern nach „{3}“.`n`nFarbe, Symbol und Kürzel bleiben gespeichert und sind wieder da, wenn Du erneut einen Desktop „{1}“ anlegst.",
+    "ask.remove.empty", "Desktop „{1}“ entfernen? Es liegen keine Fenster darauf.`n`nFarbe, Symbol und Kürzel bleiben gespeichert und sind wieder da, wenn Du erneut einen Desktop „{1}“ anlegst.",
     "menu.tab.compact", "Kompakt anzeigen (nur Symbol)",
     "menu.pin.untick", "Haken entfernen: nur noch auf „{1}“ anzeigen",
     "tip.appunpinnedto", "„{1}“ nicht mehr auf allen Desktops, dieses Fenster jetzt auf „{2}“",
@@ -923,6 +932,15 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.newdesk", "New desktop…",
+    "prompt.newdesk.title", "New desktop",
+    "prompt.newdesk.text", "Name of the new desktop (leave empty and Windows calls it “Desktop N”):",
+    "menu.tab.rename", "Rename…",
+    "prompt.rename.title", "Rename “{1}”",
+    "prompt.rename.text", "New name. Colour, icon, abbreviation and compact setting move along:",
+    "menu.tab.remove", "Remove desktop…",
+    "ask.remove.windows", "Remove the desktop “{1}”?`n`nWindows closes no windows when doing so: its {2} windows move to “{3}”.`n`nColour, icon and abbreviation stay saved and come back if you create a desktop called “{1}” again.",
+    "ask.remove.empty", "Remove the desktop “{1}”? There are no windows on it.`n`nColour, icon and abbreviation stay saved and come back if you create a desktop called “{1}” again.",
     "menu.tab.compact", "Compact (icon only)",
     "menu.pin.untick", "Untick to show it only on “{1}”",
     "tip.appunpinnedto", "“{1}” no longer on all desktops, this window is now on “{2}”",
@@ -1143,6 +1161,7 @@ Main() {
     }
     ApplyIniOverrides()                      ; gemerkte Einstellungen aus settings.ini [View]
     MigrateLogs()                            ; alte Zeit-Log-Dateien in den Unterordner
+    SyncDesktopIds()                         ; in Windows umbenannt, waehrend DeskTabs aus war?
     ApplyTheme()                             ; Farbsatz passend zum Windows-Theme
     BuildBar()
     ApplyWindowHooks()                       ; Pin auf alle Desktops + Change-Hook
@@ -2298,6 +2317,17 @@ ShowContextMenu(num, *) {
         m.Add(T("menu.tab.compact"), ToggleCompact.Bind(num))
         if (IsCompactDesk(num))
             m.Check(T("menu.tab.compact"))
+        m.Add(T("menu.tab.rename"), PromptRename.Bind(num))
+        MenuGlyph(m, T("menu.tab.rename"), "E70F")
+        m.Add(T("menu.tab.remove"), RemoveDesktopAsk.Bind(num))
+        MenuGlyph(m, T("menu.tab.remove"), "E74D")
+        if (GetDesktopCount() < 2)
+            m.Disable(T("menu.tab.remove"))
+        m.Add()
+    }
+    if (num < 0) {
+        m.Add(T("menu.newdesk"), NewDesktop)
+        MenuGlyph(m, T("menu.newdesk"), "E710")
         m.Add()
     }
     ; Griff bzw. Luecke: gehoert keinem Desktop, also der Ort fuer "auf allen Desktops"
@@ -2834,6 +2864,100 @@ LabelFor(num) {
 ; Desktop kompakt anzeigen (Tab-Menue, settings.ini [Compact] Desktopname=1): fuer
 ; ruhende Projekte, die offen bleiben, aber wenig Platz brauchen sollen
 IsCompactDesk(num) => (IniLookup("Compact", GetDesktopNameRaw(num)) = "1")
+; ------------- Desktops anlegen, umbenennen, entfernen (wie die Aufgabenansicht) -------------
+; Einstellungen haengen lesbar am Desktop-Namen. Damit sie ein Umbenennen ueberleben -
+; auch eins in der Windows-Aufgabenansicht -, merkt sich [Ids] je Desktop-GUID den zuletzt
+; gesehenen Namen. Aendert sich der, ziehen Farbe, Symbol, Kuerzel und Kompakt mit um.
+DesktopGuid(num) {
+    g := Buffer(16, 0)
+    try DllCall("VirtualDesktopAccessor\GetDesktopIdByNumber", "Ptr", g, "Int", num, "Ptr")   ; GUID per verstecktem Rueckgabezeiger
+    catch
+        return ""
+    s := Buffer(80, 0)
+    DllCall("ole32\StringFromGUID2", "Ptr", g, "Ptr", s, "Int", 40)
+    id := StrGet(s, "UTF-16")
+    return (id = "{00000000-0000-0000-0000-000000000000}") ? "" : id
+}
+; Einstellungen eines Desktops auf einen neuen Namen umziehen; was der neue Name schon hat, bleibt
+MoveDesktopSettings(oldName, newName) {
+    if (oldName = "" || newName = "" || NormName(oldName) = NormName(newName))
+        return
+    for , sec in ["Colors", "Icons", "Short", "Compact"] {
+        v := IniLookup(sec, oldName)
+        if (v = "" || IniLookup(sec, newName) != "")
+            continue
+        IniSet(sec, newName, v)
+        IniDelLoose(sec, oldName)
+    }
+}
+SyncDesktopIds() {
+    ids := ReadIniSection("Ids")
+    Loop GetDesktopCount() {
+        num := A_Index - 1
+        id := DesktopGuid(num)
+        if (id = "")
+            continue
+        name := GetDesktopNameRaw(num)
+        old := ids.Has(id) ? ids[id] : ""
+        if (old == name)
+            continue
+        ; Windows-Ersatzname ("Desktop 3") ist kein echter Name: aendert er sich, wurde nur umsortiert
+        if (old != "" && name != "Desktop " (num + 1))
+            MoveDesktopSettings(old, name)
+        IniSet("Ids", id, name)
+    }
+}
+SetDesktopNameUtf8(num, name) {
+    buf := Buffer(StrPut(name, "UTF-8"))
+    StrPut(name, buf, "UTF-8")
+    return VD("SetDesktopName", "Int", num, "Ptr", buf, "Int")
+}
+; Hamburger-Menue: neuen Desktop anlegen, gleich benennen und hinwechseln (wie Strg+Win+D)
+NewDesktop(*) {
+    ib := InputBox(T("prompt.newdesk.text"), T("prompt.newdesk.title"), "w380 h130")
+    if (ib.Result != "OK")
+        return
+    name := Trim(ib.Value)
+    idx := VD("CreateDesktop", "Int")
+    if (idx < 0)
+        return
+    if (name != "")
+        SetDesktopNameUtf8(idx, name)
+    SyncDesktopIds()
+    RebuildAll()
+    SwitchToDesktop(idx)
+}
+; Tab-Menue: umbenennen, Einstellungen ziehen mit
+PromptRename(num, *) {
+    old := GetDesktopNameRaw(num)
+    ib := InputBox(T("prompt.rename.text"), T("prompt.rename.title", old), "w380 h130", old)
+    if (ib.Result != "OK")
+        return
+    neu := Trim(ib.Value)
+    if (neu = "" || neu == old)
+        return
+    SetDesktopNameUtf8(num, neu)
+    MoveDesktopSettings(old, neu)          ; auch wenn der alte Name nur der Ersatzname war
+    SyncDesktopIds()
+    RebuildAll()
+}
+; Tab-Menue: Desktop entfernen. Windows schliesst dabei keine Fenster, sondern schiebt sie
+; auf den Nachbarn - deshalb vorher klar sagen, wie viele wohin wandern. Die Einstellungen
+; bleiben in der settings.ini: ein neuer Desktop gleichen Namens bekommt sie zurueck.
+RemoveDesktopAsk(num, *) {
+    cnt := GetDesktopCount()
+    if (cnt < 2 || num < 0 || num >= cnt)
+        return
+    fb := (num > 0) ? num - 1 : 1
+    name := GetDesktopNameRaw(num), fbName := GetDesktopNameRaw(fb)
+    wins := WindowsOnDesktop(num).Length
+    txt := wins ? T("ask.remove.windows", name, wins, fbName) : T("ask.remove.empty", name)
+    if (MsgBox(txt, "DeskTabs", 0x34 | 0x100 | 0x40000) != "Yes")   ; Ja/Nein, "Nein" vorgewaehlt, im Vordergrund
+        return
+    VD("RemoveDesktop", "Int", num, "Int", fb, "Int")
+    RebuildAll()
+}
+
 ; Woraus ein Tab gebaut wurde; aendert sich das, muss die Leiste neu vermessen werden
 TabSource(num) => LabelFor(num) "|" IsCompactDesk(num)
 ToggleCompact(num, *) {
@@ -2979,7 +3103,10 @@ BuildBarAt() {
         w := px(gPadX) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
         if (iw && label = "")
             w := Max(btnH, iw + px(12) * 2)       ; quadratische Kachel wie die Taskleisten-Buttons
-        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false, "badge", BadgeText(num, icon, label)
+        badge := BadgeText(num, icon, label)
+        if (badge != "" && iw && label != "")
+            w += px(5)                            ; das Abzeichen ragt links uebers Symbol: dort etwas mehr Luft
+        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false, "badge", badge
             , "src", TabSource(num)))
         x += w
         if (A_Index < cnt)
@@ -3445,6 +3572,8 @@ RenderBar(force := false) {
         ; Symbol links, Text daneben (bzw. nur eins von beidem)
         iw := item["iw"]
         tx0 := x + px(gPadX), tw := w - 2 * px(gPadX)
+        if (iw && item["label"] != "" && item["badge"] != "")
+            tx0 += px(5), tw -= px(5)             ; Platz fuers Abzeichen links (siehe BuildBarAt)
         if (iw && item["label"] = "")
             tx0 := x + (w - iw) // 2              ; nur Symbol: mittig in der Kachel
         if (iw) {
@@ -4004,6 +4133,7 @@ Refresh() {
         return
     }
     if (GetDesktopCount() != BTNS.Length) {
+        SyncDesktopIds()
         BuildBar()
         ApplyWindowHooks()
     } else {
@@ -4021,6 +4151,7 @@ Refresh() {
             }
         }
         if (nameChanged) {
+            SyncDesktopIds()       ; in Windows umbenannt? Farbe, Symbol, Kuerzel ziehen mit
             BuildBar()
             ApplyWindowHooks()
         }
