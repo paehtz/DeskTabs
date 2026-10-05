@@ -1792,8 +1792,12 @@ FetchSiteIcon(url, dest) {
     host := RegExReplace(origin, "i)^https?://")
     cands.Push(Map("href", "https://www.google.com/s2/favicons?sz=128&domain=" host, "size", 0))
 
+    ; Nur (annaehernd) quadratische Bilder taugen als Tab-Symbol. Manche Seiten tragen als
+    ; apple-touch-icon einfach ihr breites Logo ein (z.B. Website-Baukaesten); das wird
+    ; uebersprungen und nur genommen, wenn sich gar nichts Quadratisches findet.
     DirCreate(IconsDir())
-    tmpFile := IconsDir() "\_dl.tmp"
+    tmpFile := IconsDir() "\_dl.tmp", wideFile := IconsDir() "\_wide.tmp", haveWide := false
+    try FileDelete(wideFile)
     for cand in cands {
         bytes := HttpGetBytes(cand["href"])
         if (!bytes)
@@ -1801,13 +1805,33 @@ FetchSiteIcon(url, dest) {
         try FileDelete(tmpFile)
         if (!SaveBytes(bytes, tmpFile))
             continue
-        if (ConvertToPng(tmpFile, dest, 128)) {   ; grosszuegig zwischenspeichern, beim Zeichnen sauber verkleinert
+        if (ConvertToPng(tmpFile, dest, 128, 1.25)) {   ; grosszuegig zwischenspeichern, beim Zeichnen sauber verkleinert
             try FileDelete(tmpFile)
+            try FileDelete(wideFile)
             return true
+        }
+        if (!haveWide && ImageSize(tmpFile)) {
+            try FileCopy(tmpFile, wideFile, true)
+            haveWide := FileExist(wideFile) ? true : false
         }
     }
     try FileDelete(tmpFile)
-    return false
+    ok := haveWide && ConvertToPng(wideFile, dest, 128)
+    try FileDelete(wideFile)
+    return ok
+}
+
+; Breite und Hoehe einer Bilddatei als [w, h], 0 wenn GDI+ sie nicht lesen kann
+ImageSize(path) {
+    GdipStart()
+    img := 0
+    if (DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", path, "Ptr*", &img) != 0 || !img)
+        return 0
+    w := 0, h := 0
+    DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
+    DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+    return (w && h) ? [w, h] : 0
 }
 
 ; Relative Adresse auf eine vollstaendige URL bringen
@@ -1822,8 +1846,9 @@ AbsUrl(href, origin, pageUrl) {
     return base href
 }
 
-; Bilddatei (ico/png/jpg/svg-frei) als quadratisches PNG in Zielgroesse speichern
-ConvertToPng(src, dest, size) {
+; Bilddatei (ico/png/jpg/svg-frei) als quadratisches PNG in Zielgroesse speichern.
+; maxRatio > 0: Bilder, deren Seitenverhaeltnis davon weiter abweicht, werden abgelehnt.
+ConvertToPng(src, dest, size, maxRatio := 0) {
     GdipStart()
     img := 0
     if (DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", src, "Ptr*", &img) != 0 || !img)
@@ -1831,7 +1856,7 @@ ConvertToPng(src, dest, size) {
     w := 0, h := 0
     DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
     DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
-    if (!w || !h) {
+    if (!w || !h || (maxRatio > 0 && Max(w, h) / Min(w, h) > maxRatio)) {
         DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
         return false
     }
@@ -1868,6 +1893,21 @@ LoadIconBitmap(path) {
     GdipStart()
     img := 0
     DllCall("gdiplus\GdipCreateBitmapFromFile", "WStr", path, "Ptr*", &img)
+    ; GDI+ haelt die Datei offen, solange das Bild lebt. Deshalb in eine eigene Kopie
+    ; umzeichnen und das Original freigeben - sonst liesse sich ein angezeigtes Symbol
+    ; weder erneuern noch loeschen (Abruf von der Webseite schlug dann immer fehl).
+    if (img) {
+        w := 0, h := 0, cp := 0, g := 0
+        DllCall("gdiplus\GdipGetImageWidth", "Ptr", img, "UInt*", &w)
+        DllCall("gdiplus\GdipGetImageHeight", "Ptr", img, "UInt*", &h)
+        if (w && h && DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", w, "Int", h, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &cp) = 0 && cp) {
+            DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", cp, "Ptr*", &g)
+            DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", img, "Int", 0, "Int", 0, "Int", w, "Int", h)
+            DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+            DllCall("gdiplus\GdipDisposeImage", "Ptr", img)
+            img := cp
+        }
+    }
     gIconCache[key] := img
     return img
 }
