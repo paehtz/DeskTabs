@@ -67,6 +67,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Fluent-Optik:** abgerundete Tabs, aktiver Desktop getönt in seiner eigenen Farbe (Farbton bleibt, Helligkeit kommt vom Farbschema), dezente senkrechte Verläufe, Hover hellt auf wie bei den Windows-Taskleisten-Buttons. Der aktive Stil ist umschaltbar: eigene Desktop-Farbe, einheitliche Akzentfarbe oder kräftige Füllung.
 - **Klick auf aktiven Desktop:** öffnet die Task-Ansicht (Win+Tab).
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
+- **Einzelne Desktops kompakt:** Rechtsklick auf einen Tab → *Kompakt anzeigen (nur Symbol)* für Projekte, die gerade ruhen, aber offen bleiben. Ihr Tab zeigt nur noch sein Symbol (oder Kürzel/Nummer), die aktiven Desktops behalten ihre volle Größe. Zeigt ein Tab seinen Namen nicht ganz, nennt ihn ein kurzer Hinweis beim Überfahren.
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
 - **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`timelog\desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
 - **Rechtsklick-Menü:** Rechtsklick auf einen Tab, um Fenster dorthin zu schicken, und für Symbol, Farbe und Kürzel, dazu alle App-Einstellungen: *Ansicht* (was im Tab steht, Symbole, Nummern, Farbbalken), *Aktiver Desktop*, *Hell oder dunkel*, *Tastenkürzel*, *Sprache* und unter *Weitere Einstellungen* Direktsprung, Einrasten, Wechsel-Meldung, Hinweispunkt, Fenster auf Tabs ziehen und Zeit-Log. Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
@@ -192,6 +193,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `CompactMode` | `auto` | Was ein Tab zeigt: `bigtext` (großes Symbol + Name), `full` (Name), `short` (Kurzname), `icon` (Kürzel oder Nummer), `big` (nur großes Symbol). `auto` beginnt bei `bigtext` und schaltet herunter, bis die Leiste ins Breiten-Budget passt. |
 | `MaxBarWidthPct` | 40 | Nur `auto`: maximaler Anteil der Taskleistenbreite, bevor eine Stufe runtergeschaltet wird. |
 | `ShortNameLen` | 8 | Stufe `short`: Namen länger als das werden gekürzt (wenn kein Kürzel hinterlegt ist). |
+| `PadX` / `PadXMax` | 18 / 24 | Innenabstand links und rechts im Tab: `PadXMax`, solange die Leiste in ihr Platzbudget passt (`MaxBarWidthPct`), bei Platzmangel schrittweise bis `PadX`, bevor eine Stufe kleiner geschaltet wird. |
 | `TimeLog` | 1 | Aufenthaltszeiten pro Desktop in `timelog\desktop-log_YYYY-MM.csv` im Programmordner schreiben. `0` = aus. |
 | `TimeLogIdleMin` | 5 | Minuten ohne Tastatur-/Mauseingabe, nach denen der laufende Aufenthalt geschlossen wird (zählt als Pause). Bildschirmsperre schließt ihn immer. |
 | `TimeLogMinSec` | 5 | Aufenthalte unter so vielen Sekunden werden nicht eingetragen, sie sind nur Übergänge (Durchschalten, kurzer Blick). Ihre Sekunden zählen zum Desktop, auf dem Du ankommst, das Log bleibt lückenlos. `0` = alles eintragen. |
@@ -228,6 +230,10 @@ Y=1392
 ; Farbcodierung pro Desktop-Name überschreiben (RRGGBB):
 Design=E5471D
 Buchhaltung=1565C0
+
+[Compact]
+; Desktops nur als Symbol (Rechtsklick auf einen Tab → Kompakt):
+Miller & Sons=1
 
 [Short]
 ; Kürzel pro Desktop-Name für die Kompakt-Stufen

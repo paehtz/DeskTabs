@@ -35,6 +35,9 @@ Everything a user can set in the UI also lives in plain text in `settings.ini` n
 [Short]                      ; abbreviation per desktop (compact levels)
 Acme Bakery=ACME
 
+[Compact]                    ; desktop shown as icon only (tab menu "Compact")
+Acme Bakery=1
+
 [Colors]                     ; accent colour per desktop, RRGGBB
 Acme Bakery=E5471D
 

@@ -68,6 +68,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Click on the active desktop:** opens Task View (Win+Tab).
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
+- **Compact single desktops:** right-click a tab → *Compact (icon only)* for projects that rest for a while but stay open. Their tab shows only its icon (or abbreviation/number), the busy desktops keep their full size. Hover a tab that does not show its whole name and a tooltip tells you which desktop it is.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`timelog\desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
 - **Right-click menu:** right-click a tab to move windows there and for its icon, colour and abbreviation, plus all app settings: *View* (what a tab shows, icons, numbers, colour bars), *Active desktop*, *Light or dark*, *Keyboard shortcuts*, *Language*, and under *More settings* direct jumping, snapping, switch alerts, the attention dot, dragging windows onto tabs and the time log. No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
 - **Help menu:** documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
@@ -192,6 +193,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `CompactMode` | `auto` | What a tab shows: `bigtext` (large icon + name), `full` (name), `short` (short name), `icon` (abbreviation or number), `big` (large icon only). `auto` starts at `bigtext` and steps down until the bar fits the width budget. |
 | `MaxBarWidthPct` | 40 | `auto` only: maximum share of the taskbar width before the bar steps down one level. |
 | `ShortNameLen` | 8 | Level `short`: names longer than this are truncated. |
+| `PadX` / `PadXMax` | 18 / 24 | Space left and right inside a tab: `PadXMax` while the bar fits its width budget (`MaxBarWidthPct`), shrinking step by step down to `PadX` when space gets tight, before any level steps down. |
 | `TimeLog` | 1 | Write per-desktop stay times to `timelog\desktop-log_YYYY-MM.csv` in the program folder. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
 | `TimeLogMinSec` | 5 | Stays shorter than this many seconds are not written: they are just transitions (stepping through desktops, a quick glance). Their seconds count towards the desktop you settle on, so the log stays gap-free. `0` = log everything. |
@@ -228,6 +230,10 @@ Y=1392
 ; Override the colour coding per desktop name (RRGGBB):
 Design=E5471D
 Buchhaltung=1565C0
+
+[Compact]
+; Desktops shown as icon only (right-click a tab → Compact):
+Miller & Sons=1
 
 [Short]
 ; Abbreviation per desktop name, used by the compact levels

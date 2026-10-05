@@ -39,7 +39,8 @@ global CONF := Map(
     "IniPath",        A_ScriptDir "\settings.ini",
     "FontName",       "Segoe UI",
     "FontSizePt",     10,
-    "PadX",           18,      ; Innenabstand links/rechts im Tab (px @100%)
+    "PadX",           18,      ; Innenabstand links/rechts im Tab (px @100%), Minimum bei wenig Platz
+    "PadXMax",        24,      ; ... und so viel, solange die Leiste ins Platzbudget passt (MaxBarWidthPct)
     "Gap",            4,       ; Abstand zwischen den Tabs (px @100%), wie zwischen Taskleisten-Buttons
     "GripW",          16,      ; Breite des Ziehgriffs (px @100%)
     "SwitchMethod",   "dll",   ; "dll"    = Direktsprung per GoToDesktopNumber (Standard, ohne Zwischen-Desktops)
@@ -327,6 +328,8 @@ DragEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
         DllCall("GetWindowPlacement", "Ptr", hwnd, "Ptr", wp)
         gDragHwnd := hwnd, gDragPlace := wp
         gDragPin := PinState(hwnd)                ; einmal zu Beginn: auf allen Desktops?
+        ToolTip(, , , 4)                          ; Namens-Kurzinfo weg, beim Ziehen spricht DragTipTick
+        global gHoverTipNum := -1
         SetTimer(DragTipTick, 40)
         return
     }
@@ -745,6 +748,8 @@ global gAlertNum := -1, gAlertPhase := 0, gPrevCount := 0  ; Hinweis auf fremden
 global gAttention := Map(), gShellMsg := 0  ; Desktops mit blinkendem Programm (Punkt am Tab)
 global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
+global gPadX := 18           ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
+global gHoverTipNum := -1    ; Tab, dessen voller Name gerade als Kurzinfo ansteht/erscheint
 global gDragCb := 0, gDragHook := 0, gDragHwnd := 0, gDragPlace := 0, gDragPin := 0, gDragTipNum := -1   ; Fenster auf Tab ziehen
 global gLastDesk := -1, gDeskSince := A_TickCount   ; zuletzt genutzter Desktop (fuer "zurueck")
 global gCompact := "full"    ; aktuell dargestellte Stufe: "full" | "short" | "icon"
@@ -755,6 +760,7 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.tab.compact", "Kompakt anzeigen (nur Symbol)",
     "menu.pin.untick", "Haken entfernen: nur noch auf „{1}“ anzeigen",
     "tip.appunpinnedto", "„{1}“ nicht mehr auf allen Desktops, dieses Fenster jetzt auf „{2}“",
     "tip.apppinned", "„{1}“ wird auf allen Desktops angezeigt (Einstellung der ganzen App, ändern per Rechtsklick auf ≡)",
@@ -917,6 +923,7 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.tab.compact", "Compact (icon only)",
     "menu.pin.untick", "Untick to show it only on “{1}”",
     "tip.appunpinnedto", "“{1}” no longer on all desktops, this window is now on “{2}”",
     "tip.apppinned", "“{1}” is shown on all desktops (setting of the whole app, change it with a right-click on ≡)",
@@ -2190,6 +2197,7 @@ HeadDraw(wParam, lParam, msg, hwnd) {
 
 ShowContextMenu(num, *) {
     fgw := WorkWindow()                     ; vor dem Menue merken, an welchem Fenster gearbeitet wird
+    ToolTip(, , , 4)                        ; Namens-Kurzinfo nicht ueber dem Menue stehen lassen
     m := Menu()
     AddAppHeader(m)
     if (num >= 0) {
@@ -2287,6 +2295,9 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.tab.color"), "E790")
         m.Add(T("menu.tab.short"), PromptShort.Bind(num))
         MenuGlyph(m, T("menu.tab.short"), "E8AC")
+        m.Add(T("menu.tab.compact"), ToggleCompact.Bind(num))
+        if (IsCompactDesk(num))
+            m.Check(T("menu.tab.compact"))
         m.Add()
     }
     ; Griff bzw. Luecke: gehoert keinem Desktop, also der Ort fuer "auf allen Desktops"
@@ -2820,6 +2831,19 @@ LabelFor(num) {
     return (CONF["ShowIndex"] ? (num + 1) " · " : "") name
 }
 
+; Desktop kompakt anzeigen (Tab-Menue, settings.ini [Compact] Desktopname=1): fuer
+; ruhende Projekte, die offen bleiben, aber wenig Platz brauchen sollen
+IsCompactDesk(num) => (IniLookup("Compact", GetDesktopNameRaw(num)) = "1")
+; Woraus ein Tab gebaut wurde; aendert sich das, muss die Leiste neu vermessen werden
+TabSource(num) => LabelFor(num) "|" IsCompactDesk(num)
+ToggleCompact(num, *) {
+    if (IsCompactDesk(num))
+        IniDelLoose("Compact", GetDesktopNameRaw(num))
+    else
+        IniSet("Compact", GetDesktopNameRaw(num), 1)
+    RebuildAll()
+}
+
 ; Hat dieser Desktop ein Symbol (und sind Symbole eingeschaltet)?
 HasTabIcon(num) => (CONF["ShowIcons"] && IconPathFor(num) != "")
 
@@ -2861,16 +2885,28 @@ px(v) => Round(v * SCALE)     ; logische px -> physische px
 ; Waehlt die Kompakt-Stufe und baut die Leiste. Bei CompactMode=auto wird mit
 ; "full" begonnen und so lange eine Stufe runtergeschaltet, bis die Leiste
 ; ins Breiten-Budget (MaxBarWidthPct der Taskleistenbreite) passt.
+; Innenabstand der Tabs: grosszuegig (PadXMax), solange Platz ist; wird die Leiste
+; zu breit, schrumpft er in Schritten bis PadX - erst danach eine Stufe kleiner.
 BuildBar() {
-    global gBuilding, gCompact, GUIW, gTaskbarW
+    global gBuilding, gCompact, GUIW, gTaskbarW, gPadX
     if (gBuilding)              ; verschachtelten Neuaufbau verhindern (Geometrie-Race)
         return
     gBuilding := true
     mode := CONF["CompactMode"]
     level := (mode = "auto") ? "bigtext" : mode   ; grosszuegig anfangen, dann bei Platzmangel herunter
+    pads := []
+    p := Max(CONF["PadXMax"], CONF["PadX"])
+    while (p > CONF["PadX"])
+        pads.Push(p), p -= 3
+    pads.Push(CONF["PadX"])
     Loop {
         gCompact := level
-        BuildBarAt()
+        for i, pad in pads {
+            gPadX := pad
+            BuildBarAt()
+            if (!gTaskbarW || i = pads.Length || GUIW <= gTaskbarW * CONF["MaxBarWidthPct"] / 100)
+                break
+        }
         if (mode != "auto" || !gTaskbarW)
             break
         budget := gTaskbarW * CONF["MaxBarWidthPct"] / 100
@@ -2936,12 +2972,15 @@ BuildBarAt() {
         big := (icon != "" && (gCompact = "big" || gCompact = "bigtext"))   ; Symbol in Taskleisten-Groesse
         if (icon != "" && gCompact = "icon")
             label := ""                          ; kleinste Stufe: nur das Symbol, klein
+        if (IsCompactDesk(num))                  ; ruhendes Projekt: nur Symbol, sonst Kuerzel/Nummer
+            label := (icon != "") ? "" : ((ShortNameFor(num) != "") ? ShortNameFor(num) : String(num + 1))
         iw := (icon != "") ? (big ? bigSize : iconSize) : 0
         tw := (label != "") ? MeasureText(mG, font, sf, label) : 0
-        w := px(CONF["PadX"]) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
+        w := px(gPadX) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
         if (iw && label = "")
             w := Max(btnH, iw + px(12) * 2)       ; quadratische Kachel wie die Taskleisten-Buttons
-        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false, "badge", BadgeText(num, icon, label)))
+        BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false, "badge", BadgeText(num, icon, label)
+            , "src", TabSource(num)))
         x += w
         if (A_Index < cnt)
             x += gap
@@ -3405,7 +3444,7 @@ RenderBar(force := false) {
             FillRoundRect(g, x, y, w, h, r, 0xC0000000 | col)
         ; Symbol links, Text daneben (bzw. nur eins von beidem)
         iw := item["iw"]
-        tx0 := x + px(CONF["PadX"]), tw := w - 2 * px(CONF["PadX"])
+        tx0 := x + px(gPadX), tw := w - 2 * px(gPadX)
         if (iw && item["label"] = "")
             tx0 := x + (w - iw) // 2              ; nur Symbol: mittig in der Kachel
         if (iw) {
@@ -3798,8 +3837,39 @@ HoverTick() {
     }
     if (gAlertNum >= 0 && gAlertPhase = 0 && over && over["num"] = gAlertNum)
         ClearSwitchAlert()
+    HoverNameTip(over ? over["num"] : -1)
     if (changed)
         RenderBar()
+}
+; Zeigt der Tab seinen Namen nicht ganz (kompakt, nur Symbol, Kuerzel, gekuerzt), erscheint
+; er nach kurzem Verweilen als Kurzinfo ueber dem Tab - wie bei den Taskleisten-Buttons
+HoverNameTip(num) {
+    global gHoverTipNum
+    static show := ShowHoverName
+    if (num = gHoverTipNum)
+        return
+    gHoverTipNum := num
+    ToolTip(, , , 4)
+    SetTimer(show, 0)
+    if (num >= 0)
+        SetTimer(show, -450)
+}
+ShowHoverName() {
+    global gHoverTipNum, BTNS, MyGui, gDragHwnd, gHidden
+    if (gHoverTipNum < 0 || gDragHwnd || gHidden || !MyGui)
+        return
+    for item in BTNS {
+        if (item["num"] != gHoverTipNum)
+            continue
+        raw := GetDesktopNameRaw(item["num"])
+        if (raw = "" || InStr(item["label"], raw))  ; Name steht schon voll im Tab
+            return
+        bx := 0, by := 0
+        MyGui.GetPos(&bx, &by)
+        CoordMode("ToolTip", "Screen")
+        ToolTip(raw, bx + item["x"], by - px(34), 4)
+        return
+    }
 }
 ; Vollbild-App im Vordergrund -> Leiste ausblenden, sonst wieder zeigen
 FullscreenTick() {
@@ -3940,9 +4010,12 @@ Refresh() {
         ; Hat sich ein Name geaendert? -> KOMPLETT neu bauen, damit die Button-BREITEN
         ; zur neuen Textlaenge passen. Reines c.Text := ... laesst die Breite stehen
         ; -> lange Namen werden abgeschnitten und die Abstaende kollabieren.
+        ; Verglichen wird die Quelle (Name/Kuerzel + Kompakt-Schalter), nicht der angezeigte
+        ; Text: der ist bei Symbol-Tabs absichtlich leer und loeste sonst jede 1,2 s einen
+        ; Neuaufbau aus (Leiste zuckte).
         nameChanged := false
         for item in BTNS {
-            if (item["label"] != LabelFor(item["num"])) {
+            if (item["src"] != TabSource(item["num"])) {
                 nameChanged := true
                 break
             }
