@@ -13,7 +13,10 @@ A single-file **AutoHotkey v2** script that draws a clickable bar of buttons (on
 
 - `DeskTabs.ahk` — the entire app (GUI, DLL calls, timers, WinEvent hook). All logic lives here.
 - `VirtualDesktopAccessor.dll` — must sit in the same folder as the script/exe at runtime.
-- `settings.ini` — user runtime file (window position + per-desktop colour overrides). Auto-created, git-ignored.
+- `settings.ini` — user runtime file (position, per-desktop colours, abbreviations, icons, view settings). Auto-created, git-ignored.
+- `lang\de.ini`, `lang\en.ini` — UI texts (override the built-in maps); `data\glyph-names.txt` — names and search words for the icon library.
+- `icons\` (fetched site icons) and `timelog\` (monthly CSVs) — created at runtime, git-ignored.
+- `installer\DeskTabs.iss`, `setup.ps1`, `.github/workflows/build.yml` — setup, one-line installer, release build.
 
 ## Run / validate
 
@@ -36,7 +39,7 @@ Acme Bakery=ACME
 Acme Bakery=E5471D
 
 [View]                       ; what the right-click menu saves; each key overrides CONF
-CompactMode=auto             ; auto | full | short | icon
+CompactMode=auto             ; auto | bigtext | full | short | icon | big
 ThemeMode=auto               ; auto | light | dark
 Language=auto                ; auto | de | en | <code of lang\<code>.ini>
 ShowIndex=1                  ; 0|1  numbers in front of names
@@ -44,8 +47,8 @@ ColorCoding=1                ; 0|1  colour bar under each tab
 SnapToTaskbar=1              ; 0|1
 TimeLog=1                    ; 0|1
 
-[Icons]                      ; planned (issue #2): image path or website URL per desktop
-Acme Bakery=C:\Projects\Acme\logo.png
+[Icons]                      ; per desktop: website, image path, glyph:E713 (icon library), number, none
+Acme Bakery=acmebakery.com
 ```
 
 Keys are the exact desktop names as shown in Windows Task View (read them with `VirtualDesktopAccessor\GetDesktopName` or from the bar's labels). Write real umlauts; the file is UTF-8.
@@ -74,7 +77,7 @@ All user-facing options are in the `CONF := Map(...)` block at the very top of `
 - **Switching behaviour** → `SwitchMethod` (`native` keystrokes vs `dll`).
 - **Labels / look** → `ShowIndex`, `ColorCoding`, `AccentBarH`, `FontSizePt`, `MaxNameLen`, `WheelSwitch`, `AutoHideFullscreen`, `ClickActiveTaskView`.
 - **Per-desktop colour at runtime** → `settings.ini` section `[Colors]`, lines `Desktop name = RRGGBB`.
-- **Compact levels** → `CompactMode` (`auto` / `full` / `short` / `icon`), `MaxBarWidthPct` (auto budget), `ShortNameLen`. `BuildBar()` picks the level (auto steps down until the bar fits), `BuildBarAt()` does the actual build, `LabelFor()` renders the label for the current level (`gCompact`). Ctrl + mouse wheel calls `CycleCompact()` and persists the choice in `settings.ini [View]`.
+- **Compact levels** → `CompactMode` (`auto` / `bigtext` / `full` / `short` / `icon` / `big`), `MaxBarWidthPct` (auto budget), `ShortNameLen`. `BuildBar()` picks the level (auto steps down until the bar fits), `BuildBarAt()` does the actual build, `LabelFor()` renders the label for the current level (`gCompact`). Ctrl + mouse wheel calls `CycleCompact()` and persists the choice in `settings.ini [View]`.
 - **Per-desktop abbreviation** → `settings.ini` section `[Short]`, lines `Desktop name = ABBR` (used by `short`/`icon`).
 - **Right-click menu** → `ShowContextMenu(num)` (num = tab index or −1 for the general menu), opened from `OnRButtonUp` and the tray. Every switch goes through `SetView(key, val)` → writes `settings.ini [View]`, re-applies theme, rebuilds. `ApplyIniOverrides()` reads those keys at startup and on live reload. Per-tab actions: `PromptShort`, `PromptColor`, `SetColor`, `ClearColor`.
 - **UI texts / languages** → every visible string goes through `T("key", args*)`. Built-in maps `LANG_DE` / `LANG_EN` near the top of the script; `lang\<code>.ini` (UTF-8, `key=Text`) overrides or adds a language, chosen by `Language` (`auto` = Windows display language). **When you add a UI string, add it to both maps and both `lang\*.ini` files.**
@@ -85,16 +88,16 @@ After editing: run `/validate`, then restart the script and look at the bar. **R
 ## Pitfalls (read before editing — easy to re-introduce)
 
 - **Inline comments need a space before `;`.** `x ;c` throws "Illegal character in expression"; `x ; c` is fine.
-- Desktop buttons use the `SS_NOPREFIX` style (`+0x80`) so a `&` in a desktop name shows literally.
-- Switching uses simulated `Win+Ctrl+Arrow` (`SwitchMethod=native`), **not** the DLL's `GoToDesktopNumber`, which drags the focused window along on Windows 24H2/25H2.
-- Accent colour bars sit *below* the buttons and dividers sit *in the gaps*, to avoid z-order overlap (overlapping controls get hidden by the button).
-- On a desktop **name or count change** the bar is rebuilt so button widths are re-measured. Do not just set `ctrl.Text` — that leaves the old width and clips or collapses the layout. See `Refresh()`.
+- **AHK identifiers are case-insensitive:** a function `Out` and a local variable `out` collide. `//` needs integers (use `Floor()`), and a `Map` enumerates its keys sorted, so menu orders live in arrays.
+- Switching uses the DLL's `GoToDesktopNumber` (`SwitchMethod=dll`, default). On 24H2 it could drag the focused window along; on 25H2 it does not, and `SwitchToDesktop()` moves the window back if a build does. `native` emulates `Win+Ctrl+Arrow` instead.
+- The bar is **one GDI+ picture** drawn by `RenderBar()`, not a set of controls. Change the look there; it skips the redraw unless its state signature changed, so new visual state must be part of that signature.
+- On a desktop **name or count change** the bar is rebuilt so tab widths are re-measured. See `Refresh()`.
 - The bar must stay on top: this is handled by a `SetWinEventHook` + a short burst + a backstop timer (`AssertTop`). Don't remove these or it will be hidden behind windows.
 - The DLL is labelled "24H2" but runs on 25H2 (build 26200). If a Windows feature update breaks the virtual-desktop COM vtable, fetch a newer build from [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor).
 
 ## Build (optional)
 
-A standalone `.exe` is produced with Ahk2Exe and the AHK v2 base; releases ship a zip of `DeskTabs.exe` + the DLL. The compiled exe embeds the AutoHotkey interpreter (GPL-2.0-or-later); DeskTabs itself is GPL-3.0-or-later with attribution terms in NOTICE (MIT up to 1.1.8), see THIRD-PARTY-LICENSES.md. For development you do not need to build — just run the `.ahk`.
+A standalone `.exe` is produced with Ahk2Exe and the AHK v2 base; releases ship a setup and a portable zip (`DeskTabs.exe`, the DLL, `lang\`, `data\`, licences), built by `.github/workflows/build.yml`. The compiled exe embeds the AutoHotkey interpreter (GPL-2.0-or-later); DeskTabs itself is GPL-3.0-or-later with attribution terms in NOTICE (MIT up to 1.1.8), see THIRD-PARTY-LICENSES.md. For development you do not need to build — just run the `.ahk`.
 
 ## Contributing back (please)
 

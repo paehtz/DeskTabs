@@ -23,7 +23,7 @@ DeskTabs is a single AutoHotkey v2 script, so changes are straightforward:
 ## Notes for contributors
 
 - All user-facing options live in the `CONF` block at the top of `DeskTabs.ahk`.
-- Please read the "Lessons learned / pitfalls" section in the [README](README.md) first. A few non-obvious traps are documented there (the AHK semicolon trap, `SS_NOPREFIX` for `&`, the native switch method, z-order of the colour bars).
+- Please read the "Lessons learned / pitfalls" section in the [README](README.md) first. A few non-obvious traps are documented there (the AHK semicolon trap, the direct jump and its safety net, the fight with the taskbar over z-order). [CLAUDE.md](CLAUDE.md) lists more pitfalls, for example that AHK identifiers are case-insensitive.
 - Inline comments use a leading space before `;` on purpose (see the semicolon trap).
 - Keep changes focused and the script readable; match the surrounding style.
 

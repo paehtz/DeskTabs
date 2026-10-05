@@ -57,7 +57,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Show a window on all desktops:** right-click the grip ≡ and tick *Show “…” on all desktops* (or *All windows of “…” on all desktops* for the whole app), or drag the window by its title bar onto ≡. Drag it onto ≡ again, or onto a tab, and it lives on one desktop only again. A right-click on any tab shows the tick as well; untick it there to keep the window on that desktop only. DeskTabs respects the Windows setting: a window shown on all desktops that you move to a tab loses that setting openly (the tip says so); an app set to all desktops is left untouched.
 - **Back to the last desktop:** middle-click the bar or press Ctrl+Win+Backspace to return to the desktop you last worked on (quick pass-throughs don't count).
 - **Attention dot:** when an app on another desktop flashes for attention, its tab gets a small orange dot until you go there.
-- **Visible on all desktops:** the window is pinned to every desktop.
+- **Visible on all desktops:** the bar itself is pinned to every desktop.
 - **Light/Dark automatic:** follows the Windows theme (taskbar brightness), switchable or fixed.
 - **Index prefix:** "3 · ProjectName" (can be disabled).
 - **Colour coding:** a thin colour bar per desktop (tab-indicator style, can be disabled, overridable per desktop). *Take the colour from the icon* reads the dominant colour out of a fetched site icon and uses it for that desktop.
@@ -69,11 +69,11 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`timelog\desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
-- **Right-click menu:** right-click a tab for its icon, colour and abbreviation, plus all app settings: *View* (what a tab shows, icons, numbers, colour bars), *Active desktop*, *Light or dark*, *Keyboard shortcuts*, *Language*, and under *More settings* direct jumping, snapping and the time log. No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
+- **Right-click menu:** right-click a tab to move windows there and for its icon, colour and abbreviation, plus all app settings: *View* (what a tab shows, icons, numbers, colour bars), *Active desktop*, *Light or dark*, *Keyboard shortcuts*, *Language*, and under *More settings* direct jumping, snapping, switch alerts, the attention dot, dragging windows onto tabs and the time log. No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
 - **Help menu:** documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
 - **Update check:** once a day DeskTabs asks the GitHub releases API for the latest version number (nothing else is sent) and shows a tray notification if a newer release exists. Disable via the Help menu or `UpdateCheck = 0`.
 - **Live config:** edits to `settings.ini` (abbreviations, colours, level) are picked up within ~1.2 s, no restart. Handy when your AI agent configures the bar for you.
-- **Keyboard shortcuts (off by default):** jump straight to desktop 1 to 10 with a number key, from the number row or the numpad (the numpad works with NumLock on or off). Pick the modifier in the menu: Ctrl+Win, Ctrl+Alt, Win+Alt or Ctrl+Shift.
+- **Keyboard shortcuts (off by default):** jump straight to desktop 1 to 10 with a number key, from the number row or the numpad (the numpad works with NumLock on or off). Combine the modifier keys freely in the menu (Ctrl, Shift, Alt, Win; default Ctrl+Win). The same keys plus Shift send the active window to that desktop (if Shift is not already part of the modifier), and Backspace returns to the last desktop.
 - **Mouse wheel** over the bar pages through the desktops.
 - **Separators** between the tabs (off by default, switchable).
 - **Movable** by the handle `≡` on the left; the position is remembered in `settings.ini`.
@@ -118,7 +118,7 @@ Other tools cover parts of this: hotkey scripts for switching, tray icons that s
 ## Requirements
 
 - **Windows 11:** developed and tested on **25H2 (build 26200)**. Works from 24H2 (26100).
-- **AutoHotkey v2** (tested with 2.0.26), default path `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
+- **AutoHotkey v2** (tested with 2.0.29), default path `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
 - **VirtualDesktopAccessor.dll** (bundled in this repo), from [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), release `2024-12-16-windows11`.
 
 ---
@@ -149,7 +149,6 @@ That installs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and starts D
 
 It stops DeskTabs, removes the autostart shortcut and the program folder, and asks whether to keep your settings, icons and time logs (they are moved to a folder in `%TEMP%` if you say yes). DeskTabs writes nothing to the registry and installs nothing outside its own folder, so removing that folder is enough if you installed manually.
 
-This installs DeskTabs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and launches it. Run it again any time to update.
 
 > Note: an AutoHotkey-compiled `.exe` can trigger false positives in some antivirus scanners. That is why both the `.exe` and the full source are provided; you can always run from source instead.
 
@@ -167,7 +166,7 @@ This installs DeskTabs to `%LOCALAPPDATA%\DeskTabs`, adds an autostart entry and
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`)
 → target: `AutoHotkey64.exe`, with the path to `DeskTabs.ahk` as the argument.
 
-**Quit / control:** tray icon (DeskTabs symbol) → right-click: the full settings menu, Help (docs, feedback, updates, About), Rebuild bar, Reset position, Exit.
+**Quit / control:** tray icon (DeskTabs symbol) → right-click: the full settings menu (*Rebuild bar* and *Reset position* are under *More settings*), Help (docs, feedback, updates, About) and Exit.
 
 ---
 
@@ -207,7 +206,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ShowIcons` | 1 | Show the icons from `[Icons]` in the tabs. |
 | `DefaultIcons` | 1 | What desktops without an icon of their own show: `1` = one from a suggested set, so the bar looks finished from the first start; `2` = their number as a filled circle; `0` = nothing. Nothing is written to the file; assigning your own icon, or *Remove icon*, overrides it. Also under *View › Icons*. |
 | `NumberBadge` | `auto` | Small number on the top left of each icon: `auto` = while the keyboard shortcuts are on (it then shows the key, desktop 10 = `0`), `on`, `off`. Not shown when the number is already in the label or is the icon itself. Also under *View › Numbers*. |
-| `IconSize` / `IconGap` | 16 / 7 | Icon size and the gap between icon and text. |
+| `IconSize` / `IconGap` | 18 / 7 | Icon size and the gap between icon and text. |
 | `ShowDividers` | 0 | Thin separators between the tabs. |
 | `Hotkeys` | 0 | 1 = register the number-key shortcuts for jumping to a desktop. |
 | `SwitchAlert` | 1 | Flag desktop switches that other apps cause (the new tab flashes orange, then keeps an orange frame until you hover it, plus a short hint). Also under *More settings*. |
@@ -273,6 +272,8 @@ start,end,seconds,desktop_index,desktop_name
 
 - **Reading the desktops** via `VirtualDesktopAccessor.dll` (in-process, fast): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
 - **Switching** via the DLL in one step (`SwitchMethod=dll`), with a safety net that moves the foreground window back if a Windows build drags it along; `native` emulates the keyboard shortcuts instead.
+- **Drawing:** `RenderBar()` paints the whole bar with GDI+ into one bitmap and puts it on screen at once; it only redraws when something visible changed (active desktop, hover, drag target, blink).
+- **Moving windows** via `MoveWindowToDesktopNumber`; *on all desktops* via `PinWindow` / `PinApp` (and their counterparts). Dragging a window onto a tab is detected with `SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART/END)`.
 - **Live highlight update** through `RegisterPostMessageHook` (desktop-change notification) plus a 1.2 s fallback timer (`Refresh`), which also refreshes the desktop count and names and rebuilds the bar when needed.
 - **Always on top** (on the taskbar): a combination of
   - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → an immediate `AssertTop()` on every window switch,
@@ -287,8 +288,7 @@ start,end,seconds,desktop_index,desktop_name
 
 - **25H2 compatibility:** the Ciantic DLL is labelled "24H2" but runs fine on 25H2 (26200). A Windows feature update that changes the virtual-desktop COM vtable could break the DLL → then grab a fresh build from Ciantic's repo.
 - **`GoToDesktopNumber` and the foreground window:** on 24H2 the DLL internally uses `switch_desktop_and_move_foreground_view`, which used to drag the focused window to the target desktop. Measured again on 25H2 (26200) with a foreground window from another process, it no longer does, so the direct jump is the default; DeskTabs still checks after every jump and moves the window back if needed. `SwitchMethod=native` restores the old shortcut emulation.
-- **`&` in a desktop name:** AHK text controls interpret `&` as an accelerator marker. Fix: the `SS_NOPREFIX` style (`+0x80`) on the buttons, which shows `&` literally (e.g. "M&S").
-- **z-order of colour bars / separators:** overlapping controls get hidden by the button. So separators sit in the gaps and colour bars sit **below** the button (no overlap).
+- **One picture instead of controls:** early versions built the bar from text controls, which turned `&` into an accelerator marker and hid overlapping colour bars. Today `RenderBar()` draws the whole bar with GDI+ into one bitmap, so a `&` shows literally and highlights, colour bars and dividers cannot cover each other.
 - **AHK semicolon trap:** a `;` without a preceding space is NOT a comment but throws "Illegal character in expression". Always put a space before inline `;`.
 - **Sitting on the taskbar:** the bar fights the taskbar over z-order (a brief flicker on window switch despite the WinEvent hook + burst). Up to v1.1.4 there was a `DockMode=above` that parked the bar just above the taskbar instead: flicker-free, but it covered the bottom edge of every window (status bars, scroll bars, input fields), so it was useless in daily work and was removed in v1.1.5. An old `DockMode=above` in `settings.ini` is cleared on start and the bar returns to the taskbar.
 - **Multi-monitor:** the bar always sits on the **primary taskbar** (`Shell_TrayWnd`) and follows automatically when the primary monitor changes in Windows. Secondary taskbars (`Shell_SecondaryTrayWnd`) are not served.

@@ -57,7 +57,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Fenster auf allen Desktops anzeigen:** Rechtsklick auf den Griff ≡ und *„…“ auf allen Desktops anzeigen* anhaken (oder *Alle Fenster von „…“ auf allen Desktops* für die ganze App), oder das Fenster an der Titelleiste auf ≡ ziehen. Noch einmal auf ≡ oder auf einen Tab gezogen, lebt es wieder nur auf einem Desktop. Auch der Rechtsklick auf einen Tab zeigt den Haken; dort abgewählt, bleibt das Fenster nur auf diesem Desktop. DeskTabs respektiert die Windows-Einstellung: Ein Fenster auf allen Desktops, das Du auf einen Tab schiebst, verliert sie offen angesagt (der Hinweis nennt es); eine App auf allen Desktops bleibt unangetastet.
 - **Zurück zum letzten Desktop:** Mittelklick auf die Leiste oder Strg+Win+Rücktaste bringt Dich zum Desktop, auf dem Du zuletzt gearbeitet hast (kurze Durchfahrten zählen nicht).
 - **Hinweispunkt:** Blinkt ein Programm auf einem anderen Desktop, bekommt dessen Tab einen kleinen orangen Punkt, bis Du dort bist.
-- **Auf allen Desktops sichtbar:** das Fenster ist an alle Desktops gepinnt.
+- **Auf allen Desktops sichtbar:** die Leiste selbst ist an alle Desktops gepinnt.
 - **Hell/Dunkel automatisch:** folgt dem Windows-Theme (Taskleisten-Helligkeit), umschaltbar oder fest einstellbar.
 - **Index-Präfix:** „3 · Projektname" (abschaltbar).
 - **Farbcodierung:** dünner Farbbalken pro Desktop (Tab-Indikator-Stil, abschaltbar, pro Desktop überschreibbar). *Farbe aus dem Symbol übernehmen* liest die Hauptfarbe aus einem geholten Seiten-Symbol und setzt sie für diesen Desktop.
@@ -69,11 +69,11 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
 - **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`timelog\desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
-- **Rechtsklick-Menü:** Rechtsklick auf einen Tab für Symbol, Farbe und Kürzel, dazu alle App-Einstellungen: *Ansicht* (was im Tab steht, Symbole, Nummern, Farbbalken), *Aktiver Desktop*, *Hell oder dunkel*, *Tastenkürzel*, *Sprache* und unter *Weitere Einstellungen* Direktsprung, Einrasten und Zeit-Log. Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
+- **Rechtsklick-Menü:** Rechtsklick auf einen Tab, um Fenster dorthin zu schicken, und für Symbol, Farbe und Kürzel, dazu alle App-Einstellungen: *Ansicht* (was im Tab steht, Symbole, Nummern, Farbbalken), *Aktiver Desktop*, *Hell oder dunkel*, *Tastenkürzel*, *Sprache* und unter *Weitere Einstellungen* Direktsprung, Einrasten, Wechsel-Meldung, Hinweispunkt, Fenster auf Tabs ziehen und Zeit-Log. Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
 - **Hilfe-Menü:** Dokumentation, Änderungsverlauf, Fehler melden und Wunsch einreichen (öffnet ein vorausgefülltes GitHub-Issue), E-Mail an den Autor, Update-Prüfung und *Über DeskTabs* (Version, Lizenz, Links).
 - **Update-Prüfung:** einmal täglich fragt DeskTabs die GitHub-Releases-API nach der aktuellen Versionsnummer (mehr wird nicht übertragen) und zeigt bei einer neueren Version einen Tray-Hinweis. Abschaltbar im Hilfe-Menü oder per `UpdateCheck = 0`.
 - **Live-Konfiguration:** Änderungen an `settings.ini` (Kürzel, Farben, Stufe) werden innerhalb von ~1,2 s übernommen, ohne Neustart. Praktisch, wenn Dein KI-Agent die Leiste für Dich einrichtet.
-- **Tastenkürzel (standardmäßig aus):** mit einer Zifferntaste direkt auf Desktop 1 bis 10 springen, wahlweise über die Zifferreihe oder den Ziffernblock (dort unabhängig davon, ob NumLock an ist). Modifikator im Menü wählbar: Strg+Windows, Strg+Alt, Windows+Alt oder Strg+Umschalt.
+- **Tastenkürzel (standardmäßig aus):** mit einer Zifferntaste direkt auf Desktop 1 bis 10 springen, wahlweise über die Zifferreihe oder den Ziffernblock (dort unabhängig davon, ob NumLock an ist). Die Zusatztasten sind im Menü frei kombinierbar (Strg, Umschalt, Alt, Windows; Standard Strg+Windows). Dieselben Tasten plus Umschalt schicken das aktive Fenster auf diesen Desktop (sofern Umschalt nicht schon dazugehört), die Rücktaste führt zurück zum letzten Desktop.
 - **Mausrad** über der Leiste blättert durch die Desktops.
 - **Trennstriche** zwischen den Tabs (standardmäßig aus, umschaltbar).
 - **Verschiebbar** am Griff `≡` links; Position wird in `settings.ini` gemerkt.
@@ -118,7 +118,7 @@ Andere Werkzeuge decken Teile davon ab: Tastenkürzel-Skripte zum Wechseln, Tray
 ## Voraussetzungen
 
 - **Windows 11:** entwickelt und getestet auf **25H2 (Build 26200)**. Funktioniert ab 24H2 (26100).
-- **AutoHotkey v2** (getestet mit 2.0.26), Standardpfad `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
+- **AutoHotkey v2** (getestet mit 2.0.29), Standardpfad `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
 - **VirtualDesktopAccessor.dll** (liegt im Repo bei), von [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), Release `2024-12-16-windows11`.
 
 ---
@@ -149,7 +149,6 @@ Das installiert nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Eintrag an 
 
 Stoppt DeskTabs, entfernt die Autostart-Verknüpfung und den Programmordner und fragt, ob Einstellungen, Symbole und Zeit-Logs erhalten bleiben sollen (sie wandern dann in einen Ordner unter `%TEMP%`). DeskTabs schreibt nichts in die Registry und legt nichts außerhalb seines Ordners ab — bei einer Installation von Hand genügt es also, den Ordner zu löschen.
 
-Das installiert DeskTabs nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Eintrag an und startet es. Erneut ausführen aktualisiert auf die neueste Version.
 
 > Hinweis: Eine mit AutoHotkey kompilierte `.exe` kann bei manchen Virenscannern Fehlalarme auslösen. Deshalb gibt es immer beides, die `.exe` und den vollständigen Quellcode; Du kannst stattdessen jederzeit aus dem Quellcode starten.
 
@@ -167,7 +166,7 @@ Das installiert DeskTabs nach `%LOCALAPPDATA%\DeskTabs`, legt einen Autostart-Ei
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`)
 → Ziel: `AutoHotkey64.exe`, als Argument der Pfad zu `DeskTabs.ahk`.
 
-**Beenden / Steuern:** Tray-Icon (DeskTabs-Symbol) → Rechtsklick: das komplette Einstellungsmenü, Hilfe (Doku, Feedback, Updates, Über), Leiste neu aufbauen, Position zurücksetzen, Beenden.
+**Beenden / Steuern:** Tray-Icon (DeskTabs-Symbol) → Rechtsklick: das komplette Einstellungsmenü (*Leiste neu aufbauen* und *Position zurücksetzen* unter *Weitere Einstellungen*), Hilfe (Doku, Feedback, Updates, Über) und Beenden.
 
 ---
 
@@ -207,7 +206,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `ShowIcons` | 1 | Symbole aus `[Icons]` in den Tabs anzeigen. |
 | `DefaultIcons` | 1 | Was Desktops ohne eigenes Symbol zeigen: `1` = eines aus einem Vorschlagssatz, damit die Leiste vom ersten Start an fertig aussieht; `2` = ihre Nummer als gefüllten Kreis; `0` = nichts. In die Datei wird nichts geschrieben; ein eigenes Symbol oder *Symbol entfernen* sticht den Vorschlag. Auch unter *Ansicht › Symbole*. |
 | `NumberBadge` | `auto` | Kleine Nummer oben links am Symbol: `auto` = solange die Tastenkürzel an sind (dann zeigt sie die Taste, Desktop 10 = `0`), `on`, `off`. Entfällt, wenn die Nummer schon im Text steht oder selbst das Symbol ist. Auch unter *Ansicht › Nummern*. |
-| `IconSize` / `IconGap` | 16 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
+| `IconSize` / `IconGap` | 18 / 7 | Symbolgröße und Abstand zwischen Symbol und Text. |
 | `ShowDividers` | 0 | Dünne Trennstriche zwischen den Tabs. |
 | `Hotkeys` | 0 | 1 = Tastenkürzel für den Direktsprung auf einen Desktop registrieren. |
 | `SwitchAlert` | 1 | Desktop-Wechsel melden, die andere Programme auslösen (der neue Tab blinkt orange und behält einen orangen Rahmen, bis die Maus darüberfährt, dazu ein kurzer Hinweis). Auch unter *Weitere Einstellungen*. |
@@ -273,6 +272,8 @@ start,end,seconds,desktop_index,desktop_name
 
 - **Lesen der Desktops** über `VirtualDesktopAccessor.dll` (in-process, schnell): `GetDesktopCount`, `GetCurrentDesktopNumber`, `GetDesktopName`, `PinWindow`, `RegisterPostMessageHook`.
 - **Wechseln** über die DLL in einem Schritt (`SwitchMethod=dll`), mit Sicherheitsnetz: Nimmt ein Windows-Build das Vordergrundfenster mit, schiebt DeskTabs es zurück; `native` bildet stattdessen die Tastenkürzel nach.
+- **Zeichnen:** `RenderBar()` malt die ganze Leiste mit GDI+ in ein Bild und bringt es in einem Zug auf den Bildschirm; neu gezeichnet wird nur, wenn sich etwas Sichtbares geändert hat (aktiver Desktop, Hover, Ziel beim Ziehen, Blinken).
+- **Fenster verschieben** über `MoveWindowToDesktopNumber`; *auf allen Desktops* über `PinWindow` / `PinApp` (und deren Gegenstücke). Das Ziehen eines Fensters auf einen Tab erkennt `SetWinEventHook(EVENT_SYSTEM_MOVESIZESTART/END)`.
 - **Live-Update der Hervorhebung** via `RegisterPostMessageHook` (Desktop-Wechsel-Benachrichtigung) + 1,2-s-Fallback-Timer (`Refresh`), der auch Desktop-Anzahl/Namen aktualisiert und die Leiste bei Bedarf neu baut.
 - **Immer im Vordergrund** (auf der Taskleiste): Kombination aus
   - `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)` → bei jedem Fensterwechsel sofort `AssertTop()`,
@@ -287,8 +288,7 @@ start,end,seconds,desktop_index,desktop_name
 
 - **25H2-Kompatibilität:** Die Ciantic-DLL ist mit „24H2" gelabelt, läuft aber auf 25H2 (26200) einwandfrei. Bei einem Windows-Feature-Update, das die Virtual-Desktop-COM-VTable ändert, kann die DLL brechen → dann neue Version von Ciantics Repo holen.
 - **`GoToDesktopNumber` und das Vordergrundfenster:** Auf 24H2 nutzt die DLL intern `switch_desktop_and_move_foreground_view` und nahm das fokussierte Fenster mit auf den Ziel-Desktop. Auf 25H2 (26200) mit einem Vordergrundfenster aus einem fremden Prozess nachgemessen: passiert nicht mehr, deshalb ist der Direktsprung Standard. DeskTabs prüft trotzdem nach jedem Sprung und schiebt das Fenster notfalls zurück. `SwitchMethod=native` stellt den alten Tastenkürzel-Nachbau wieder her.
-- **`&` im Desktop-Namen:** AHK-Text-Controls interpretieren `&` als Tastenkürzel-Markierung. Lösung: Style `SS_NOPREFIX` (`+0x80`) auf die Buttons, das zeigt `&` wörtlich (z.B. „M&S").
-- **z-Order der Farbbalken/Trennstriche:** Überlappende Controls werden vom Button verdeckt. Deshalb liegen Trennstriche in den Lücken und Farbbalken **unter** dem Button (überlappungsfrei).
+- **Ein Bild statt Controls:** Frühe Versionen bauten die Leiste aus Text-Controls; die machten aus `&` eine Tastenkürzel-Markierung und verdeckten überlappende Farbbalken. Heute zeichnet `RenderBar()` die ganze Leiste mit GDI+ in ein einziges Bild, ein `&` erscheint wörtlich, und Hervorhebungen, Farbbalken und Trennstriche können sich nicht mehr gegenseitig verdecken.
 - **AHK-Semikolon-Falle:** Ein `;` ohne Leerzeichen davor ist KEIN Kommentar, sondern wirft „Illegal character in expression". Inline-Kommentare immer mit Leerzeichen vor `;`.
 - **Platz auf der Taskleiste:** Die Leiste kämpft mit der Taskleiste um die z-Order (kurzes Flackern beim Fensterwechsel trotz WinEvent-Hook + Burst). Bis v1.1.4 gab es `DockMode=above`, das die Leiste knapp über der Taskleiste parkte: flackerfrei, lag aber über der Unterkante jedes Fensters (Statuszeilen, Bildlaufleisten, Eingabefelder) und war damit im Alltag unbrauchbar; in v1.1.5 entfernt. Ein altes `DockMode=above` in der `settings.ini` wird beim Start gelöscht, die Leiste kehrt auf die Taskleiste zurück.
 - **Multi-Monitor:** Die Leiste sitzt immer auf der **Primär-Taskleiste** (`Shell_TrayWnd`) und folgt automatisch, wenn sich der Primärmonitor in Windows ändert. Sekundäre Taskleisten (`Shell_SecondaryTrayWnd`) werden nicht bespielt.

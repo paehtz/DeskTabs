@@ -52,7 +52,7 @@ body:
     id: config
     attributes:
       label: Relevant settings
-      description: e.g. DockMode, ThemeMode, number of desktops, monitor resolution
+      description: e.g. CompactMode, ActiveStyle, ThemeMode, number of desktops, monitor resolution
     validations:
       required: false
   - type: textarea

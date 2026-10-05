@@ -1,6 +1,6 @@
 # Code signing policy
 
-This page documents who may request, review and approve a signed build of DeskTabs, as required for projects that use a certificate from the SignPath Foundation.
+This page documents who may request, review and approve a signed build of DeskTabs, as required by free code signing programmes for open source projects. DeskTabs is not signed yet; an application is pending.
 
 ## Team
 
@@ -12,7 +12,7 @@ DeskTabs is maintained by one person, who therefore holds all three roles:
 | Reviewer (reviews what goes into a release) | Henning Pähtz | [@paehtz](https://github.com/paehtz) |
 | Approver (approves a signing request) | Henning Pähtz | [@paehtz](https://github.com/paehtz) |
 
-Two-factor authentication is enabled for the GitHub account that owns this repository and for the SignPath account.
+Two-factor authentication is enabled for the GitHub account that owns this repository and will be for the account at the signing service.
 
 ## What gets signed
 
