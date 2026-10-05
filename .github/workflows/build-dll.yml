@@ -1,0 +1,54 @@
+name: Build VirtualDesktopAccessor.dll
+
+# Builds the bundled VirtualDesktopAccessor.dll from the source of
+# Ciantic/VirtualDesktopAccessor at a pinned commit, plus one extra export
+# (MoveDesktop, see vda/move_desktop.rs). Started by hand only; the resulting
+# DLL is reviewed and committed to the repository like any other change.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out DeskTabs
+        uses: actions/checkout@v4
+
+      - name: Check out VirtualDesktopAccessor (pinned)
+        uses: actions/checkout@v4
+        with:
+          repository: Ciantic/VirtualDesktopAccessor
+          ref: 7ff9ef827bab9a081421ebb204339dd96475ec1a
+          path: upstream
+
+      - name: Add the MoveDesktop export
+        shell: pwsh
+        run: |
+          Add-Content -Path upstream/dll/src/lib.rs -Value (Get-Content vda/move_desktop.rs -Raw)
+          Select-String -Path upstream/dll/src/lib.rs -Pattern 'fn MoveDesktop'
+
+      - name: Build
+        shell: pwsh
+        working-directory: upstream
+        run: |
+          rustc --version
+          cargo build --release -p dll --locked
+
+      - name: Collect DLL and checksum
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item upstream/target/release/VirtualDesktopAccessor.dll out/
+          $h = (Get-FileHash out/VirtualDesktopAccessor.dll -Algorithm SHA256).Hash.ToLower()
+          "$h  VirtualDesktopAccessor.dll" | Set-Content out/SHA256SUMS.txt -Encoding ascii
+          Get-Content out/SHA256SUMS.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: VirtualDesktopAccessor
+          path: out/
