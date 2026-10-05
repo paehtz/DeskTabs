@@ -4051,16 +4051,74 @@ ReorderDrag() {
     from := gReorderFrom
     gReorderFrom := -1
     if (target != from) {
-        VD("MoveDesktop", "Int", from, "Int", target, "Int")
+        global gSelfTick := A_TickCount
+        moved := (VD("MoveDesktop", "Int", from, "Int", target, "Int") = 1)
+        if (moved)
+            RemapAfterMove(from, target)
         SyncDesktopIds()
-        RebuildAll()
-        StartConfirmBlink(target)
+        if (!moved || !ReorderInPlace())             ; ohne Neuaufbau: kein Aufblitzen der Leiste
+            RebuildAll()                             ; kein Bestaetigungsblinken - Browser-Tabs blinken auch nicht
     } else {
         for it in BTNS
             it["x"] := it["x0"]
         RenderBar(true)
     }
     return 0
+}
+; Nach dem Umsortieren haben Desktops neue Positionsnummern. Alles, was sich DeskTabs per
+; Nummer merkt, wird mitgezogen - sonst hielte UpdateHighlight die neue Nummer des aktiven
+; Desktops fuer einen fremden Wechsel (oranges Blinken), das Zeit-Log teilte den Aufenthalt
+; und "zurueck" zeigte auf den falschen Desktop.
+RemapAfterMove(from, to) {
+    global gCurrent, gLastDesk, gSegDesk, gLogPend, gAttention, gAlertNum
+    m(i) => (i = from) ? to
+        : (from < to && i > from && i <= to) ? i - 1
+        : (to < from && i >= to && i < from) ? i + 1 : i
+    gCurrent := (gCurrent >= 0) ? m(gCurrent) : gCurrent
+    gLastDesk := (gLastDesk >= 0) ? m(gLastDesk) : gLastDesk
+    gSegDesk := (gSegDesk >= 0) ? m(gSegDesk) : gSegDesk
+    if (IsObject(gLogPend) && gLogPend.Has("desk") && gLogPend["desk"] >= 0)
+        gLogPend["desk"] := m(gLogPend["desk"])
+    if (gAlertNum >= 0)
+        gAlertNum := m(gAlertNum)
+    att := Map()
+    for k in gAttention
+        att[m(k)] := true
+    gAttention := att
+}
+; Die Tabs stehen nach dem Gleiten schon an ihren neuen Plaetzen: nur Nummern, Beschriftungen
+; und Abzeichen nachziehen und neu zeichnen, statt die Leiste neu aufzubauen (das liess sie
+; kurz aufblitzen). Aendert sich dabei eine Beschriftung in der Laenge (Nummer vorangestellt,
+; 9 -> 10), stimmen die Breiten nicht mehr: dann false, der Aufrufer baut neu.
+ReorderInPlace() {
+    global BTNS, gOrdCache
+    gOrdCache := Map()                               ; Position -> Laufnummer hat sich verschoben
+    order := []
+    for it in BTNS
+        order.Push(it)
+    ; nach der Zielposition sortieren (wenige Tabs: einfaches Einfuegesortieren)
+    Loop order.Length - 1 {
+        i := A_Index + 1, cur := order[i], j := i - 1
+        while (j >= 1 && order[j]["tx"] > cur["tx"]) {
+            order[j + 1] := order[j], j -= 1
+        }
+        order[j + 1] := cur
+    }
+    for i, it in order {
+        num := i - 1
+        label := LabelFor(num)
+        if (it["label"] != "" && StrLen(label) != StrLen(it["label"]))
+            return false
+        if (it["label"] != "")
+            it["label"] := label
+        it["num"] := num, it["x"] := it["tx"]
+        it["badge"] := BadgeText(num, it["icon"], it["label"])
+        it["src"] := TabSource(num)
+    }
+    BTNS := order
+    UpdateHighlight()
+    RenderBar(true)
+    return true
 }
 ; weiches Annaehern: pro Schritt gut ein Drittel des Restwegs
 Glide(cur, to) => (Abs(to - cur) < 1) ? to : cur + (to - cur) * 0.35
