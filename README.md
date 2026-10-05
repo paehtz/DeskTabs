@@ -201,6 +201,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read). Also switchable in the Help menu; stored in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `soliddesk` = a strong fill in its own desktop colour, `solid` = a strong fill in the accent colour. |
 | `TintL` / `TintS` | 86 / 100 (light), 32 / 78 (dark) | Lightness and saturation (%) of the tinted active tab. Higher `TintL` = more delicate, lower = stronger. |
+| `ActiveShadow` | 1 | A small hard shadow under the active tab, so it looks slightly lifted. Also under *Active desktop*. |
 | `ActiveBold` | 0 | 1 = write the active desktop's label in bold. Also in the menu under *Active desktop*. |
 | `ActiveBarBoost` | 2 | How many pixels the colour bar of the active desktop grows, so it reads as active at a glance. |
 | `GradientPct` | 14 | Strength of the vertical gradient inside filled tabs, `0` = flat. |

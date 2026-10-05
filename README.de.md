@@ -201,6 +201,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `UpdateCheck` | 1 | 1 = einmal täglich die GitHub-Releases-API nach einer neueren Version fragen (nur die Versionsnummer wird gelesen). Auch im Hilfe-Menü schaltbar; landet in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | Füllung des aktiven Tabs: `desktop` = eigene Desktop-Farbe, `accent` = einheitliche Akzentfarbe, `soliddesk` = kräftige Füllung in der eigenen Desktop-Farbe, `solid` = kräftige Füllung in der Akzentfarbe. |
 | `TintL` / `TintS` | 86 / 100 (hell), 32 / 78 (dunkel) | Helligkeit und Sättigung (%) des getönten aktiven Tabs. Höheres `TintL` = zarter, niedrigeres = kräftiger. |
+| `ActiveShadow` | 1 | Kleiner, harter Schatten unter dem aktiven Tab, er wirkt leicht abgehoben. Auch unter *Aktiver Desktop*. |
 | `ActiveBold` | 0 | 1 = Beschriftung des aktiven Desktops fett. Auch im Menü unter *Aktiver Desktop*. |
 | `ActiveBarBoost` | 2 | Um wie viele Pixel der Farbbalken des aktiven Desktops wächst, damit er auf den ersten Blick auffällt. |
 | `GradientPct` | 14 | Stärke des senkrechten Verlaufs in gefüllten Tabs, `0` = flach. |

@@ -83,6 +83,7 @@ global CONF := Map(
     "ColHoverTx",     0x1F1F1F,
     "HoverPct",      58,      ; Deckkraft (%) der Hover-Aufhellung; je Theme ueberschrieben
     "GradientPct",   14,      ; Staerke des senkrechten Verlaufs in gefuellten Tabs (0 = flach), wie bei Fluent-Buttons
+    "ActiveShadow",  1,       ; 1 = harter Schatten unter dem aktiven Tab: er wirkt leicht abgehoben (Menue: Aktiver Desktop)
     "ActiveBold",    0,       ; 1 = Beschriftung des aktiven Desktops fett (im Ansicht-Menue schaltbar)
     "ActiveBarBoost", 2,      ; um so viele px waechst der Farbbalken des aktiven Desktops (px @100%)
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
@@ -767,6 +768,7 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.activeshadow", "Schatten unter dem aktiven Tab",
     "menu.shape", "Form:",
     "menu.shape.tabs", "Tabs",
     "menu.shape.register", "Register (Tab hängt an der Taskleiste)",
@@ -943,6 +945,7 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.activeshadow", "Shadow under the active tab",
     "menu.shape", "Shape:",
     "menu.shape.tabs", "Tabs",
     "menu.shape.register", "Register (tab hangs from the taskbar)",
@@ -1245,7 +1248,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "SwitchAlert", "AttentionDot", "DragToTab"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -2468,6 +2471,9 @@ FillSettingsMenu(m) {
             am.Check(it[2])
     }
     am.Add()
+    am.Add(T("menu.activeshadow"), ToggleView.Bind("ActiveShadow"))
+    if (CONF["ActiveShadow"])
+        am.Check(T("menu.activeshadow"))
     am.Add(T("menu.activebold"), ToggleView.Bind("ActiveBold"))
     if (CONF["ActiveBold"])
         am.Check(T("menu.activebold"))
@@ -3662,6 +3668,12 @@ RenderBar(force := false) {
             ; Register: der Tab reicht bis zur Oberkante (die oberen Ecken liegen ausserhalb
             ; und werden abgeschnitten) und haengt so glatt an der farbigen Kante
             ay := reg ? -r : y, ah := reg ? y + h + r : h
+            ; leicht abgehoben: kleiner, harter Schatten nach unten (im dunklen Thema kraeftiger,
+            ; sonst verschwindet er auf der dunklen Leiste)
+            if (CONF["ActiveShadow"] && gReorderFrom < 0) {
+                sd := Max(2, px(2))
+                FillRoundRect(g, x + Max(1, px(1)), ay + sd, w, ah, r, (gTheme = "dark") ? 0xA0000000 : 0x4A000000)
+            }
             if (solid) {
                 FillRoundRectGrad(g, x, ay, w, ah, r, ARGB(solidBg), grad)
                 tx := (style = "soliddesk") ? ReadableOn(col) : CONF["ColActiveTx"]
