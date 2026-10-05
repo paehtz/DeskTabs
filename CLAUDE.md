@@ -94,7 +94,7 @@ After editing: run `/validate`, then restart the script and look at the bar. **R
 
 ## Build (optional)
 
-A standalone `.exe` is produced with Ahk2Exe and the AHK v2 base; releases ship a zip of `DeskTabs.exe` + the DLL. The compiled exe embeds the GPL-2.0 AutoHotkey interpreter (see THIRD-PARTY-LICENSES.md). For development you do not need to build — just run the `.ahk`.
+A standalone `.exe` is produced with Ahk2Exe and the AHK v2 base; releases ship a zip of `DeskTabs.exe` + the DLL. The compiled exe embeds the AutoHotkey interpreter (GPL-2.0-or-later); DeskTabs itself is GPL-3.0-or-later with attribution terms in NOTICE (MIT up to 1.1.8), see THIRD-PARTY-LICENSES.md. For development you do not need to build — just run the `.ahk`.
 
 ## Contributing back (please)
 

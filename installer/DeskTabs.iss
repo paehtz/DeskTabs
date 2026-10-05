@@ -74,6 +74,7 @@ Source: "{#SourceDir}\data\*";                      DestDir: "{app}\data"; Flags
 Source: "{#SourceDir}\README.md";                   DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\README.de.md";                DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\LICENSE";                     DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\NOTICE";                      DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\LICENSE-AutoHotkey.txt";      DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\THIRD-PARTY-LICENSES.md";     DestDir: "{app}"; Flags: ignoreversion
 

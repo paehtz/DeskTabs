@@ -6,7 +6,7 @@
 
 Entwickelt von [Henning Pähtz](https://paehtz.de) als schlankes Werkzeug fürs Zeit-Tracking pro Projekt: ein Desktop = ein Kunde, immer einen Klick entfernt.
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 ![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-334455.svg)
 ![Windows 11](https://img.shields.io/badge/Windows-11-0078D4.svg)
 
@@ -54,7 +54,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Direktsprung:** Ein Klick springt in einem Schritt zum Ziel-Desktop (~100 ms), ohne die Desktops dazwischen durchzuschalten. Auf 25H2 (26200) gemessen: Das fokussierte Fenster bleibt liegen; nimmt ein Build es doch mit, schiebt DeskTabs es sofort zurück. Der schrittweise Wechsel (`Win+Strg+Pfeil`) bleibt über *Weitere Einstellungen › Direkt springen statt durchblättern* verfügbar.
 - **Ungewollte Wechsel werden gemeldet:** Zieht ein anderes Programm Dich auf einen anderen Desktop (etwa eine PDF, deren Reader woanders offen ist), blinkt der neue Tab orange und behält einen Rahmen, bis Du mit der Maus darüberfährst; ein Hinweis nennt das Programm im Vordergrund. Eigene Wechsel (Tabs, Mausrad, Zifferntasten, Strg+Win+Pfeil, Task-Ansicht) bleiben still.
 - **Fenster auf einen anderen Desktop schicken:** Rechtsklick auf einen Tab, *„…“ hierher verschieben*, schickt das Fenster, an dem Du gerade arbeitest, auf diesen Desktop; alternativ Strg+Win+Umschalt+1 … 0 (bei eingeschalteten Tastenkürzeln). Am schnellsten: **Umschalt + Klick** auf einen Tab; **Strg + Umschalt + Klick** nimmt das Fenster mit und wechselt gleich dorthin. *Fenster hierher holen ›* listet alle Fenster Deines aktuellen Desktops. Oder Du ziehst ein Fenster an der Titelleiste auf einen Tab und lässt los: Es wandert dorthin und behält Größe und Position. Du selbst bleibst, wo Du bist.
-- **Fenster auf allen Desktops anzeigen:** Rechtsklick auf den Griff ≡ und *„…“ auf allen Desktops anzeigen* anhaken (oder *Alle Fenster von „…“ auf allen Desktops* für die ganze App), oder das Fenster an der Titelleiste auf ≡ ziehen. Noch einmal auf ≡ oder auf einen Tab gezogen, lebt es wieder nur auf einem Desktop. DeskTabs respektiert die Windows-Einstellung: Ein Fenster auf allen Desktops, das Du auf einen Tab schiebst, verliert sie offen angesagt (der Hinweis nennt es); eine App auf allen Desktops bleibt unangetastet.
+- **Fenster auf allen Desktops anzeigen:** Rechtsklick auf den Griff ≡ und *„…“ auf allen Desktops anzeigen* anhaken (oder *Alle Fenster von „…“ auf allen Desktops* für die ganze App), oder das Fenster an der Titelleiste auf ≡ ziehen. Noch einmal auf ≡ oder auf einen Tab gezogen, lebt es wieder nur auf einem Desktop. Auch der Rechtsklick auf einen Tab zeigt den Haken; dort abgewählt, bleibt das Fenster nur auf diesem Desktop. DeskTabs respektiert die Windows-Einstellung: Ein Fenster auf allen Desktops, das Du auf einen Tab schiebst, verliert sie offen angesagt (der Hinweis nennt es); eine App auf allen Desktops bleibt unangetastet.
 - **Zurück zum letzten Desktop:** Mittelklick auf die Leiste oder Strg+Win+Rücktaste bringt Dich zum Desktop, auf dem Du zuletzt gearbeitet hast (kurze Durchfahrten zählen nicht).
 - **Hinweispunkt:** Blinkt ein Programm auf einem anderen Desktop, bekommt dessen Tab einen kleinen orangen Punkt, bis Du dort bist.
 - **Auf allen Desktops sichtbar:** das Fenster ist an alle Desktops gepinnt.
@@ -98,7 +98,7 @@ Ja. Wenn Du pro Projekt einen Desktop nutzt, schreibt DeskTabs jeden Aufenthalt 
 Öffnest Du eine Datei, deren Programm schon auf einem anderen Desktop läuft, wechselt Windows ungefragt dorthin. DeskTabs meldet solche Wechsel: Der Tab blinkt orange, und ein kurzer Hinweis nennt das Programm im Vordergrund. So landet keine Zeit unbemerkt beim falschen Projekt.
 
 **Ist DeskTabs kostenlos? Braucht es Administratorrechte?**
-DeskTabs ist kostenlos und quelloffen (MIT). Das Setup installiert pro Benutzer ohne Administratorrechte, außerdem gibt es eine portable ZIP.
+DeskTabs ist kostenlos und quelloffen (GPL v3). Das Setup installiert pro Benutzer ohne Administratorrechte, außerdem gibt es eine portable ZIP.
 
 ### DeskTabs im Vergleich zu Windows 11 allein
 
@@ -315,9 +315,15 @@ Die Dateien eines Releases entstehen in [einem GitHub-Actions-Ablauf](.github/wo
 
 ## Lizenz
 
-DeskTabs steht unter der [MIT-Lizenz](LICENSE) © Henning Pähtz.
+DeskTabs ist freie Software © Henning Pähtz unter der [GNU General Public License v3](LICENSE) oder später, mit Zusatzbedingungen nach Abschnitt 7 in [NOTICE](NOTICE):
 
-**Haftungsausschluss:** DeskTabs wird „wie besehen" bereitgestellt, ohne jede Gewährleistung und ohne Haftung, wie in der MIT-Lizenz festgehalten. Nutzung auf eigenes Risiko.
+- **Urheber nennen.** Wer DeskTabs oder ein darauf aufbauendes Programm weitergibt, behält die Nennung „DeskTabs von Henning Pähtz“ samt Link auf dieses Repository, im Über-Dialog (oder den Credits) des Programms und in seiner Dokumentation. Das gilt auch, wenn DeskTabs Teil einer größeren Werkzeugsammlung wird.
+- **Abgewandelte Fassungen kennzeichnen** und nicht DeskTabs nennen.
+- Wie bei der GPL üblich muss ein Programm, das DeskTabs-Code enthält, selbst unter der GPL und mit Quelltext veröffentlicht werden.
+
+Für die Nutzung von DeskTabs, auch im Beruf, ändert sich dadurch nichts. Versionen bis einschließlich 1.1.8 sind unter der MIT-Lizenz erschienen und bleiben unter ihr verfügbar.
+
+**Haftungsausschluss:** DeskTabs wird „wie besehen" bereitgestellt, ohne jede Gewährleistung und ohne Haftung, wie in der GPL festgehalten. Nutzung auf eigenes Risiko.
 
 ### Drittkomponenten
 

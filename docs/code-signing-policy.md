@@ -33,7 +33,7 @@ Both are produced by [`.github/workflows/build.yml`](../.github/workflows/build.
 ## Third-party components
 
 - `VirtualDesktopAccessor.dll` — [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), MIT, redistributed unmodified.
-- The AutoHotkey v2 interpreter is embedded in the compiled executable by Ahk2Exe, which puts the executable under GPL-2.0; the text ships with every release as `LICENSE-AutoHotkey.txt`. The DeskTabs source itself is MIT.
+- The AutoHotkey v2 interpreter is embedded in the compiled executable by Ahk2Exe, under GPL-2.0 or later; the text ships with every release as `LICENSE-AutoHotkey.txt`. DeskTabs itself is GPL-3.0-or-later with the attribution terms in `NOTICE` (MIT up to version 1.1.8), so the executable as a whole is distributed under GPL v3.
 - `data/glyph-names.txt` — icon names from the Microsoft documentation, CC BY 4.0.
 
 Details in [THIRD-PARTY-LICENSES.md](../THIRD-PARTY-LICENSES.md).

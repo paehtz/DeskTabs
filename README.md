@@ -6,7 +6,7 @@
 
 Built by [Henning Pähtz](https://paehtz.de) as a lean tool for per-project time tracking: one desktop = one client, always a single click away.
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)
 ![AutoHotkey v2](https://img.shields.io/badge/AutoHotkey-v2-334455.svg)
 ![Windows 11](https://img.shields.io/badge/Windows-11-0078D4.svg)
 
@@ -54,7 +54,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Direct jump:** a click jumps straight to the target desktop in one step (~100 ms), no stepping through the desktops in between. Measured on 25H2 (26200) the focused window stays where it is; if a build does drag it along, DeskTabs moves it right back. Step-by-step switching (`Win+Ctrl+Arrow` emulation) is still available via *More settings › Jump directly instead of stepping through*.
 - **Unexpected switches are flagged:** when another app pulls you to a different desktop (say, a PDF opens in a reader that lives elsewhere), the new tab flashes orange and keeps a frame until you hover it, and a hint tells you which app is now in front. Your own switches (tabs, wheel, number keys, Ctrl+Win+Arrow, Task View) stay quiet.
 - **Send windows to another desktop:** right-click a tab and choose *Move “…” here* to send the window you are working in to that desktop, or press Ctrl+Win+Shift+1 … 0 (with the keyboard shortcuts on). Quickest: **Shift + click** a tab; **Ctrl + Shift + click** takes the window along and switches there too. *Bring a window here ›* lists every window of your current desktop. Or simply drag a window by its title bar onto a tab and let go: it moves there and keeps its size and position. You stay where you are.
-- **Show a window on all desktops:** right-click the grip ≡ and tick *Show “…” on all desktops* (or *All windows of “…” on all desktops* for the whole app), or drag the window by its title bar onto ≡. Drag it onto ≡ again, or onto a tab, and it lives on one desktop only again. DeskTabs respects the Windows setting: a window shown on all desktops that you move to a tab loses that setting openly (the tip says so); an app set to all desktops is left untouched.
+- **Show a window on all desktops:** right-click the grip ≡ and tick *Show “…” on all desktops* (or *All windows of “…” on all desktops* for the whole app), or drag the window by its title bar onto ≡. Drag it onto ≡ again, or onto a tab, and it lives on one desktop only again. A right-click on any tab shows the tick as well; untick it there to keep the window on that desktop only. DeskTabs respects the Windows setting: a window shown on all desktops that you move to a tab loses that setting openly (the tip says so); an app set to all desktops is left untouched.
 - **Back to the last desktop:** middle-click the bar or press Ctrl+Win+Backspace to return to the desktop you last worked on (quick pass-throughs don't count).
 - **Attention dot:** when an app on another desktop flashes for attention, its tab gets a small orange dot until you go there.
 - **Visible on all desktops:** the window is pinned to every desktop.
@@ -98,7 +98,7 @@ Yes. If you keep one desktop per project, DeskTabs writes a monthly CSV with eve
 When you open a file whose program already runs on another desktop, Windows switches there without asking. DeskTabs flags these switches: the tab flashes orange and a short hint names the app that is now in front, so no time ends up on the wrong project unnoticed.
 
 **Is it free? Does it need admin rights?**
-DeskTabs is free and open source (MIT). The setup installs per user without admin rights, and there is a portable ZIP as well.
+DeskTabs is free and open source (GPL v3). The setup installs per user without admin rights, and there is a portable ZIP as well.
 
 ### DeskTabs compared with Windows 11 alone
 
@@ -315,14 +315,20 @@ Release artifacts are built by [a GitHub Actions workflow](.github/workflows/bui
 
 ## License
 
-DeskTabs is licensed under the [MIT License](LICENSE) © Henning Pähtz.
+DeskTabs is free software © Henning Pähtz, licensed under the [GNU General Public License v3](LICENSE) or later, with additional terms under section 7 in [NOTICE](NOTICE):
 
-**Disclaimer:** DeskTabs is provided "as is", without warranty of any kind and without any liability, as stated in the MIT License. Use at your own risk.
+- **Credit the author.** Anyone who passes on DeskTabs or a program based on it keeps the attribution “DeskTabs by Henning Pähtz” with a link to this repository, in the program's About dialog (or credits) and in its documentation. This also applies when DeskTabs becomes part of a larger tool collection.
+- **Mark modified versions** as different from the original, and do not call them DeskTabs.
+- As usual with the GPL, a program that includes DeskTabs code must itself be released under the GPL, with its source.
+
+Using DeskTabs, also at work, is not affected by any of this. Versions up to and including 1.1.8 were released under the MIT License and stay available under it.
+
+**Disclaimer:** DeskTabs is provided "as is", without warranty of any kind and without any liability, as stated in the GPL. Use at your own risk.
 
 ### Third-party components
 
 - **VirtualDesktopAccessor.dll** ([Ciantic](https://github.com/Ciantic/VirtualDesktopAccessor)) is bundled under the **MIT License**.
-- The compiled **`DeskTabs.exe`** (in the releases) embeds the **AutoHotkey** interpreter, which is licensed under **GPL-2.0**. The compiled executable is therefore distributed under GPL-2.0; the script source is in this repository and AutoHotkey's source is at its [project page](https://github.com/AutoHotkey/AutoHotkey). Running from source (`DeskTabs.ahk`) does not bundle AutoHotkey.
+- The compiled **`DeskTabs.exe`** (in the releases) embeds the **AutoHotkey** interpreter, which is licensed under **GPL-2.0 or later**. The compiled executable as a whole is distributed under GPL v3; the script source is in this repository and AutoHotkey's source is at its [project page](https://github.com/AutoHotkey/AutoHotkey). Running from source (`DeskTabs.ahk`) does not bundle AutoHotkey.
 
 Full notices: [THIRD-PARTY-LICENSES.md](THIRD-PARTY-LICENSES.md).
 

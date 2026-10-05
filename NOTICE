@@ -1,0 +1,43 @@
+DeskTabs
+Copyright (C) 2026 Henning Pähtz <https://paehtz.de>
+https://github.com/paehtz/DeskTabs
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version, with the additional terms below.
+
+This program is distributed in the hope that it will be useful, but WITHOUT
+ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with
+this program (file LICENSE). If not, see <https://www.gnu.org/licenses/>.
+
+Versions up to and including 1.1.8 were released under the MIT License. Those
+releases remain available under MIT; this notice applies from version 1.1.9 on.
+
+
+ADDITIONAL TERMS (GNU GPL version 3, section 7)
+-----------------------------------------------
+
+The following additional terms apply to DeskTabs and to every work based on it.
+
+1. Author attribution (section 7 b). Any conveyed copy or modified version must
+   preserve the attribution "DeskTabs by Henning Pähtz" together with the link
+   https://github.com/paehtz/DeskTabs
+   a) in the Appropriate Legal Notices the program displays (in DeskTabs: the
+      "About" dialog), or, if a work based on DeskTabs has no such display, in
+      its "About" information, credits or equivalent place visible to users;
+   b) in the documentation that accompanies the conveyed work.
+   If DeskTabs is included as a part of a larger program or tool collection,
+   the attribution must name DeskTabs as the origin of that part.
+
+2. Origin of modified versions (section 7 c). Modified versions must be marked
+   as different from the original, and must not be represented as the
+   original DeskTabs or as made or endorsed by Henning Pähtz.
+
+3. Name and logo (section 7 e). This license grants no right to use the name
+   "DeskTabs" or the DeskTabs logo for a modified version, except for the
+   attribution required in term 1 and for describing the origin truthfully
+   (for example "based on DeskTabs").

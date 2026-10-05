@@ -27,4 +27,4 @@ DeskTabs is a single AutoHotkey v2 script, so changes are straightforward:
 - Inline comments use a leading space before `;` on purpose (see the semicolon trap).
 - Keep changes focused and the script readable; match the surrounding style.
 
-By contributing, you agree that your contributions are licensed under the project's [MIT License](LICENSE).
+By contributing, you agree that your contributions are licensed under the project's license, the [GNU GPL v3 or later](LICENSE) with the additional terms in [NOTICE](NOTICE).

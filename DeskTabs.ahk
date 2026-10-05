@@ -3,12 +3,13 @@
 ;@Ahk2Exe-SetMainIcon DeskTabs.ico
 ;@Ahk2Exe-SetName DeskTabs
 ;@Ahk2Exe-SetDescription DeskTabs - clickable taskbar buttons for Windows 11 virtual desktops
-;@Ahk2Exe-SetCopyright Henning Pähtz (MIT License)
+;@Ahk2Exe-SetCopyright Henning Pähtz (GPL-3.0-or-later)
 ;@Ahk2Exe-SetVersion 1.1.8.0
 ; ============================================================================
 ;  DeskTabs  —  klickbare Buttons fuer virtuelle Desktops (Win 11)
 ;  Von Henning Pähtz (paehtz.de), baut auf Ciantic/VirtualDesktopAccessor.dll
-;  MIT License
+;  Lizenz: GNU GPL v3 oder spaeter, mit Zusatzbedingungen nach Abschnitt 7
+;  (Namensnennung, siehe NOTICE). Bis Version 1.1.8 MIT.
 ;  Stand: 2026-06-04
 ; ----------------------------------------------------------------------------
 ;  - Liest Desktop-Namen LIVE aus Windows (in Windows benannt, nichts doppelt)
@@ -188,7 +189,10 @@ MoveWindowTo(idx, hwnd, *) {
     VD("MoveWindowToDesktopNumber", "Ptr", hwnd, "Int", idx)
     if (VD("GetWindowDesktopNumber", "Ptr", hwnd, "Int") = idx)
         StartConfirmBlink(idx)                 ; angekommen: Ziel-Tab blinkt zur Bestaetigung
-    ShowBarTip(idx, T(pin = 1 ? "tip.movedunpinned" : "tip.moved", TruncName(title != "" ? title : "?", 40), GetDesktopNameRaw(idx)), 3500)
+    if (pin = 1 && idx = GetCurrentDesktop())           ; nicht verschoben, nur nicht mehr ueberall
+        ShowBarTip(idx, T("tip.unpinned", TruncName(ProgName(hwnd), 30), GetDesktopNameRaw(idx)), 3500)
+    else
+        ShowBarTip(idx, T(pin = 1 ? "tip.movedunpinned" : "tip.moved", TruncName(title != "" ? title : "?", 40), GetDesktopNameRaw(idx)), 3500)
 }
 
 ; 2 = die ganze App wird auf allen Desktops angezeigt, 1 = nur dieses Fenster, 0 = normal (ein Desktop)
@@ -214,6 +218,16 @@ TogglePinWindow(hwnd, *) {
         StartConfirmBlink(-2)                  ; -2 = der Griff
         ShowBarTip(-2, T("tip.pinned", name), 3500)
     }
+}
+; Tab-Menue: App nicht mehr auf allen Desktops, dieses Fenster landet auf Desktop idx
+UnpinAppTo(idx, hwnd, *) {
+    if (!hwnd || !WinExist("ahk_id " hwnd))
+        return
+    VD("UnPinApp", "Ptr", hwnd)
+    if (idx != GetCurrentDesktop())
+        VD("MoveWindowToDesktopNumber", "Ptr", hwnd, "Int", idx)
+    StartConfirmBlink(idx)
+    ShowBarTip(idx, T("tip.appunpinnedto", TruncName(ProgName(hwnd), 30), GetDesktopNameRaw(idx)), 3500)
 }
 ; Alle Fenster der App auf allen Desktops (wie "Fenster dieser App auf allen Desktops anzeigen" in Windows)
 TogglePinApp(hwnd, *) {
@@ -741,6 +755,8 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.pin.untick", "Haken entfernen: nur noch auf „{1}“ anzeigen",
+    "tip.appunpinnedto", "„{1}“ nicht mehr auf allen Desktops, dieses Fenster jetzt auf „{2}“",
     "tip.apppinned", "„{1}“ wird auf allen Desktops angezeigt (Einstellung der ganzen App, ändern per Rechtsklick auf ≡)",
     "tip.movedunpinned", "„{1}“ nach „{2}“ verschoben, jetzt nur noch dort statt auf allen Desktops",
     "tip.unpinned", "„{1}“ nur noch auf „{2}“",
@@ -883,9 +899,9 @@ global LANG_DE := Map(
     "about.tagline",   "Klickbare Taskleisten-Buttons für virtuelle Desktops",
     "about.version",   "Version {1}",
     "about.author",    "von {1}",
-    "about.license",   "Lizenz: MIT (Quelltext frei verfügbar)",
+    "about.license",   "Lizenz: GNU GPL v3 mit Namensnennung (siehe NOTICE). Quelltext frei verfügbar,`nohne jede Gewährleistung. Weitergaben und Abwandlungen müssen „DeskTabs von Henning Pähtz“ nennen.",
     "about.components", "Enthält VirtualDesktopAccessor (MIT, Jari Pennanen){1}.`nSymbol-Bibliothek: Schrift „Segoe Fluent Icons“ von Windows; Symbolnamen aus der`nMicrosoft-Dokumentation (CC BY 4.0).",
-    "about.ahk",       "und AutoHotkey v2 (GPL-2.0)",
+    "about.ahk",       "und AutoHotkey v2 (GPL-2.0 oder später)",
     "about.website",   "Website",
     "about.github",    "Projekt auf GitHub",
     "about.feedback",  "Feedback geben",
@@ -901,6 +917,8 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.pin.untick", "Untick to show it only on “{1}”",
+    "tip.appunpinnedto", "“{1}” no longer on all desktops, this window is now on “{2}”",
     "tip.apppinned", "“{1}” is shown on all desktops (setting of the whole app, change it with a right-click on ≡)",
     "tip.movedunpinned", "Moved “{1}” to “{2}”, now only there instead of on all desktops",
     "tip.unpinned", "“{1}” now only on “{2}”",
@@ -1043,9 +1061,9 @@ global LANG_EN := Map(
     "about.tagline",   "Clickable taskbar buttons for virtual desktops",
     "about.version",   "Version {1}",
     "about.author",    "by {1}",
-    "about.license",   "License: MIT (source code freely available)",
+    "about.license",   "License: GNU GPL v3 with attribution (see NOTICE). Source code freely available,`nwithout any warranty. Copies and modified versions must credit “DeskTabs by Henning Pähtz”.",
     "about.components", "Includes VirtualDesktopAccessor (MIT, Jari Pennanen){1}.`nIcon library: the Windows font “Segoe Fluent Icons”; icon names from the`nMicrosoft documentation (CC BY 4.0).",
-    "about.ahk",       "and AutoHotkey v2 (GPL-2.0)",
+    "about.ahk",       "and AutoHotkey v2 (GPL-2.0 or later)",
     "about.website",   "Website",
     "about.github",    "Project on GitHub",
     "about.feedback",  "Give feedback",
@@ -2185,10 +2203,22 @@ ShowContextMenu(num, *) {
         NumPut("UPtr", 0xDE5D, mii, 48)
         DllCall("SetMenuItemInfoW", "Ptr", m.Handle, "UInt", 2, "Int", 1, "Ptr", mii)   ; Position 2: nach Kopf und Linie
         fpin := PinState(fgw)
-        ; Aktion nur, wenn sie etwas bewirkt: nicht fuer Apps auf allen Desktops (siehe MoveWindowTo),
-        ; auf dem eigenen Desktop nur fuer ein Fenster auf allen Desktops ("nur noch hier")
-        if (fgw && fpin != 2 && (num != GetCurrentDesktop() || fpin = 1)) {
-            mv := T(num = GetCurrentDesktop() ? "menu.tab.onlyhere" : "menu.tab.movehere", TruncName(ProgName(fgw), 24))   ; Programmname, nicht der (oft lange) Fenstertitel
+        if (fgw && fpin >= 1) {
+            ; Fenster bzw. App liegt auf allen Desktops: hier sichtbar und abwaehlbar (Haken weg =
+            ; nur noch auf DIESEM Desktop). Setzen geht bewusst nur ueber den Griff.
+            prog := TruncName(ProgName(fgw), 24)
+            pl := T(fpin = 2 ? "menu.pin.app" : "menu.pin.window", prog)
+            m.Add(pl, fpin = 2 ? UnpinAppTo.Bind(num, fgw) : MoveWindowTo.Bind(num, fgw))
+            m.Check(pl)
+            ph := T("menu.pin.untick", raw)
+            m.Add(ph, (*) => 0)
+            m.Disable(ph)
+            if (num = GetCurrentDesktop())
+                m.Add()
+        }
+        ; Hauptaktion nur fuer normale Fenster und fremde Desktops
+        if (fgw && fpin = 0 && num != GetCurrentDesktop()) {
+            mv := T("menu.tab.movehere", TruncName(ProgName(fgw), 24))   ; Programmname, nicht der (oft lange) Fenstertitel
             m.Add(mv, MoveWindowTo.Bind(num, fgw))
             ; Hauptaktion des Tab-Menues: selbst gezeichnet, gross und in der Desktop-Farbe
             global gMenuAction := mv, gMenuActionCol := DesktopColor(num)

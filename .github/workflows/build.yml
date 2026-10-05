@@ -78,7 +78,7 @@ jobs:
         run: |
           $pkg = 'dist\package'
           New-Item -ItemType Directory -Force -Path "$pkg\lang", "$pkg\data" | Out-Null
-          Copy-Item VirtualDesktopAccessor.dll, LICENSE, LICENSE-AutoHotkey.txt, THIRD-PARTY-LICENSES.md, README.md, README.de.md $pkg
+          Copy-Item VirtualDesktopAccessor.dll, LICENSE, NOTICE, LICENSE-AutoHotkey.txt, THIRD-PARTY-LICENSES.md, README.md, README.de.md $pkg
           Copy-Item lang\de.ini, lang\en.ini "$pkg\lang"
           Copy-Item data\glyph-names.txt "$pkg\data"
           Get-ChildItem $pkg -Recurse -File | Select-Object FullName, Length

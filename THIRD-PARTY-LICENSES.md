@@ -1,6 +1,6 @@
 # Third-party licenses
 
-DeskTabs itself is licensed under the [MIT License](LICENSE) © Henning Pähtz.
+DeskTabs itself is licensed under the [GNU GPL v3 or later](LICENSE) with the additional terms in [NOTICE](NOTICE) © Henning Pähtz (versions up to 1.1.8: MIT).
 It builds on the following third-party components.
 
 ---
@@ -40,16 +40,16 @@ SOFTWARE.
 ## AutoHotkey (interpreter)
 
 - **Project:** [AutoHotkey/AutoHotkey](https://github.com/AutoHotkey/AutoHotkey)
-- **License:** GNU General Public License v2.0 (GPL-2.0), full text in [LICENSE-AutoHotkey.txt](LICENSE-AutoHotkey.txt)
+- **License:** GNU General Public License v2.0 or (at your option) any later version (GPL-2.0-or-later, as stated in its source files), full text in [LICENSE-AutoHotkey.txt](LICENSE-AutoHotkey.txt)
 
-**Running from source (`DeskTabs.ahk`):** AutoHotkey is not bundled. You install AutoHotkey v2 yourself and it runs the script. The script itself remains under the MIT License.
+**Running from source (`DeskTabs.ahk`):** AutoHotkey is not bundled. You install AutoHotkey v2 yourself and it runs the script. The script itself is under GPL v3 (see [NOTICE](NOTICE)).
 
-**Compiled executable (`DeskTabs.exe` in the releases):** the executable is produced with Ahk2Exe and **embeds the AutoHotkey interpreter**, which is licensed under GPL-2.0. The compiled `.exe` is therefore distributed as a combined work under the terms of the **GPL-2.0**. To comply:
+**Compiled executable (`DeskTabs.exe` in the releases):** the executable is produced with Ahk2Exe and **embeds the AutoHotkey interpreter**, which is licensed under GPL-2.0 or later. The compiled `.exe` is therefore distributed as a combined work under the terms of the **GPL v3**, which the interpreter's “or later” clause allows. To comply:
 
-- The GPL-2.0 license text is included as `LICENSE-AutoHotkey.txt` (and shipped inside the release archive).
+- The GPL v3 text is included as `LICENSE`, the additional terms as `NOTICE`, the interpreter's GPL-2.0 text as `LICENSE-AutoHotkey.txt` (all shipped inside the release archive).
 - The corresponding source is available: the DeskTabs script in this repository, and the AutoHotkey interpreter source at <https://github.com/AutoHotkey/AutoHotkey>.
 
-MIT (the DeskTabs script) is compatible with GPL-2.0, so combining them in the compiled binary is permitted; the resulting binary as a whole follows GPL-2.0.
+The bundled MIT component (VirtualDesktopAccessor) is compatible with GPL v3; the resulting binary as a whole follows GPL v3.
 
 ---
 
