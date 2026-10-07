@@ -755,6 +755,7 @@ global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
 global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
+global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
 global gHoverTipNum := -1    ; Tab, dessen voller Name gerade als Kurzinfo ansteht/erscheint
@@ -768,6 +769,43 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.help.shortcuts", "Tastenkürzel und Gesten…",
+    "sc.title", "DeskTabs: Tastenkürzel und Gesten",
+    "sc.hkoff", "Die Tastenkürzel sind gerade aus (grau). Einschalten: Rechtsklick auf die Leiste › Tastenkürzel.",
+    "sc.sec.switch", "Desktop wechseln",
+    "sc.sec.windows", "Fenster verschieben",
+    "sc.sec.desktops", "Desktops verwalten",
+    "sc.sec.bar", "Leiste",
+    "sc.k.click", "Klick auf einen Tab",
+    "sc.d.click", "zu diesem Desktop wechseln",
+    "sc.k.clickactive", "Klick auf den aktiven Tab",
+    "sc.d.clickactive", "Taskansicht öffnen (Win+Tab): alle Fenster und Desktops",
+    "sc.k.wheel", "Mausrad über der Leiste",
+    "sc.d.wheel", "durch die Desktops blättern",
+    "sc.k.middle", "Mittelklick auf die Leiste",
+    "sc.d.back", "zurück zum zuletzt genutzten Desktop",
+    "sc.d.jump", "direkt zu Desktop 1 bis 10 (Ziffernreihe oder Ziffernblock)",
+    "sc.k.shiftclick", "{1} + Klick auf einen Tab",
+    "sc.d.send", "aktives Fenster dorthin schicken, Du bleibst, wo Du bist",
+    "sc.k.ctrlshiftclick", "{1} + {2} + Klick auf einen Tab",
+    "sc.d.take", "aktives Fenster mitnehmen und dorthin wechseln",
+    "sc.k.dragwin", "Fenster an der Titelleiste auf einen Tab ziehen",
+    "sc.d.dragwin", "Fenster auf diesen Desktop verschieben",
+    "sc.k.dragwingrip", "Fenster an der Titelleiste auf ≡ ziehen",
+    "sc.d.dragwingrip", "auf allen Desktops anzeigen (noch einmal: wieder nur hier)",
+    "sc.k.rtab", "Rechtsklick auf einen Tab",
+    "sc.d.rtabwin", "„… hierher verschieben“ und „Fenster hierher holen ›“",
+    "sc.k.dragtab", "Tab seitlich ziehen",
+    "sc.d.dragtab", "Desktops umsortieren (wie Browser-Tabs)",
+    "sc.k.rgrip", "Rechtsklick auf ≡",
+    "sc.d.rgrip", "neuer Desktop, Fenster auf allen Desktops, alle Einstellungen",
+    "sc.d.rtabdesk", "umbenennen, entfernen, Symbol, Farbe, Kürzel, kompakt",
+    "sc.k.draggrip", "≡ ziehen",
+    "sc.d.draggrip", "Leiste verschieben (rastet an der Taskleiste ein)",
+    "sc.k.ctrlwheel", "{1} + Mausrad über der Leiste",
+    "sc.d.ctrlwheel", "Ansichtsstufe wechseln (Name, Kürzel, Symbol)",
+    "sc.k.hover", "Maus auf einem Tab ruhen lassen",
+    "sc.d.hover", "voller Name, wenn der Tab ihn nicht ganz zeigt",
     "menu.activeshadow", "Schatten unter dem aktiven Tab",
     "menu.shape", "Form:",
     "menu.shape.tabs", "Tabs",
@@ -945,6 +983,43 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.help.shortcuts", "Keyboard shortcuts and gestures…",
+    "sc.title", "DeskTabs: keyboard shortcuts and gestures",
+    "sc.hkoff", "The keyboard shortcuts are off right now (grey). Turn them on: right-click the bar › Keyboard shortcuts.",
+    "sc.sec.switch", "Switch desktops",
+    "sc.sec.windows", "Move windows",
+    "sc.sec.desktops", "Manage desktops",
+    "sc.sec.bar", "Bar",
+    "sc.k.click", "Click a tab",
+    "sc.d.click", "switch to that desktop",
+    "sc.k.clickactive", "Click the active tab",
+    "sc.d.clickactive", "open Task View (Win+Tab): all windows and desktops",
+    "sc.k.wheel", "Mouse wheel over the bar",
+    "sc.d.wheel", "page through the desktops",
+    "sc.k.middle", "Middle-click the bar",
+    "sc.d.back", "back to the desktop you last worked on",
+    "sc.d.jump", "straight to desktop 1 to 10 (number row or numpad)",
+    "sc.k.shiftclick", "{1} + click a tab",
+    "sc.d.send", "send the active window there, you stay where you are",
+    "sc.k.ctrlshiftclick", "{1} + {2} + click a tab",
+    "sc.d.take", "take the active window along and switch there",
+    "sc.k.dragwin", "Drag a window by its title bar onto a tab",
+    "sc.d.dragwin", "move the window to that desktop",
+    "sc.k.dragwingrip", "Drag a window by its title bar onto ≡",
+    "sc.d.dragwingrip", "show it on all desktops (again: only here)",
+    "sc.k.rtab", "Right-click a tab",
+    "sc.d.rtabwin", "“Move … here” and “Bring a window here ›”",
+    "sc.k.dragtab", "Drag a tab sideways",
+    "sc.d.dragtab", "reorder desktops (like browser tabs)",
+    "sc.k.rgrip", "Right-click ≡",
+    "sc.d.rgrip", "new desktop, window on all desktops, all settings",
+    "sc.d.rtabdesk", "rename, remove, icon, colour, abbreviation, compact",
+    "sc.k.draggrip", "Drag ≡",
+    "sc.d.draggrip", "move the bar (snaps to the taskbar)",
+    "sc.k.ctrlwheel", "{1} + mouse wheel over the bar",
+    "sc.d.ctrlwheel", "change the view level (name, abbreviation, icon)",
+    "sc.k.hover", "Rest the mouse on a tab",
+    "sc.d.hover", "full name, if the tab does not show all of it",
     "menu.activeshadow", "Shadow under the active tab",
     "menu.shape", "Shape:",
     "menu.shape.tabs", "Tabs",
@@ -2521,6 +2596,9 @@ FillSettingsMenu(m) {
     }
     km.Add(T("menu.hotkeys.back", modTxt " + " T("key.backspace")), (*) => 0)
     km.Disable(T("menu.hotkeys.back", modTxt " + " T("key.backspace")))
+    km.Add()
+    km.Add(T("menu.help.shortcuts"), ShowShortcuts)
+    MenuGlyph(km, T("menu.help.shortcuts"), "E765")
     hkHead := T("menu.hotkeys") ": " (CONF["Hotkeys"] ? HotkeyLabel(CONF["HotkeyMod"]) : T("menu.hotkeys.off"))
     m.Add(hkHead, km)
     MenuGlyph(m, hkHead, "E961")
@@ -2591,6 +2669,8 @@ OpenLogFolder(*) {
 ; Untermenue "Hilfe": Doku, Changelog, Feedback-Wege, Update-Pruefung
 HelpMenu() {
     hm := Menu()
+    hm.Add(T("menu.help.shortcuts"), ShowShortcuts)
+    MenuGlyph(hm, T("menu.help.shortcuts"), "E765")
     hm.Add(T("menu.help.docs"), OpenDocs)
     MenuGlyph(hm, T("menu.help.docs"), "E8F1")
     hm.Add(T("menu.help.changelog"), (*) => Run(APP_CHANGELOG_URL))
@@ -2800,6 +2880,82 @@ OpenReleasePage(*) {
     Run(APP_URL "/releases/latest")
 }
 
+; --- Uebersicht "Tastenkuerzel und Gesten" ---
+; Alle Kuerzel, Klicks und Ziehgesten an einem Ort, mit den tatsaechlich eingestellten
+; Zusatztasten; was gerade abgeschaltet ist, steht nicht drin (oder mit Hinweis).
+ShowShortcuts(*) {
+    global gShortcutsGui
+    try gShortcutsGui.Destroy()
+    mod := CONF["HotkeyMod"]
+    modTxt := StrReplace(HotkeyLabel(mod), " + 1 … 0", "")
+    S := T("key.shift"), C := T("key.ctrl")
+    rows := []
+    rows.Push([T("sc.sec.switch")])
+    rows.Push([T("sc.k.click"), T("sc.d.click")])
+    if (CONF["ClickActiveTaskView"])
+        rows.Push([T("sc.k.clickactive"), T("sc.d.clickactive")])
+    if (CONF["WheelSwitch"])
+        rows.Push([T("sc.k.wheel"), T("sc.d.wheel")])
+    rows.Push([T("sc.k.middle"), T("sc.d.back")])
+    rows.Push([modTxt " + 1 … 0", T("sc.d.jump"), "hk"])
+    rows.Push([modTxt " + " T("key.backspace"), T("sc.d.back"), "hk"])
+    rows.Push([T("sc.sec.windows")])
+    rows.Push([T("sc.k.shiftclick", S), T("sc.d.send")])
+    rows.Push([T("sc.k.ctrlshiftclick", C, S), T("sc.d.take")])
+    if (!InStr(mod, "+"))
+        rows.Push([modTxt " + " S " + 1 … 0", T("sc.d.send"), "hk"])
+    if (CONF["DragToTab"]) {
+        rows.Push([T("sc.k.dragwin"), T("sc.d.dragwin")])
+        rows.Push([T("sc.k.dragwingrip"), T("sc.d.dragwingrip")])
+    }
+    rows.Push([T("sc.k.rtab"), T("sc.d.rtabwin")])
+    rows.Push([T("sc.sec.desktops")])
+    if (CanMoveDesktop())
+        rows.Push([T("sc.k.dragtab"), T("sc.d.dragtab")])
+    rows.Push([T("sc.k.rgrip"), T("sc.d.rgrip")])
+    rows.Push([T("sc.k.rtab"), T("sc.d.rtabdesk")])
+    rows.Push([T("sc.sec.bar")])
+    rows.Push([T("sc.k.draggrip"), T("sc.d.draggrip")])
+    rows.Push([T("sc.k.ctrlwheel", C), T("sc.d.ctrlwheel")])
+    rows.Push([T("sc.k.hover"), T("sc.d.hover")])
+
+    g := Gui("+AlwaysOnTop +OwnDialogs -MinimizeBox -MaximizeBox", T("sc.title"))
+    g.MarginX := 22, g.MarginY := 16
+    g.SetFont("s10", "Segoe UI")
+    if (!CONF["Hotkeys"]) {
+        g.SetFont("s9 c8A5A00")
+        g.Add("Text", "x22 y+0 w640", T("sc.hkoff"))
+        g.SetFont("s10 c000000")
+    }
+    first := true
+    for row in rows {
+        if (row.Length = 1) {                        ; Abschnitt
+            g.SetFont("s11 bold c1F1F1F")
+            g.Add("Text", "x22 " (first ? "y+4" : "y+18") " w640", row[1])
+            g.SetFont("s10 norm")
+            first := false
+            continue
+        }
+        off := (row.Length = 3 && !CONF["Hotkeys"])
+        g.SetFont("s10 " (off ? "c9A9A9A" : "c1F1F1F"))
+        k := g.Add("Text", "x22 y+7 w320", row[1])
+        g.SetFont("s10 " (off ? "c9A9A9A" : "c5C5C5C"))
+        d := g.Add("Text", "x+14 yp w390", row[2])
+        ; die naechste Zeile beginnt unter der hoeheren Spalte (lange Uebersetzungen brechen um)
+        k.GetPos(, &ky, , &kh), d.GetPos(, &dy, , &dh)
+        g.Add("Text", "x22 y" Max(ky + kh, dy + dh) " w0 h0")
+    }
+    g.SetFont("s10 norm c000000")
+    btn := g.Add("Button", "x22 y+22 w120 Default", T("about.close"))
+    btn.OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    g.OnEvent("Close", (*) => g.Destroy())
+    gShortcutsGui := g
+    SetGuiIcon(g)
+    g.Show("AutoSize Center")
+    btn.Focus()
+}
+
 ; --- "Ueber"-Dialog ---
 ShowAbout(*) {
     global APP_VERSION, APP_AUTHOR, APP_AUTHOR_URL, APP_URL, gAbout
@@ -2937,9 +3093,9 @@ LabelFor(num) {
 ; Desktop kompakt anzeigen (Tab-Menue, settings.ini [Compact] Desktopname=1): fuer
 ; ruhende Projekte, die offen bleiben, aber wenig Platz brauchen sollen
 IsCompactDesk(num) => (IniLookup("Compact", GetDesktopNameRaw(num)) = "1")
-; ------------- Desktops anlegen, umbenennen, entfernen (wie die Aufgabenansicht) -------------
+; ------------- Desktops anlegen, umbenennen, entfernen (wie die Taskansicht) -------------
 ; Einstellungen haengen lesbar am Desktop-Namen. Damit sie ein Umbenennen ueberleben -
-; auch eins in der Windows-Aufgabenansicht -, merkt sich [Ids] je Desktop-GUID den zuletzt
+; auch eins in der Windows-Taskansicht -, merkt sich [Ids] je Desktop-GUID den zuletzt
 ; gesehenen Namen. Aendert sich der, ziehen Farbe, Symbol, Kuerzel und Kompakt mit um.
 DesktopGuid(num) {
     g := Buffer(16, 0)
