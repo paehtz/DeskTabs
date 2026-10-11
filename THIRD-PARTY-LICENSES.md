@@ -10,7 +10,7 @@ It builds on the following third-party components.
 - **Project:** [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor)
 - **License:** MIT
 - **Bundled:** yes (the `.dll` ships in this repository and in the release archive)
-- **Modified:** built from the upstream source at commit `7ff9ef827bab9a081421ebb204339dd96475ec1a` with one function added to `dll/src/lib.rs`: the export `MoveDesktop`, which calls the library's existing `move_desktop`. The added code is in [`vda/move_desktop.rs`](vda/move_desktop.rs), the build in [`.github/workflows/build-dll.yml`](.github/workflows/build-dll.yml). Everything else is unchanged.
+- **Modified:** no. Built from the unmodified upstream source at commit `ceb648849dcc5760a7f4ed223308ffe3de0b51c6` (the merge of [#119](https://github.com/Ciantic/VirtualDesktopAccessor/pull/119), which added the `MoveDesktop` export DeskTabs uses for reordering) by [`.github/workflows/build-dll.yml`](.github/workflows/build-dll.yml), because no official release includes that export yet.
 
 ```
 MIT License

@@ -5364,7 +5364,8 @@ SavePosDeferred() {
 ; Tab-Klick (beim Loslassen, wie ein Button)
 ; Desktops umsortieren wie Browser-Tabs: Tab greifen und seitlich ziehen. Erst ab ein paar
 ; Pixeln Weg gilt es als Ziehen - ein Klick (auch Umschalt+Klick) bleibt ein Klick.
-; Braucht die selbst gebaute DLL mit dem Export MoveDesktop (siehe vda\move_desktop.rs).
+; Braucht eine DLL mit dem Export MoveDesktop (Ciantic ab Commit ceb6488, PR #119; bis zu einem
+; offiziellen Release selbst gebaut per .github/workflows/build-dll.yml).
 ReorderDrag() {
     global gReorderFrom
     ; Mit Alt, Strg oder Umschalt ist ein Klick immer eine Geste (Unterprojekt, Fenster

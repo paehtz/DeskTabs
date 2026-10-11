@@ -97,7 +97,7 @@ After editing: run `/validate`, then restart the script and look at the bar. **R
 - The bar is **one GDI+ picture** drawn by `RenderBar()`, not a set of controls. Change the look there; it skips the redraw unless its state signature changed, so new visual state must be part of that signature.
 - On a desktop **name or count change** the bar is rebuilt so tab widths are re-measured. See `Refresh()`.
 - The bar must stay on top: this is handled by a `SetWinEventHook` + a short burst + a backstop timer (`AssertTop`). Don't remove these or it will be hidden behind windows.
-- The DLL is **built from source** (Ciantic/VirtualDesktopAccessor at a pinned commit plus the `MoveDesktop` export in `vda/move_desktop.rs`) by `.github/workflows/build-dll.yml`, started by hand. If a Windows feature update breaks the virtual-desktop COM vtable, move the pinned commit to a newer upstream one and rebuild; do not swap in an official release DLL, it lacks `MoveDesktop` (reordering then switches itself off via `CanMoveDesktop()`).
+- The DLL is **built from source** (Ciantic/VirtualDesktopAccessor, unmodified, pinned to `ceb6488`, the merge of our PR #119 that added the `MoveDesktop` export) by `.github/workflows/build-dll.yml`, started by hand. If a Windows feature update breaks the virtual-desktop COM vtable, move the pinned commit to a newer upstream one and rebuild; do not swap in an official release DLL older than one that includes #119, it lacks `MoveDesktop` (reordering then switches itself off via `CanMoveDesktop()`).
 
 ## Build (optional)
 
