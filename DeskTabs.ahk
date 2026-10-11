@@ -5064,6 +5064,9 @@ PrevVersion(v) {                                   ; "1.1.13" -> "1.1.12" (fuer 
 ; Beim Start: erstes Mal nach einem Update? Dann einmal zeigen, was neu ist.
 NewsAfterUpdate() {
     global APP_VERSION, gWasWelcomed
+    ; vom Ein-Klick-Update geladenes Setup wegraeumen (das Setup ist laengst beendet)
+    if DirExist(A_Temp "\DeskTabs-update")
+        try DirDelete(A_Temp "\DeskTabs-update", true)
     seen := IniRead(CONF["IniPath"], "State", "SeenVersion", "")
     IniSet("State", "SeenVersion", APP_VERSION)
     if (seen = "") {

@@ -101,6 +101,7 @@ end;
 
 // Beim Deinstallieren fragen, ob die eigenen Dateien des Nutzers bleiben sollen.
 // Standard ist "behalten" - wer neu installiert, findet seine Tabs wie gewohnt vor.
+// Still (/SUPPRESSMSGBOXES) keine Frage: dann gilt der Standard, die Dateien bleiben.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Dir: string;
@@ -110,7 +111,7 @@ begin
     Dir := ExpandConstant('{app}');
     if DirExists(Dir) then
     begin
-      if MsgBox(ExpandConstant('{cm:KeepDataMsg}'), mbConfirmation, MB_YESNO) = IDNO then
+      if SuppressibleMsgBox(ExpandConstant('{cm:KeepDataMsg}'), mbConfirmation, MB_YESNO, IDYES) = IDNO then
         DelTree(Dir, True, True, True);
     end;
   end;
