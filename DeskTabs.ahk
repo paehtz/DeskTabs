@@ -5439,6 +5439,10 @@ ReorderDragRun() {
     from := gReorderFrom
     gReorderFrom := -1
     if (target != from) {
+        ; am Stueck, nicht unterbrechbar: Windows hat den Desktop sofort verschoben, die
+        ; Nummern hier ziehen erst danach nach. Zeichnete der Hover-Timer dazwischen (beim
+        ; ersten Mal dauert MoveDesktop ~50 ms), sprangen Markierung und Farben kurz zurueck.
+        Critical
         global gSelfTick := A_TickCount
         moved := (VD("MoveDesktop", "Int", from, "Int", target, "Int") = 1)
         if (moved)
