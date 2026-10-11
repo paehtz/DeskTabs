@@ -780,6 +780,7 @@ global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
 global gOd := Map(), gOdNext := 0x10000, gMenuGlyphs := Map(), gMenuSwatches := Map()   ; selbst gezeichnete Menues
+global gCard := 0, gNoticeDismissed := "", gWasWelcomed := ""   ; Hinweis-Karten (Update, Neu in dieser Version)
 global gSP := 0, gSPClosed := 0   ; Unterprojekt-Auswahl am aktiven Tab (SubPanelOpen)
 global gBarReused := false, gBarPos := [0, 0]   ; Neuaufbau im vorhandenen Fenster (kein Aufblitzen)
 global gNameCache := 0         ; Desktop-Namen, nur waehrend eines Aufbaus gemerkt
@@ -1001,7 +1002,8 @@ global LANG_DE := Map(
     "menu.feedback.mailbug", "Fehler per E-Mail melden…",
     "menu.feedback.mail", "Idee oder Frage per E-Mail…",
     "menu.update.check", "Nach Updates suchen…",
-    "menu.update.auto", "Täglich automatisch nach Updates suchen",
+    "menu.update.auto", "Update-Hinweis anzeigen (täglich prüfen)",
+    "menu.help.news", "Neu in dieser Version…",
     "menu.update.available", "Update {1} verfügbar…",
     "menu.about",      "Über DeskTabs…",
     "about.title",     "Über DeskTabs",
@@ -1017,9 +1019,18 @@ global LANG_DE := Map(
     "about.check",     "Nach Updates suchen",
     "about.close",     "Schließen",
     "update.none",     "DeskTabs {1} ist aktuell.",
-    "update.found",    "Version {1} ist verfügbar (installiert: {2}).`n`nDownload-Seite öffnen?",
     "update.error",    "Update-Prüfung nicht möglich (keine Verbindung zu GitHub).",
-    "update.tip",      "DeskTabs {1} ist verfügbar. Rechtsklick auf die Leiste → Update…",
+    "upd.title",       "DeskTabs {1} ist verfügbar",
+    "upd.sub",         "Mit einem Klick aktualisieren. Einstellungen und Zeit-Logs bleiben.",
+    "upd.sub.page",    "Klick öffnet die Download-Seite.",
+    "upd.btn",         "Jetzt aktualisieren",
+    "upd.btn.page",    "Zum Download",
+    "upd.loading",     "Update wird geladen…",
+    "upd.loading.sub", "DeskTabs startet gleich neu.",
+    "upd.failed",      "Update nicht möglich",
+    "upd.failed.sub",  "Bitte von der Download-Seite installieren.",
+    "news.title",      "Neu in DeskTabs {1}",
+    "news.all",        "Alle Änderungen auf GitHub",
     "feedback.mail.subject.bug", "DeskTabs {1}: Fehlermeldung",
     "feedback.mail.subject.feedback", "DeskTabs {1}: Idee oder Frage",
     "feedback.mail.body.bug", "Hallo Henning,`n`nin DeskTabs ist mir das hier aufgefallen:`n`nWas passiert ist:`n`nWas ich erwartet hatte:`n`nSo lässt es sich nachstellen:`n1.`n2.`n3.`n`nViele Grüße",
@@ -1227,7 +1238,8 @@ global LANG_EN := Map(
     "menu.feedback.mailbug", "Report a bug by e-mail…",
     "menu.feedback.mail", "Send an idea or question by e-mail…",
     "menu.update.check", "Check for updates…",
-    "menu.update.auto", "Check for updates daily",
+    "menu.update.auto", "Show update notice (checks daily)",
+    "menu.help.news", "New in this version…",
     "menu.update.available", "Update {1} available…",
     "menu.about",      "About DeskTabs…",
     "about.title",     "About DeskTabs",
@@ -1243,9 +1255,18 @@ global LANG_EN := Map(
     "about.check",     "Check for updates",
     "about.close",     "Close",
     "update.none",     "DeskTabs {1} is up to date.",
-    "update.found",    "Version {1} is available (installed: {2}).`n`nOpen the download page?",
     "update.error",    "Could not check for updates (no connection to GitHub).",
-    "update.tip",      "DeskTabs {1} is available. Right-click the bar → Update…",
+    "upd.title",       "DeskTabs {1} is available",
+    "upd.sub",         "Update with one click. Settings and time logs are kept.",
+    "upd.sub.page",    "Click to open the download page.",
+    "upd.btn",         "Update now",
+    "upd.btn.page",    "Download",
+    "upd.loading",     "Downloading the update…",
+    "upd.loading.sub", "DeskTabs restarts in a moment.",
+    "upd.failed",      "Update not possible",
+    "upd.failed.sub",  "Please install it from the download page.",
+    "news.title",      "New in DeskTabs {1}",
+    "news.all",        "All changes on GitHub",
     "feedback.mail.subject.bug", "DeskTabs {1}: bug report",
     "feedback.mail.subject.feedback", "DeskTabs {1}: idea or question",
     "feedback.mail.body.bug", "Hello Henning,`n`nI ran into this in DeskTabs:`n`nWhat happened:`n`nWhat I expected:`n`nHow to reproduce it:`n1.`n2.`n3.`n`nBest regards",
@@ -1338,6 +1359,10 @@ Main() {
     DllCall("Wtsapi32\WTSRegisterSessionNotification", "Ptr", A_ScriptHwnd, "UInt", 0)
     OnMessage(0x02B1, OnSessionChange)      ; WM_WTSSESSION_CHANGE
     BuildTray()
+    OnMessage(0x0202, CardUp)                ; Klicks in die Hinweis-Karten
+    OnMessage(0x0020, CardSetCursor)
+    global gWasWelcomed := IniRead(CONF["IniPath"], "State", "Welcomed", "")   ; vor FirstRunHint lesen
+    SetTimer(NewsAfterUpdate, -4000)         ; erster Start nach einem Update: was ist neu
     SetTimer(AutoUpdateTick, -20000)         ; Update-Pruefung 20 s nach dem Start, hoechstens einmal pro Tag
     SetTimer(FirstRunHint, -1500)            ; beim allerersten Start kurz erklaeren, wo die Einstellungen sind
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
@@ -2818,6 +2843,9 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.snap"), ToggleView.Bind("SnapToTaskbar"))
     if (CONF["SnapToTaskbar"])
         xm.Check(T("menu.snap"))
+    xm.Add(T("menu.update.auto"), ToggleView.Bind("UpdateCheck"))
+    if (CONF["UpdateCheck"])
+        xm.Check(T("menu.update.auto"))
     lgm := Menu()
     lgm.Add(T("menu.timelog.on"), ToggleView.Bind("TimeLog"))
     if (CONF["TimeLog"])
@@ -2837,7 +2865,7 @@ FillSettingsMenu(m) {
     m.Add(T("menu.help"), HelpMenu())
     MenuGlyph(m, T("menu.help"), "E897")
     if (gUpdateTag != "")
-        m.Add(T("menu.update.available", gUpdateTag), OpenReleasePage)
+        m.Add(T("menu.update.available", gUpdateTag), UpdateNotice.Bind(true))
     m.Add(T("menu.about"), ShowAbout)
     MenuGlyph(m, T("menu.about"), "E946")
     m.Add()
@@ -2862,6 +2890,8 @@ HelpMenu() {
     MenuGlyph(hm, T("menu.help.shortcuts"), "E765")
     hm.Add(T("menu.help.docs"), OpenDocs)
     MenuGlyph(hm, T("menu.help.docs"), "E8F1")
+    hm.Add(T("menu.help.news"), (*) => ShowNews(PrevVersion(APP_VERSION)))
+    MenuGlyph(hm, T("menu.help.news"), "E789")
     hm.Add(T("menu.help.changelog"), (*) => Run(APP_CHANGELOG_URL))
     hm.Add()
     hm.Add(T("menu.feedback.bug"), ReportBug)
@@ -3023,15 +3053,11 @@ CheckUpdate(manual := false, *) {
             MsgBox(T("update.error"), "DeskTabs", 0x30)
         return
     }
+    IniSet("State", "LatestVersion", tag)          ; nach einem Neustart ohne erneute Abfrage zeigen
     if (VersionCmp(tag, APP_VERSION) > 0) {
         gUpdateTag := tag
         BuildTray()
-        if (manual) {
-            if (MsgBox(T("update.found", tag, APP_VERSION), "DeskTabs", 0x24) = "Yes")
-                Run(APP_URL "/releases/latest")
-        } else {
-            TrayTip(T("update.tip", tag), "DeskTabs", 0x1)
-        }
+        UpdateNotice(manual)                         ; Karte ueber der Taskleiste (nach X: heute nicht mehr)
     } else {
         gUpdateTag := ""
         if (manual)
@@ -3039,13 +3065,24 @@ CheckUpdate(manual := false, *) {
     }
 }
 
-; Beim Start (verzoegert): hoechstens einmal pro Tag, nur wenn eingeschaltet
+; Beim Start (verzoegert) und dann stuendlich: bei GitHub hoechstens einmal pro Tag fragen.
+; Schon heute gefragt: die gemerkte Version nehmen - so steht der Hinweis nach jedem
+; Neustart wieder da, auch wenn er vorher weggeklickt wurde.
 AutoUpdateTick() {
+    global gUpdateTag, APP_VERSION
+    SetTimer(AutoUpdateTick, 3600000)
     if (!CONF["UpdateCheck"])
         return
-    if (IniRead(CONF["IniPath"], "State", "LastUpdateCheck", "") = FormatTime(, "yyyyMMdd"))
-        return
-    CheckUpdate(false)
+    if (IniRead(CONF["IniPath"], "State", "LastUpdateCheck", "") != FormatTime(, "yyyyMMdd"))
+        return CheckUpdate(false)
+    tag := IniRead(CONF["IniPath"], "State", "LatestVersion", "")
+    if (tag != "" && VersionCmp(tag, APP_VERSION) > 0) {
+        if (gUpdateTag != tag) {
+            gUpdateTag := tag
+            BuildTray()
+        }
+        UpdateNotice()
+    }
 }
 
 OpenReleasePage(*) {
@@ -4516,6 +4553,484 @@ RenderBar(force := false) {
     DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
     DllCall("gdiplus\GdipDisposeImage", "Ptr", pBmp)
     Critical(crit)
+}
+
+; ------------------ Hinweis-Karten ueber der Taskleiste ----------------------
+; Kleine Flaechen im Grau der Leiste, die ganz links aus der Oberkante der Taskleiste
+; herausgleiten (wie die Unterprojekt-Auswahl am Tab): der Update-Hinweis und
+; "Neu in dieser Version". Sie liegen auf allen Desktops und bleiben, bis man sie
+; schliesst (X) bzw. etwas anklickt. Eigenes Schichtfenster (UpdateLayeredWindow).
+CardOpen(kind, data := "") {
+    global gCard
+    if (gCard)
+        CardClose()
+    c := Map("kind", kind, "data", data, "state", "", "hover", "", "dc", 0, "hbm", 0, "obm", 0, "shown", 0)
+    gCard := c
+    CardLayout(c)
+    tb := TaskbarRect()
+    c["x"] := (tb ? tb[1] : 0) + px(12)
+    c["bottom"] := (tb && tb[2] > A_ScreenHeight // 2) ? tb[2] : A_ScreenHeight
+    g := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08080000 -DPIScale")   ; NOACTIVATE | LAYERED
+    g.Show(Format("NA x{1} y{2} w1 h1", c["x"], c["bottom"] - 1))
+    c["gui"] := g
+    try DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", g.Hwnd)          ; auf allen Desktops
+    CardPaint()
+    Loop 10 {                                      ; herausgleiten
+        if (gCard != c)
+            return
+        f10 := A_Index / 10
+        CardShow(Max(1, Round(c["h"] * (1 - (1 - f10) ** 3))))
+        Sleep(14)
+    }
+    SetTimer(CardTick, 40)
+}
+
+CardClose(*) {
+    global gCard
+    if (!gCard)
+        return
+    c := gCard, gCard := 0
+    SetTimer(CardTick, 0)
+    try c["gui"].Destroy()
+    if (c["dc"]) {
+        DllCall("SelectObject", "Ptr", c["dc"], "Ptr", c["obm"])
+        DllCall("DeleteObject", "Ptr", c["hbm"])
+        DllCall("DeleteDC", "Ptr", c["dc"])
+    }
+}
+
+; Groesse und Klickflaechen (zones: Name -> [x, y, w, h]) berechnen
+CardLayout(c) {
+    GdipStart()
+    mBmp := 0, mG := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", 1, "Int", 1, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &mBmp)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", mBmp, "Ptr*", &mG)
+    fB := MakeFont(true), fS := MakeFont(false, CONF["FontSizePt"] - 1), sf := MakeFormat()
+    fSB := MakeFont(true, CONF["FontSizePt"] - 1)
+    z := Map(), xs := px(30)
+    if (c["kind"] = "update") {
+        c["l1"] := (c["state"] = "load") ? T("upd.loading") : (c["state"] = "err") ? T("upd.failed") : T("upd.title", c["data"])
+        if (!c.Has("setup"))
+            c["setup"] := IsSetupInstall()          ; nur dann geht das Update mit einem Klick
+        c["l2"] := (c["state"] = "load") ? T("upd.loading.sub") : (c["state"] = "err") ? T("upd.failed.sub")
+            : c["setup"] ? T("upd.sub") : T("upd.sub.page")
+        c["btn"] := (c["state"] = "load") ? "" : (c["state"] = "err" || !c["setup"]) ? T("upd.btn.page") : T("upd.btn")
+        tw := Max(MeasureText(mG, fB, sf, c["l1"]), MeasureText(mG, fS, sf, c["l2"]))
+        bw := (c["btn"] != "") ? MeasureText(mG, fB, sf, c["btn"]) + px(28) : 0
+        h := px(60), tx := px(54)
+        w := tx + tw + px(20) + bw + (bw ? px(10) : 0) + xs + px(10)
+        if (bw)
+            z["btn"] := [w - px(10) - xs - px(10) - bw, (h - px(32)) // 2, bw, px(32)]
+        z["body"] := [0, 0, w, h]
+    } else {                                       ; "news": Neu in dieser Version
+        w := px(460), padX := px(18), bx := padX + px(16), bodyW := w - bx - padX
+        y := px(16), rows := []
+        rows.Push(["title", T("news.title", APP_VERSION), padX, y, w - 2 * padX - xs, px(24)])
+        y += px(32)
+        groups := c["data"]
+        for gi, grp in groups {
+            if (groups.Length > 1) {
+                rows.Push(["ver", grp[1], padX, y, bodyW, px(18)])
+                y += px(22)
+            }
+            for , item in grp[2] {
+                rl := RichLayout(mG, fS, fSB, item, bodyW)
+                rows.Push(["item", rl, bx, y, bodyW, rl["h"]])
+                y += rl["h"] + px(6)
+            }
+            y += px(4)
+        }
+        y += px(2)
+        rows.Push(["link", T("news.all"), padX, y, MeasureText(mG, fS, sf, T("news.all")) + px(4), px(20)])
+        z["link"] := [padX, y, MeasureText(mG, fS, sf, T("news.all")) + px(4), px(20)]
+        h := y + px(20) + px(14)
+        c["rows"] := rows
+    }
+    z["x"] := [w - px(8) - xs, (c["kind"] = "update") ? (h - xs) // 2 : px(10), xs, xs]
+    c["w"] := w, c["h"] := h, c["zones"] := z
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fB), DllCall("gdiplus\GdipDeleteFont", "Ptr", fS), DllCall("gdiplus\GdipDeleteFont", "Ptr", fSB)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG), DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
+}
+
+; Text mit **fett** markierten Stellen, an Wortgrenzen auf width umbrochen.
+; Ergebnis: runs = [Text, fett, x, y, Breite] je Stueck, lh = Zeilenhoehe, h = Gesamthoehe
+RichLayout(g, fN, fB, s, width) {
+    sf := RichFormat()
+    spaceW := RichW(g, fN, " ")
+    fh := 0
+    DllCall("gdiplus\GdipGetFontHeight", "Ptr", fN, "Ptr", g, "Float*", &fh)
+    lh := Ceil(fh * 1.12)
+    runs := [], x := 0, y := 0, bold := false
+    for , word in StrSplit(s, " ") {
+        if (word = "")
+            continue
+        wr := [], ww := 0
+        for i, part in StrSplit(word, "**") {
+            if (i > 1)
+                bold := !bold                        ; jedes ** schaltet um
+            if (part = "")
+                continue
+            pw := RichW(g, bold ? fB : fN, part)
+            wr.Push([part, bold, ww, pw]), ww += pw
+        }
+        if (!wr.Length)
+            continue
+        if (x > 0 && x + ww > width)
+            x := 0, y += lh
+        for , rn in wr
+            runs.Push([rn[1], rn[2], x + rn[3], y, rn[4]])
+        x += ww + spaceW
+    }
+    return Map("runs", runs, "lh", lh, "h", y + lh)
+}
+; Typografisches Format (ohne den Zusatzrand von GDI+), damit Stuecke nahtlos aneinanderpassen
+RichFormat() {
+    static sf := 0
+    if (!sf) {
+        tmp := 0
+        DllCall("gdiplus\GdipStringFormatGetGenericTypographic", "Ptr*", &tmp)
+        DllCall("gdiplus\GdipCloneStringFormat", "Ptr", tmp, "Ptr*", &sf)
+        DllCall("gdiplus\GdipSetStringFormatFlags", "Ptr", sf, "Int", 0x4 | 0x800 | 0x1000 | 0x4000)   ; NoFitBlackBox | MeasureTrailingSpaces | NoWrap | NoClip
+    }
+    return sf
+}
+RichW(g, font, s) {
+    layout := Buffer(16, 0), bound := Buffer(16, 0)
+    NumPut("Float", 0, "Float", 0, "Float", 10000, "Float", 1000, layout)
+    DllCall("gdiplus\GdipMeasureString", "Ptr", g, "Str", s, "Int", -1, "Ptr", font, "Ptr", layout, "Ptr", RichFormat(), "Ptr", bound, "Ptr", 0, "Ptr", 0)
+    return NumGet(bound, 8, "Float")
+}
+
+CardPaint() {
+    global gCard
+    c := gCard, w := c["w"], h := c["h"]
+    if (c["dc"] && (c["dcW"] != w || c["dcH"] != h)) {     ; Groesse geaendert (anderer Zustand)
+        DllCall("SelectObject", "Ptr", c["dc"], "Ptr", c["obm"]), DllCall("DeleteObject", "Ptr", c["hbm"]), DllCall("DeleteDC", "Ptr", c["dc"])
+        c["dc"] := 0
+    }
+    if (!c["dc"]) {
+        bi := Buffer(40, 0)
+        NumPut("UInt", 40, bi, 0), NumPut("Int", w, bi, 4), NumPut("Int", -h, bi, 8)
+        NumPut("UShort", 1, bi, 12), NumPut("UShort", 32, bi, 14)
+        c["dc"] := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr")
+        bits := 0
+        c["hbm"] := DllCall("CreateDIBSection", "Ptr", c["dc"], "Ptr", bi, "UInt", 0, "Ptr*", &bits, "Ptr", 0, "UInt", 0, "Ptr")
+        c["obm"] := DllCall("SelectObject", "Ptr", c["dc"], "Ptr", c["hbm"], "Ptr")
+        c["dcW"] := w, c["dcH"] := h
+    }
+    g := 0
+    DllCall("gdiplus\GdipCreateFromHDC", "Ptr", c["dc"], "Ptr*", &g)
+    DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", 0)
+    bg := CONF["ColBarBg"], fg := CONF["ColInactiveTx"], r := px(8), d := r * 2
+    hov := Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])
+    ; Grund: oben rund, unten eckig (sitzt auf der Taskleiste); feiner Rand oben und seitlich
+    path := 0
+    DllCall("gdiplus\GdipCreatePath", "Int", 0, "Ptr*", &path)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", 0, "Float", 0, "Float", d, "Float", d, "Float", 180, "Float", 90)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", w - d, "Float", 0, "Float", d, "Float", d, "Float", 270, "Float", 90)
+    DllCall("gdiplus\GdipAddPathLine", "Ptr", path, "Float", w, "Float", r, "Float", w, "Float", h)
+    DllCall("gdiplus\GdipAddPathLine", "Ptr", path, "Float", w, "Float", h, "Float", 0, "Float", h)
+    DllCall("gdiplus\GdipClosePathFigure", "Ptr", path)
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(bg), "Ptr*", &brush)
+    DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", path)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush)
+    pen := 0
+    DllCall("gdiplus\GdipCreatePen1", "UInt", 0x28000000 | (fg & 0xFFFFFF), "Float", 1, "Int", 2, "Ptr*", &pen)
+    DllCall("gdiplus\GdipDrawPath", "Ptr", g, "Ptr", pen, "Ptr", path)
+    DllCall("gdiplus\GdipDeletePen", "Ptr", pen), DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+    fB := MakeFont(true), fS := MakeFont(false, CONF["FontSizePt"] - 1), fT := MakeFont(true, CONF["FontSizePt"] + 1)
+    fSB := MakeFont(true, CONF["FontSizePt"] - 1)
+    sfL := MakeFormat()
+    DllCall("gdiplus\GdipSetStringFormatAlign", "Ptr", sfL, "Int", 0)
+    sfC := MakeFormat()
+    z := c["zones"]
+    if (c["kind"] = "update") {
+        isz := px(26), iy := (h - isz) // 2
+        bmp := CardAppIcon(isz)
+        if (bmp)
+            DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", bmp, "Int", px(16), "Int", iy, "Int", isz, "Int", isz)
+        if (c["hover"] = "body" || c["hover"] = "btn")
+            FillRoundRect(g, px(4), px(4), z["x"][1] - px(8), h - px(8), px(6), ARGB(hov))
+        lh := Round(CONF["FontSizePt"] * SCALE * 96 / 72 * 1.3)
+        DrawText(g, fB, sfL, c["l1"], px(54), h // 2 - lh, w, lh, ARGB(fg))
+        DrawText(g, fS, sfL, c["l2"], px(54), h // 2, w, lh, 0xA0000000 | (fg & 0xFFFFFF))
+        if (z.Has("btn")) {
+            b := z["btn"], acc := CONF["ColActiveBg"]
+            FillRoundRect(g, b[1], b[2], b[3], b[4], px(6), ARGB(c["hover"] = "btn" ? Mix(0x000000, acc, 15) : acc))
+            DrawText(g, fB, sfC, c["btn"], b[1], b[2], b[3], b[4], ARGB(ReadableOn(acc)))
+        }
+    } else {
+        sfW := 0
+        DllCall("gdiplus\GdipCreateStringFormat", "Int", 0, "Int", 0, "Ptr*", &sfW)
+        for , row in c["rows"] {
+            kindR := row[1], s := row[2], x := row[3], y := row[4], rw := row[5], rh := row[6]
+            if (kindR = "title")
+                DrawText(g, fT, sfL, s, x, y, rw, rh, ARGB(fg))
+            else if (kindR = "ver")
+                DrawText(g, fS, sfL, s, x, y, rw, rh, 0x99000000 | (fg & 0xFFFFFF))
+            else if (kindR = "item") {
+                FillRoundRect(g, x - px(12), y + s["lh"] / 2 - px(2.5), px(5), px(5), px(2.5), ARGB(CONF["ColActiveBg"]))
+                for , rn in s["runs"]
+                    DrawText(g, rn[2] ? fSB : fS, RichFormat(), rn[1], x + rn[3], y + rn[4], rn[5] + px(20), s["lh"], ARGB(fg))
+            } else if (kindR = "link")
+                DrawText(g, fS, sfL, s, x, y, rw + px(40), rh, ARGB(c["hover"] = "link" ? fg : CONF["ColActiveBg"]))
+        }
+        DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sfW)
+    }
+    ; Schliessen (X)
+    xb := z["x"]
+    if (c["hover"] = "x")
+        FillRoundRect(g, xb[1], xb[2], xb[3], xb[4], px(6), ARGB(hov))
+    pen := 0, cx := xb[1] + xb[3] / 2, cy := xb[2] + xb[4] / 2, k := px(5)
+    DllCall("gdiplus\GdipCreatePen1", "UInt", ARGB(fg), "Float", Max(1, px(1.3)), "Int", 2, "Ptr*", &pen)
+    DllCall("gdiplus\GdipDrawLine", "Ptr", g, "Ptr", pen, "Float", cx - k, "Float", cy - k, "Float", cx + k, "Float", cy + k)
+    DllCall("gdiplus\GdipDrawLine", "Ptr", g, "Ptr", pen, "Float", cx - k, "Float", cy + k, "Float", cx + k, "Float", cy - k)
+    DllCall("gdiplus\GdipDeletePen", "Ptr", pen)
+    for , f in [fB, fS, fT, fSB]
+        DllCall("gdiplus\GdipDeleteFont", "Ptr", f)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sfL), DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sfC)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    if (c["shown"])
+        CardShow(c["h"])
+}
+
+; Programmsymbol als GDI+-Bild (einmal geladen)
+CardAppIcon(size) {
+    static cache := Map()
+    if (cache.Has(size))
+        return cache[size]
+    bmp := 0
+    try {
+        hIco := LoadPicture(AppIconPath(), "w" size " h" size " Icon1", &imgType)
+        if (hIco)
+            DllCall("gdiplus\GdipCreateBitmapFromHICON", "Ptr", hIco, "Ptr*", &bmp)
+    }
+    cache[size] := bmp
+    return bmp
+}
+
+CardShow(hh) {
+    global gCard
+    c := gCard
+    c["shown"] := hh
+    pt := Buffer(8, 0), sz := Buffer(8, 0), src := Buffer(8, 0)
+    NumPut("Int", c["x"], "Int", c["bottom"] - hh, pt)
+    NumPut("Int", c["w"], "Int", hh, sz)
+    DllCall("UpdateLayeredWindow", "Ptr", c["gui"].Hwnd, "Ptr", 0, "Ptr", pt, "Ptr", sz, "Ptr", c["dc"]
+        , "Ptr", src, "UInt", 0, "UInt*", 0x01FF0000, "UInt", 2)
+}
+
+; Klickflaeche unter der Maus ("" = keine, "out" = ausserhalb)
+CardZoneAt() {
+    global gCard
+    c := gCard
+    pt := Buffer(8, 0)
+    DllCall("GetCursorPos", "Ptr", pt)
+    lx := NumGet(pt, 0, "Int") - c["x"], ly := NumGet(pt, 4, "Int") - (c["bottom"] - c["h"])
+    if (lx < 0 || ly < 0 || lx >= c["w"] || ly >= c["h"])
+        return "out"
+    for , name in ["x", "btn", "link", "body"]
+        if (c["zones"].Has(name)) {
+            r := c["zones"][name]
+            if (lx >= r[1] && ly >= r[2] && lx < r[1] + r[3] && ly < r[2] + r[4])
+                return name
+        }
+    return ""
+}
+
+CardTick() {
+    global gCard
+    if (!gCard)
+        return SetTimer(CardTick, 0)
+    zn := CardZoneAt()
+    zn := (zn = "out") ? "" : zn
+    if (zn != gCard["hover"]) {
+        gCard["hover"] := zn
+        CardPaint()
+    }
+}
+
+CardUp(wParam, lParam, msg, hwnd) {
+    global gCard, gNoticeDismissed
+    if (!gCard || hwnd != gCard["gui"].Hwnd)
+        return
+    zn := CardZoneAt(), kind := gCard["kind"]
+    if (zn = "x") {
+        if (kind = "update")
+            gNoticeDismissed := FormatTime(, "yyyyMMdd")   ; heute nicht mehr; nach Neustart wieder
+        CardClose()
+    } else if (kind = "update" && (zn = "btn" || zn = "body")) {
+        if (gCard["state"] = "err") {
+            CardClose(), OpenReleasePage()
+        } else if (gCard["state"] = "")
+            UpdateStart()
+    } else if (kind = "news" && zn = "link") {
+        CardClose(), Run(APP_CHANGELOG_URL)
+    }
+    return 0
+}
+
+CardSetCursor(wParam, lParam, msg, hwnd) {
+    global gCard
+    if (!gCard || hwnd != gCard["gui"].Hwnd)
+        return
+    zn := CardZoneAt()
+    if (zn = "x" || zn = "btn" || zn = "link" || (zn = "body" && gCard["kind"] = "update" && gCard["state"] != "load")) {
+        DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", 32649, "Ptr"))   ; IDC_HAND
+        return 1
+    }
+}
+
+; --------------------------- Update mit einem Klick --------------------------
+; Mit dem Setup installiert (Eintrag in "Apps & Features" zeigt auf diesen Ordner):
+; Setup der neuen Version laden, gegen SHA256SUMS.txt pruefen, ohne Assistent starten;
+; es installiert und startet DeskTabs wieder (/restart=1, siehe installer\DeskTabs.iss).
+; Sonst (ZIP, Skript) oeffnet der Hinweis die Download-Seite.
+IsSetupInstall() {
+    if (!A_IsCompiled)
+        return false
+    try loc := RegRead("HKCU\Software\Microsoft\Windows\CurrentVersion\Uninstall\{8B5D6C21-3E4A-4F1B-9C77-1D2E3F4A5B6C}_is1", "InstallLocation")
+    catch
+        return false
+    return (RTrim(loc, "\") = RTrim(A_ScriptDir, "\"))
+}
+
+UpdateStart() {
+    global gCard
+    if (!IsSetupInstall()) {
+        CardClose(), OpenReleasePage()
+        return
+    }
+    gCard["state"] := "load", gCard["hover"] := ""
+    CardRelayout()
+    SetTimer(UpdateRun, -60)                       ; erst den neuen Zustand zeigen, dann laden
+}
+
+CardRelayout() {
+    global gCard
+    CardLayout(gCard)
+    CardPaint()
+    CardShow(gCard["h"])
+}
+
+UpdateRun() {
+    global gCard, APP_URL
+    if (!gCard || gCard["kind"] != "update")
+        return
+    tag := gCard["data"]
+    dir := A_Temp "\DeskTabs-update"
+    exeName := "DeskTabs-Setup-" tag ".exe"
+    ok := false
+    try {
+        DirCreate(dir)
+        base := APP_URL "/releases/download/" tag "/"
+        Download(base "SHA256SUMS.txt", dir "\SHA256SUMS.txt")
+        Download(base exeName, dir "\" exeName)
+        want := ""
+        Loop Parse, FileRead(dir "\SHA256SUMS.txt"), "`n", "`r"
+            if (RegExMatch(A_LoopField, "i)^([0-9a-f]{64})\s+\*?" StrReplace(exeName, ".", "\.") "$", &m))
+                want := m[1]
+        ok := (want != "" && FileSha256(dir "\" exeName) = StrLower(want))
+    }
+    if (!ok) {
+        if (gCard) {
+            gCard["state"] := "err"
+            CardRelayout()
+        }
+        return
+    }
+    ; Setup starten und DeskTabs beenden, damit es seine Dateien ersetzen kann
+    Run('"' dir "\" exeName '" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /restart=1')
+    ExitApp()
+}
+
+FileSha256(path) {
+    data := FileRead(path, "RAW")
+    hAlg := 0, hash := Buffer(32, 0)
+    DllCall("bcrypt\BCryptOpenAlgorithmProvider", "Ptr*", &hAlg, "Str", "SHA256", "Ptr", 0, "UInt", 0)
+    DllCall("bcrypt\BCryptHash", "Ptr", hAlg, "Ptr", 0, "UInt", 0, "Ptr", data, "UInt", data.Size, "Ptr", hash, "UInt", 32)
+    DllCall("bcrypt\BCryptCloseAlgorithmProvider", "Ptr", hAlg, "UInt", 0)
+    hex := ""
+    Loop 32
+        hex .= Format("{:02x}", NumGet(hash, A_Index - 1, "UChar"))
+    return hex
+}
+
+; Update-Hinweis zeigen (nicht, wenn heute schon weggeklickt - ausser auf Nachfrage)
+UpdateNotice(force := false, *) {
+    global gUpdateTag, gNoticeDismissed, gCard
+    if (gUpdateTag = "")
+        return
+    if (!force && gNoticeDismissed = FormatTime(, "yyyyMMdd"))
+        return
+    if (gCard && gCard["kind"] = "update")
+        return
+    CardOpen("update", gUpdateTag)
+}
+
+; --------------------------- Neu in dieser Version ---------------------------
+; data\changelog.<sprache>.md:  "## 1.1.13" und darunter "- Punkt" je Neuerung.
+; Gezeigt werden die Versionen nach der zuletzt gesehenen (hoechstens drei).
+NewsFor(fromVer, toVer) {
+    global gLangCode
+    file := A_ScriptDir "\data\changelog." gLangCode ".md"
+    if !FileExist(file)
+        file := A_ScriptDir "\data\changelog.en.md"
+    if !FileExist(file)
+        return []
+    groups := [], cur := 0
+    Loop Parse, FileRead(file, "UTF-8"), "`n", "`r" {
+        line := Trim(A_LoopField)
+        if RegExMatch(line, "^##\s*v?([\d.]+)", &m) {
+            cur := (VersionCmp(m[1], toVer) <= 0 && (fromVer = "" || VersionCmp(m[1], fromVer) > 0)) ? [m[1], []] : 0
+            if (cur)
+                groups.Push(cur)
+        } else if (cur && RegExMatch(line, "^[-*]\s+(.+)", &m))
+            cur[2].Push(StrReplace(m[1], "``", ""))          ; **fett** bleibt, RichLayout setzt es um
+    }
+    while (groups.Length > 3)
+        groups.Pop()
+    out := []
+    for , grp in groups
+        if (grp[2].Length)
+            out.Push(grp)
+    return out
+}
+
+ShowNews(fromVer := "", *) {
+    global APP_VERSION
+    news := NewsFor(fromVer, APP_VERSION)
+    if (!news.Length)
+        news := NewsFor(PrevVersion(APP_VERSION), APP_VERSION)
+    if (news.Length)
+        CardOpen("news", news)
+}
+PrevVersion(v) {                                   ; "1.1.13" -> "1.1.12" (fuer "nur diese Version")
+    p := StrSplit(v, ".")
+    p[p.Length] := Max(0, Integer(p[p.Length]) - 1)
+    s := ""
+    for i, n in p
+        s .= (i > 1 ? "." : "") n
+    return s
+}
+
+; Beim Start: erstes Mal nach einem Update? Dann einmal zeigen, was neu ist.
+NewsAfterUpdate() {
+    global APP_VERSION, gWasWelcomed
+    seen := IniRead(CONF["IniPath"], "State", "SeenVersion", "")
+    IniSet("State", "SeenVersion", APP_VERSION)
+    if (seen = "") {
+        if (gWasWelcomed != "1")
+            return                                  ; ganz neue Installation: nichts "Neues"
+        seen := PrevVersion(APP_VERSION)            ; Update von einer Version ohne diese Funktion
+    }
+    if (VersionCmp(APP_VERSION, seen) > 0)
+        ShowNews(seen)
 }
 
 BarBlit() {

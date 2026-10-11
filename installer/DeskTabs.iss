@@ -86,12 +86,19 @@ Name: "{userstartup}\DeskTabs"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; Description: "{cm:LaunchAfter}"; Flags: nowait postinstall skipifsilent
+; Update mit einem Klick aus DeskTabs (still, /restart=1): danach wieder starten
+Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"; Flags: nowait; Check: RestartAfterUpdate
 
 [UninstallRun]
 ; laufende Instanz beenden, damit die Dateien nicht gesperrt sind
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM DeskTabs.exe"; Flags: runhidden; RunOnceId: "StopDeskTabs"
 
 [Code]
+function RestartAfterUpdate: Boolean;
+begin
+  Result := WizardSilent and (ExpandConstant('{param:restart|0}') = '1');
+end;
+
 // Beim Deinstallieren fragen, ob die eigenen Dateien des Nutzers bleiben sollen.
 // Standard ist "behalten" - wer neu installiert, findet seine Tabs wie gewohnt vor.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
