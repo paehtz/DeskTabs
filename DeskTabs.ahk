@@ -780,6 +780,7 @@ global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
 global gOd := Map(), gOdNext := 0x10000, gMenuGlyphs := Map(), gMenuSwatches := Map()   ; selbst gezeichnete Menues
+global gSP := 0, gSPClosed := 0   ; Unterprojekt-Auswahl am aktiven Tab (SubPanelOpen)
 global gBarReused := false, gBarPos := [0, 0]   ; Neuaufbau im vorhandenen Fenster (kein Aufblitzen)
 global gNameCache := 0         ; Desktop-Namen, nur waehrend eines Aufbaus gemerkt
 global gIniGen := 0            ; zaehlt eigene Schreibzugriffe auf settings.ini (Zwischenspeicher ungueltig)
@@ -802,6 +803,7 @@ global LANG_DE := Map(
     "menu.sub", "Unterprojekt",
     "menu.sub.current", "Unterprojekt: {1}",
     "menu.sub.none", "(keins)",
+    "sub.panel.none", "ohne Unterprojekt",
     "menu.sub.add", "Neues Unterprojekt…",
     "menu.sub.remove", "Entfernen",
     "prompt.sub.title", "Unterprojekt für „{1}“",
@@ -1027,6 +1029,7 @@ global LANG_EN := Map(
     "menu.sub", "Sub-project",
     "menu.sub.current", "Sub-project: {1}",
     "menu.sub.none", "(none)",
+    "sub.panel.none", "no sub-project",
     "menu.sub.add", "New sub-project…",
     "menu.sub.remove", "Remove",
     "prompt.sub.title", "Sub-project for “{1}”",
@@ -2432,14 +2435,14 @@ HeadMeasure(wParam, lParam, msg, hwnd) {
         hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
         w := HeadTextW(hdc, f[3], gMenuCaption)
         DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
-        NumPut("UInt", w + Round(16 * s), lParam, 12)
+        NumPut("UInt", w + Round(48 * s), lParam, 12)
         NumPut("UInt", Round(24 * s), lParam, 16)
         return 1
     }
     hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
     w := HeadTextW(hdc, f[1], "DeskTabs") + Round(7 * s) + HeadTextW(hdc, f[2], APP_VERSION)
     DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
-    NumPut("UInt", w + Round(16 * s), lParam, 12)                  ; itemWidth (Rest macht Windows)
+    NumPut("UInt", w + Round(48 * s), lParam, 12)                  ; itemWidth (Rest macht Windows)
     NumPut("UInt", Round(30 * s), lParam, 16)                      ; itemHeight
     return 1
 }
@@ -2483,10 +2486,10 @@ HeadDraw(wParam, lParam, msg, hwnd) {
                 , "UInt", 1, "UInt", 0, "UInt", 0, "UInt", 5, "UInt", 0, "Str", CONF["IconFont"], "Ptr")
         old := DllCall("SelectObject", "Ptr", hdc, "Ptr", ifont, "Ptr")
         rt := Buffer(16, 0)
-        NumPut("Int", l + Round(14 * s), "Int", t, "Int", l + Round(34 * s), "Int", b, rt)
+        NumPut("Int", l + Round(10 * s), "Int", t, "Int", l + Round(32 * s), "Int", b, rt)   ; Symbolspalte wie OdDraw
         DllCall("DrawTextW", "Ptr", hdc, "Str", Chr(0xE72A), "Int", 1, "Ptr", rt, "UInt", 0x24)   ; Pfeil
         DllCall("SelectObject", "Ptr", hdc, "Ptr", f[1])
-        NumPut("Int", l + Round(38 * s), "Int", t, "Int", r - Round(8 * s), "Int", b, rt)
+        NumPut("Int", l + Round(40 * s), "Int", t, "Int", r - Round(8 * s), "Int", b, rt)
         DllCall("DrawTextW", "Ptr", hdc, "Str", gMenuAction, "Int", -1, "Ptr", rt, "UInt", 0x24)
         DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
         return 1
@@ -2496,20 +2499,20 @@ HeadDraw(wParam, lParam, msg, hwnd) {
         old := DllCall("SelectObject", "Ptr", hdc, "Ptr", f[3], "Ptr")
         DllCall("SetTextColor", "Ptr", hdc, "UInt", 0x5C5C5C)
         rt := Buffer(16, 0)
-        NumPut("Int", l + Round(20 * s), "Int", t, "Int", r, "Int", b, rt)
+        NumPut("Int", l + Round(40 * s), "Int", t, "Int", r, "Int", b, rt)     ; Textspalte wie OdDraw
         DllCall("DrawTextW", "Ptr", hdc, "Str", gMenuCaption, "Int", -1, "Ptr", rt, "UInt", 0x24)   ; VCENTER|SINGLELINE
         DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
         return 1
     }
     ; Symbol in der Spalte, in der auch die anderen Menue-Symbole stehen
-    isz := Round(14 * s)                       ; so gross wie die Symbole der anderen Eintraege
+    isz := Round(16 * s)                       ; so gross wie die Symbole der anderen Eintraege (OdDraw)
     if (!icon && FileExist(AppIconPath()))
         try icon := LoadPicture(AppIconPath(), "w" isz " h" isz " Icon1", &imgType)
-    x := l + Round(3 * s)
+    x := l + Round(10 * s) + (Round(22 * s) - isz) // 2   ; mittig in der Symbolspalte von OdDraw
     if (icon)
         DllCall("DrawIconEx", "Ptr", hdc, "Int", x, "Int", t + (b - t - isz) // 2, "Ptr", icon, "Int", isz, "Int", isz, "UInt", 0, "Ptr", 0, "UInt", 3)
     ; Texte auf gemeinsamer Grundlinie: Name fett, Version kleiner und grau
-    tx := l + Round(20 * s)
+    tx := l + Round(40 * s)                    ; Textspalte wie OdDraw
     DllCall("SetBkMode", "Ptr", hdc, "Int", 1)
     old := DllCall("SelectObject", "Ptr", hdc, "Ptr", f[1], "Ptr")
     tm := Buffer(60, 0)
@@ -3529,6 +3532,211 @@ AltReleaseWatch() {
     SetTimer(AltReleaseWatch, 0)
     AltSwallow(false)
 }
+
+; ------------- Unterprojekt-Auswahl am aktiven Tab ---------------------------
+; Klick auf den aktiven Tab eines Desktops mit Unterprojekten: Ueber dem Tab gleitet eine
+; Flaeche im Grau der Leiste heraus, als wuechse die Leiste dort nach oben (in der
+; Desktop-Farbe waere sie bei grellen Farben zu laut und schlecht lesbar). Die Farbe
+; markiert nur das aktive Unterprojekt. Nur Auswahl, kein Anlegen/Entfernen (das bleibt
+; bei Alt + Klick). Schliesst bei Auswahl, Klick daneben, Esc oder Desktop-Wechsel.
+; Eigenes Schichtfenster (UpdateLayeredWindow): runde Ecken mit Kantenglaettung.
+SubPanelOpen(num, *) {
+    global gSP, MyGui, BTNS, gLayout
+    if (gSP || !MyGui || !gLayout)
+        return
+    item := 0
+    for it in BTNS
+        if (it["num"] = num)
+            item := it
+    list := SubList(num)
+    if (!item || !list.Length)
+        return
+    ToolTip(, , , 4)
+    col := (CONF["ActiveStyle"] = "accent" || CONF["ActiveStyle"] = "solid") ? CONF["ColActiveBg"] : DesktopColor(num)
+    fill := CONF["ColBarBg"], tx := CONF["ColInactiveTx"]
+    darkFill := (ReadableOn(fill) = 0xFFFFFF)
+    ; Zeilen: die Unterprojekte, darunter (am Tab) "ohne Unterprojekt"
+    vals := []
+    for , s in list
+        vals.Push(s)
+    vals.Push("")
+    cur := SubActive(num)
+    rowH := px(30), padY := px(6), padX := px(14), divH := px(9)
+    GdipStart()
+    mBmp := 0, mG := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", 1, "Int", 1, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &mBmp)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", mBmp, "Ptr*", &mG)
+    fB := MakeFont(true), sf := MakeFormat()
+    tw := 0
+    for , v in vals
+        tw := Max(tw, MeasureText(mG, fB, sf, (v = "") ? T("sub.panel.none") : v))
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fB), DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG), DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
+    w := Max(item["w"], tw + 2 * padX + px(8))
+    rows := [], y := padY
+    for i, v in vals {
+        if (v = "")
+            y += divH                              ; Trennlinie vor "ohne Unterprojekt"
+        rows.Push(Map("y", y, "val", v))
+        y += rowH
+    }
+    h := y + padY
+    bx := 0, by := 0
+    WinGetPos(&bx, &by, , , MyGui.Hwnd)
+    left := bx + item["x"]
+    bottom := by                                    ; Oberkante der Leiste
+    if (left + w > A_ScreenWidth)
+        left := Max(0, A_ScreenWidth - w)
+    pg := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08080000 -DPIScale")   ; NOACTIVATE | LAYERED
+    pg.Show(Format("NA x{1} y{2} w1 h1", left, bottom - 1))
+    gSP := Map("num", num, "gui", pg, "x", left, "bottom", bottom, "w", w, "h", h, "tabW", item["w"]
+        , "rows", rows, "rowH", rowH, "padX", padX, "cur", cur, "fill", fill, "tx", tx, "dark", darkFill, "col", col
+        , "hover", -1, "dc", 0, "hbm", 0, "obm", 0, "shown", 0)
+    SubPanelPaint()
+    ; herausgleiten: das Fenster waechst nach oben, der Inhalt schiebt sich aus dem Tab
+    Loop 8 {
+        if (!gSP)
+            return
+        f8 := A_Index / 8                           ; (nicht "t": AHK-Namen sind case-insensitiv, T() ist die Uebersetzung)
+        SubPanelShow(Max(1, Round(h * (1 - (1 - f8) ** 3))))
+        Sleep(12)
+    }
+    SetTimer(SubPanelTick, 30)
+    try Hotkey("Esc", SubPanelClose, "On")
+}
+
+; Inhalt neu zeichnen (einmal beim Oeffnen, dann bei Hover-Wechsel)
+SubPanelPaint() {
+    global gSP
+    sp := gSP, w := sp["w"], h := sp["h"]
+    if (!sp["dc"]) {
+        bi := Buffer(40, 0)
+        NumPut("UInt", 40, bi, 0), NumPut("Int", w, bi, 4), NumPut("Int", -h, bi, 8)
+        NumPut("UShort", 1, bi, 12), NumPut("UShort", 32, bi, 14)
+        sp["dc"] := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr")
+        bits := 0
+        sp["hbm"] := DllCall("CreateDIBSection", "Ptr", sp["dc"], "Ptr", bi, "UInt", 0, "Ptr*", &bits, "Ptr", 0, "UInt", 0, "Ptr")
+        sp["obm"] := DllCall("SelectObject", "Ptr", sp["dc"], "Ptr", sp["hbm"], "Ptr")
+    }
+    g := 0
+    DllCall("gdiplus\GdipCreateFromHDC", "Ptr", sp["dc"], "Ptr*", &g)
+    DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 4)   ; AntiAliasGridFit (Fenster mit Alphakanal)
+    DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", 0)
+    r := px(CONF["CornerRadius"]), d := r * 2
+    ; Form: oben rund, unten eckig (sitzt auf der Leiste)
+    path := 0
+    DllCall("gdiplus\GdipCreatePath", "Int", 0, "Ptr*", &path)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", 0, "Float", 0, "Float", d, "Float", d, "Float", 180, "Float", 90)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", w - d, "Float", 0, "Float", d, "Float", d, "Float", 270, "Float", 90)
+    DllCall("gdiplus\GdipAddPathLine", "Ptr", path, "Float", w, "Float", r, "Float", w, "Float", h)
+    DllCall("gdiplus\GdipAddPathLine", "Ptr", path, "Float", w, "Float", h, "Float", 0, "Float", h)
+    DllCall("gdiplus\GdipClosePathFigure", "Ptr", path)
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(sp["fill"]), "Ptr*", &brush)
+    DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", path)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush), DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+    ; Zeilen
+    font := MakeFont(), fontB := MakeFont(true), sf := MakeFormat()
+    DllCall("gdiplus\GdipSetStringFormatAlign", "Ptr", sf, "Int", 0)     ; linksbuendig
+    hov := Mix(CONF["ColHoverBg"], sp["fill"], CONF["HoverPct"])   ; wie der Hover der Tabs
+    ix := px(5), iw := w - 2 * ix, rowH := sp["rowH"]
+    for i, row in sp["rows"] {
+        y := row["y"], v := row["val"]
+        if (v = "") {                              ; Trennlinie
+            FillRoundRect(g, sp["padX"], y - px(5), w - 2 * sp["padX"], Max(1, px(1)), 0, 0x30000000 | (sp["tx"] & 0xFFFFFF))
+        }
+        act := (v == sp["cur"])
+        if (act || i - 1 = sp["hover"])
+            FillRoundRect(g, ix, y + px(1), iw, rowH - px(2), px(5), ARGB(hov))
+        if (act)                                   ; Markierung in der Desktop-Farbe, wie in Windows-Listen
+            FillRoundRect(g, ix + px(2), y + rowH // 2 - px(7), px(3), px(14), px(1.5), ARGB(sp["col"]))
+        txt := (v = "") ? T("sub.panel.none") : v
+        a := (v = "" && !act) ? 0xA0000000 : 0xFF000000
+        DrawText(g, act ? fontB : font, sf, txt, sp["padX"], y, w - 2 * sp["padX"], rowH, a | (sp["tx"] & 0xFFFFFF))
+    }
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", font), DllCall("gdiplus\GdipDeleteFont", "Ptr", fontB)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    if (sp["shown"])
+        SubPanelShow(sp["shown"])
+}
+
+; die oberen hh Pixel des Bildes zeigen, Unterkante an der Oberkante des Tabs
+SubPanelShow(hh) {
+    global gSP
+    sp := gSP
+    sp["shown"] := hh
+    pt := Buffer(8, 0), sz := Buffer(8, 0), src := Buffer(8, 0)
+    NumPut("Int", sp["x"], "Int", sp["bottom"] - hh, pt)
+    NumPut("Int", sp["w"], "Int", hh, sz)
+    DllCall("UpdateLayeredWindow", "Ptr", sp["gui"].Hwnd, "Ptr", 0, "Ptr", pt, "Ptr", sz, "Ptr", sp["dc"]
+        , "Ptr", src, "UInt", 0, "UInt*", 0x01FF0000, "UInt", 2)   ; AC_SRC_ALPHA, ULW_ALPHA
+}
+
+SubPanelRowAt(&mx := 0, &my := 0) {
+    global gSP
+    sp := gSP
+    pt := Buffer(8, 0)
+    DllCall("GetCursorPos", "Ptr", pt)
+    mx := NumGet(pt, 0, "Int"), my := NumGet(pt, 4, "Int")
+    top := sp["bottom"] - sp["h"]
+    if (mx < sp["x"] || mx >= sp["x"] + sp["w"] || my < top || my >= sp["bottom"])
+        return -2                                   ; ausserhalb
+    ly := my - top
+    for i, row in sp["rows"]
+        if (ly >= row["y"] && ly < row["y"] + sp["rowH"])
+            return i - 1
+    return -1
+}
+
+SubPanelTick() {
+    global gSP, gSPClosed
+    if (!gSP)
+        return SetTimer(SubPanelTick, 0)
+    i := SubPanelRowAt()
+    if (GetCurrentDesktop() != gSP["num"])
+        return SubPanelClose()
+    if ((GetKeyState("LButton", "P") || GetKeyState("RButton", "P")) && i = -2)
+        return SubPanelClose()                      ; Klick daneben
+    hv := Max(i, -1)
+    if (hv != gSP["hover"]) {
+        gSP["hover"] := hv
+        SubPanelPaint()
+    }
+}
+
+; Klick in die Auswahl (WM_LBUTTONUP, eigene Kette neben OnLButtonUp)
+SubPanelUp(wParam, lParam, msg, hwnd) {
+    global gSP
+    if (!gSP || hwnd != gSP["gui"].Hwnd)
+        return
+    i := SubPanelRowAt()
+    if (i < 0)
+        return 0
+    num := gSP["num"], v := gSP["rows"][i + 1]["val"]
+    SubPanelClose()
+    if (v !== SubActive(num))
+        SetSub(num, v)
+    return 0
+}
+
+SubPanelClose(*) {
+    global gSP, gSPClosed
+    if (!gSP)
+        return
+    sp := gSP, gSP := 0, gSPClosed := A_TickCount
+    SetTimer(SubPanelTick, 0)
+    try Hotkey("Esc", "Off")
+    try sp["gui"].Destroy()
+    if (sp["dc"]) {
+        DllCall("SelectObject", "Ptr", sp["dc"], "Ptr", sp["obm"])
+        DllCall("DeleteObject", "Ptr", sp["hbm"])
+        DllCall("DeleteDC", "Ptr", sp["dc"])
+    }
+    RenderBar(true)                                 ; Tab wieder rund
+}
 TabSource(num) => LabelFor(num) "|" IsCompactDesk(num) "|" SubActive(num)
 ToggleCompact(num, *) {
     if (IsCompactDesk(num))
@@ -3585,6 +3793,9 @@ BuildBar() {
     global gBuilding, gCompact, GUIW, gTaskbarW, gPadX
     if (gBuilding)              ; verschachtelten Neuaufbau verhindern (Geometrie-Race)
         return
+    global gSP
+    if (gSP)
+        SubPanelClose()
     gBuilding := true
     crit := A_IsCritical            ; Aufbau nicht unterbrechen lassen (siehe RenderBar)
     Critical
@@ -3744,6 +3955,7 @@ BuildBarAt() {
     ; Maus: Ziehen am Griff (LBUTTONDOWN), Tab-Klick (LBUTTONUP)
     OnMessage(0x0201, OnLButtonDown)  ; WM_LBUTTONDOWN
     OnMessage(0x0202, OnLButtonUp)    ; WM_LBUTTONUP
+    OnMessage(0x0202, SubPanelUp)     ; ... und in der Unterprojekt-Auswahl
     OnMessage(0x0020, OnSetCursor)    ; WM_SETCURSOR -> Verschiebe-Zeiger ueber dem Griff
 }
 
@@ -4458,8 +4670,12 @@ BtnClick(num, *) {
     ; Klick auf den bereits aktiven Desktop: hat er Unterprojekte, die schlanke Auswahl
     ; (Alt + Klick bleibt das volle Menue mit Anlegen/Entfernen); sonst auf Wunsch die Taskansicht
     if (num = GetCurrentDesktop()) {
-        if (SubList(num).Length)
-            SetTimer(ShowSubMenu.Bind(num, false), -1)
+        if (SubList(num).Length) {
+            global gSP, gSPClosed
+            if (gSP || A_TickCount - gSPClosed < 400)   ; derselbe Klick hat sie gerade geschlossen
+                return
+            SetTimer(SubPanelOpen.Bind(num), -1)
+        }
         else if (CONF["ClickActiveTaskView"]) {
             MarkTaskView()
             Send("#{Tab}")
