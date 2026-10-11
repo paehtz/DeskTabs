@@ -1361,6 +1361,7 @@ Main() {
     BuildTray()
     OnMessage(0x0202, CardUp)                ; Klicks in die Hinweis-Karten
     OnMessage(0x0020, CardSetCursor)
+    OnMessage(0x020A, CardWheel)             ; Mausrad: lange Neuigkeiten scrollen
     global gWasWelcomed := IniRead(CONF["IniPath"], "State", "Welcomed", "")   ; vor FirstRunHint lesen
     SetTimer(NewsAfterUpdate, -4000)         ; erster Start nach einem Update: was ist neu
     SetTimer(AutoUpdateTick, -20000)         ; Update-Pruefung 20 s nach dem Start, hoechstens einmal pro Tag
@@ -4645,6 +4646,14 @@ CardLayout(c) {
         z["link"] := [padX, y, MeasureText(mG, fS, sf, T("news.all")) + px(4), px(20)]
         h := y + px(20) + px(14)
         c["rows"] := rows
+        tb := TaskbarRect()
+        avail := ((tb && tb[2] > A_ScreenHeight // 2) ? tb[2] : A_ScreenHeight) - px(24)
+        c["hdr"] := px(48)                         ; Titelzeile: scrollt nicht mit
+        if (h > avail) {
+            c["full"] := h, h := avail
+            if (!c.Has("sy"))
+                c["sy"] := 0
+        }
     }
     z["x"] := [w - px(8) - xs, (c["kind"] = "update") ? (h - xs) // 2 : px(10), xs, xs]
     c["w"] := w, c["h"] := h, c["zones"] := z
@@ -4765,10 +4774,19 @@ CardPaint() {
             DrawText(g, fB, sfC, c["btn"], b[1], b[2], b[3], b[4], ARGB(ReadableOn(acc)))
         }
     } else {
-        sfW := 0
-        DllCall("gdiplus\GdipCreateStringFormat", "Int", 0, "Int", 0, "Ptr*", &sfW)
+        clipped := false
+        scr := c.Has("full"), sy := scr ? c["sy"] : 0
         for , row in c["rows"] {
             kindR := row[1], s := row[2], x := row[3], y := row[4], rw := row[5], rh := row[6]
+            if (kindR != "title") {
+                if (scr && y - sy + rh < c["hdr"] || y - sy > h)
+                    continue                       ; ausserhalb des sichtbaren Bereichs
+                if (scr && !clipped) {
+                    DllCall("gdiplus\GdipSetClipRectI", "Ptr", g, "Int", 0, "Int", c["hdr"], "Int", w, "Int", h - c["hdr"] - px(4), "Int", 0)
+                    clipped := true
+                }
+                y -= sy
+            }
             if (kindR = "title")
                 DrawText(g, fT, sfL, s, x, y, rw, rh, ARGB(fg))
             else if (kindR = "ver")
@@ -4780,7 +4798,14 @@ CardPaint() {
             } else if (kindR = "link")
                 DrawText(g, fS, sfL, s, x, y, rw + px(40), rh, ARGB(c["hover"] = "link" ? fg : CONF["ColActiveBg"]))
         }
-        DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sfW)
+        if (clipped)
+            DllCall("gdiplus\GdipResetClip", "Ptr", g)
+        if (scr) {                                 ; schmaler Balken rechts, wie in Windows 11
+            trackY := c["hdr"], trackH := h - c["hdr"] - px(10)
+            thumbH := Max(px(24), Round(trackH * h / c["full"]))
+            thumbY := trackY + Round((trackH - thumbH) * sy / (c["full"] - h))
+            FillRoundRect(g, w - px(8), thumbY, px(3), thumbH, px(1.5), 0x60000000 | (fg & 0xFFFFFF))
+        }
     }
     ; Schliessen (X)
     xb := z["x"]
@@ -4837,7 +4862,13 @@ CardZoneAt() {
     for , name in ["x", "btn", "link", "body"]
         if (c["zones"].Has(name)) {
             r := c["zones"][name]
-            if (lx >= r[1] && ly >= r[2] && lx < r[1] + r[3] && ly < r[2] + r[4])
+            ry := r[2]
+            if (name = "link" && c.Has("full")) {
+                ry -= c["sy"]
+                if (ly < c["hdr"])
+                    continue                       ; unter die Titelzeile gescrollt
+            }
+            if (lx >= r[1] && ly >= ry && lx < r[1] + r[3] && ly < ry + r[4])
                 return name
         }
     return ""
@@ -4872,6 +4903,18 @@ CardUp(wParam, lParam, msg, hwnd) {
     } else if (kind = "news" && zn = "link") {
         CardClose(), Run(APP_CHANGELOG_URL)
     }
+    return 0
+}
+
+CardWheel(wParam, lParam, msg, hwnd) {
+    global gCard
+    if (!gCard || hwnd != gCard["gui"].Hwnd || !gCard.Has("full"))
+        return
+    delta := (wParam >> 16) & 0xFFFF
+    if (delta >= 0x8000)
+        delta -= 0x10000
+    gCard["sy"] := Max(0, Min(gCard["full"] - gCard["h"], gCard["sy"] - Round(delta / 120 * px(60))))
+    CardPaint()
     return 0
 }
 
@@ -4975,7 +5018,8 @@ UpdateNotice(force := false, *) {
 
 ; --------------------------- Neu in dieser Version ---------------------------
 ; data\changelog.<sprache>.md:  "## 1.1.13" und darunter "- Punkt" je Neuerung.
-; Gezeigt werden die Versionen nach der zuletzt gesehenen (hoechstens drei).
+; Gezeigt werden alle Versionen nach der zuletzt gesehenen, neueste oben. Wird die Karte
+; hoeher als der Platz ueber der Taskleiste, scrollt der Inhalt (Mausrad, Balken rechts).
 NewsFor(fromVer, toVer) {
     global gLangCode
     file := A_ScriptDir "\data\changelog." gLangCode ".md"
@@ -4993,8 +5037,6 @@ NewsFor(fromVer, toVer) {
         } else if (cur && RegExMatch(line, "^[-*]\s+(.+)", &m))
             cur[2].Push(StrReplace(m[1], "``", ""))          ; **fett** bleibt, RichLayout setzt es um
     }
-    while (groups.Length > 3)
-        groups.Pop()
     out := []
     for , grp in groups
         if (grp[2].Length)
