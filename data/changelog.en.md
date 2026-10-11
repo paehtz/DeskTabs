@@ -1,6 +1,9 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.15
+- **Leaves nothing behind:** after a one-click update, DeskTabs removes the downloaded setup file again, so your disk stays tidy.
+
 ## 1.1.14
 - **Catch up after a break:** if you skipped a few updates, this window lists what's new in every version you missed, one below the other. If it gets taller than your screen, just scroll with the mouse wheel.
 

@@ -1,6 +1,9 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.15
+- **Hinterlässt keinen Ballast:** Nach einem Update mit einem Klick räumt DeskTabs die heruntergeladene Setup-Datei wieder weg. Deine Festplatte bleibt sauber.
+
 ## 1.1.14
 - **Nichts verpassen nach längerer Pause:** Hast Du mehrere Updates ausgelassen, zeigt Dir dieses Fenster die Neuerungen aller verpassten Versionen untereinander. Wird es länger als der Bildschirm, scrollst Du einfach mit dem Mausrad.
 
