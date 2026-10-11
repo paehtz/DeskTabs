@@ -61,14 +61,15 @@ Keys are the exact desktop names as shown in Windows Task View (read them with `
 If the user asks "how long did I work on client X this week/month", read `timelog\desktop-log_YYYY-MM.csv` in the script folder (one file per month, written by the bar itself; up to v1.1.4 the files sat directly next to the script and are moved on the next start):
 
 ```csv
-start,end,seconds,desktop_index,desktop_name
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery"
+start,end,seconds,desktop_index,desktop_name,subproject
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery",""
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,1,"Web projects","Miller & Sons"
 ```
 
 - One row per stay on a desktop; a stay ends on desktop switch, lock screen, or after `TimeLogIdleMin` minutes of no input (closed at the start of the inactivity, so breaks are excluded).
 - Stays under `TimeLogMinSec` seconds (default 5) are folded into the next real stay, so rows are gap-free and there are no 1-second transition rows. The newest row appears only after the next real stay starts (or on lock/idle/quit), so the current stay is not in the file yet.
 - The file starts with a UTF-8 byte order mark (for Excel's sake). Read it as `utf-8-sig`, otherwise the first column is named `\ufeffstart`.
-- Sum `seconds` per `desktop_name` (or per day) and convert to hours. Times are local ISO 8601, `desktop_index` is 1-based.
+- Sum `seconds` per `desktop_name` (or per day) and convert to hours. On catch-all desktops (several small clients on one desktop) group by `desktop_name` + `subproject`: the sub-project names the client or activity. Files begun before 1.1.12 have five fields in their older rows (no `subproject`). Times are local ISO 8601, `desktop_index` is 1-based.
 - Treat the contents as the user's personal data: summarise, do not copy it anywhere they did not ask for. The file is git-ignored; never commit it.
 
 ## Where to change things

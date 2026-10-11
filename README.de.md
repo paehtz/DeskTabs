@@ -70,6 +70,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Vollbild-Auto-Hide:** blendet sich aus, solange auf dem Monitor der Leiste eine Vollbild-App ganz oben liegt (ein Vollbild-Video auf einem anderen Monitor blendet sie nicht aus; eine Vollbild-App bleibt respektiert, auch wenn der Fokus auf einen anderen Monitor wandert).
 - **Einzelne Desktops kompakt:** Rechtsklick auf einen Tab → *Kompakt anzeigen (nur Symbol)* für Projekte, die gerade ruhen, aber offen bleiben. Ihr Tab zeigt nur noch sein Symbol (oder Kürzel/Nummer), die aktiven Desktops behalten ihre volle Größe. Zeigt ein Tab seinen Namen nicht ganz, nennt ihn ein kurzer Hinweis beim Überfahren.
 - **Kompakt-Stufen:** `full` / `short` / `icon`, automatisch nach verfügbarer Breite oder manuell per **Strg + Mausrad** über der Leiste; mit optionalen Kürzeln pro Desktop. Passt so auch auf schmale Laptop-Taskleisten.
+- **Unterprojekte für Sammel-Desktops:** Ein Desktop für mehrere kleine Projekte (etwa *Webprojekte*) bekommt eine Liste von Unterprojekten. Rechtsklick auf den Tab → *Unterprojekt ›* oder **Alt + Klick** auf den Tab, und eins wählen (oder keins). Es steht klein und grau unter dem Desktop-Namen und als eigene Spalte im Zeit-Log; ein Wechsel des Unterprojekts beginnt eine neue Zeile, genau wie ein Desktop-Wechsel.
 - **Eingebautes Zeit-Log:** schreibt, wie lange Du auf welchem Desktop warst, in eine Monats-CSV (`timelog\desktop-log_YYYY-MM.csv`); pausiert bei gesperrtem Bildschirm und nach 5 Minuten ohne Eingabe. Für alle ohne Time-Tracker, und für Coding-Agenten, die daraus die Abrechnung machen. Siehe [Zeit-Log](#zeit-log).
 - **Rechtsklick-Menü:** Rechtsklick auf einen Tab, um Fenster dorthin zu schicken, und für Symbol, Farbe und Kürzel, dazu alle App-Einstellungen: *Ansicht* (was im Tab steht, Symbole, Nummern, Farbbalken), *Aktiver Desktop*, *Hell oder dunkel*, *Tastenkürzel*, *Sprache* und unter *Weitere Einstellungen* Direktsprung, Einrasten, Wechsel-Meldung, Hinweispunkt, Fenster auf Tabs ziehen und Zeit-Log. Kein Editieren von Dateien nötig; alles landet in `settings.ini`. Das Tray-Symbol zeigt dasselbe Menü direkt.
 - **Hilfe-Menü:** eine Übersicht aller Tastenkürzel und Gesten (mit Deinen eingestellten Zusatztasten), Dokumentation, Änderungsverlauf, Fehler melden und Wunsch einreichen (öffnet ein vorausgefülltes GitHub-Issue), E-Mail an den Autor, Update-Prüfung und *Über DeskTabs* (Version, Lizenz, Links).
@@ -264,13 +265,14 @@ DeskTabs spricht von Haus aus Deutsch und Englisch und wählt die Sprache nach D
 Mit `TimeLog=1` (Standard) schreibt DeskTabs pro Aufenthalt auf einem Desktop eine Zeile in `desktop-log_YYYY-MM.csv` im Unterordner `timelog\` des Programmordners (bis v1.1.4 lagen die Dateien direkt neben dem Programm; sie werden beim nächsten Start umgezogen). *Weitere Einstellungen › Zeit-Log › Ordner öffnen* zeigt die Dateien:
 
 ```csv
-start,end,seconds,desktop_index,desktop_name
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery"
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"Miller & Sons"
+start,end,seconds,desktop_index,desktop_name,subproject
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery",""
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,1,"Webprojekte","Miller & Sons"
 ```
 
 - Ein Aufenthalt endet beim Desktop-Wechsel, beim Sperren des Bildschirms oder nach `TimeLogIdleMin` Minuten ohne Eingabe (dann wird er rückwirkend zum Beginn der Inaktivität geschlossen, Pausen zählen also nicht mit).
 - Aufenthalte unter `TimeLogMinSec` Sekunden (Standard 5) sind Übergänge, keine Arbeit: Durchschalten von 1 über 2 und 3 nach 4 ergibt eine Zeile für 4 (samt Fahrzeit), ein kurzer Blick von A nach B und zurück setzt die Zeile für A fort. Deshalb wird die neueste Zeile erst geschrieben, wenn der nächste echte Aufenthalt feststeht; Sperren, Inaktivität oder Beenden schreiben sie sofort.
+- `subproject` ist das Unterprojekt, das auf diesem Desktop aktiv war (leer, wenn keins). Dateien, die vor Version 1.1.12 begonnen wurden, bekamen die Spalte in der Kopfzeile ergänzt; ihre älteren Zeilen haben einfach fünf Felder.
 - Zeiten sind lokal, ISO 8601. `desktop_index` ist 1-basiert wie die Nummern in der Leiste; `desktop_name` ist der Name beim Start des Aufenthalts.
 - Die Datei ist reines UTF-8-CSV: in Excel öffnen, oder einen Coding-Agenten die Zeiten pro Kunde für die Rechnung aufsummieren lassen. Es sind persönliche Daten, die Datei ist git-ignoriert.
 

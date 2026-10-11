@@ -143,6 +143,7 @@ global gSegStart := ""          ; Zeit-Log: Beginn des laufenden Aufenthalts (YY
 global gSegDesk := -1           ; Zeit-Log: Desktop-Index des laufenden Aufenthalts
 global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
 global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
+global gSegSub := ""          ; Zeit-Log: Unterprojekt des laufenden Aufenthalts
 global gLogCarry := "", gLogPend := 0   ; Zeit-Log-Filter: mitgenommene Uebergangszeit, wartender Eintrag
 
 ; ----------- Fenster verschieben, Aufmerksamkeit, zurueck zum letzten Desktop ----------
@@ -605,10 +606,10 @@ IsoTime(ts) => FormatTime(ts, "yyyy-MM-dd'T'HH:mm:ss")
 CsvQuote(s) => '"' StrReplace(s, '"', '""') '"'
 
 LogOpen(num) {
-    global gSegStart, gSegDesk, gSegName
+    global gSegStart, gSegDesk, gSegName, gSegSub
     if (!CONF["TimeLog"])
         return
-    gSegStart := A_Now, gSegDesk := num, gSegName := GetDesktopNameRaw(num)
+    gSegStart := A_Now, gSegDesk := num, gSegName := GetDesktopNameRaw(num), gSegSub := SubActive(num)
 }
 
 ; Laufendes Segment abschliessen. endTime optional (z.B. Beginn einer Pause).
@@ -622,7 +623,7 @@ LogOpen(num) {
 ; in gLogPend, bis der naechste feststeht; setzt dieser denselben Desktop nahtlos
 ; fort, wird der wartende Eintrag einfach verlaengert.
 LogClose(endTime := "", hard := true) {
-    global gSegStart, gSegDesk, gSegName, gLogCarry, gLogPend
+    global gSegStart, gSegDesk, gSegName, gSegSub, gLogCarry, gLogPend
     if (!CONF["TimeLog"] || gSegStart = "") {
         if (hard)
             LogFlush()
@@ -643,11 +644,11 @@ LogClose(endTime := "", hard := true) {
             LogFlush()
         return
     }
-    if (IsObject(gLogPend) && gLogPend["desk"] = gSegDesk && gLogPend["end"] = start)
-        gLogPend["end"] := end                           ; nahtlose Fortsetzung desselben Desktops
+    if (IsObject(gLogPend) && gLogPend["desk"] = gSegDesk && gLogPend["sub"] == gSegSub && gLogPend["end"] = start)
+        gLogPend["end"] := end                           ; nahtlose Fortsetzung desselben Desktops (und Unterprojekts)
     else {
         LogFlush()
-        gLogPend := Map("start", start, "end", end, "desk", gSegDesk, "name", gSegName)
+        gLogPend := Map("start", start, "end", end, "desk", gSegDesk, "name", gSegName, "sub", gSegSub)
     }
     if (hard)
         LogFlush()
@@ -663,11 +664,35 @@ LogFlush() {
     file := LogFile(p["start"])
     try {
         DirCreate(LogDir())
-        if !FileExist(file)
-            FileAppend("start,end,seconds,desktop_index,desktop_name`n", file, "UTF-8")
-        FileAppend(Format("{1},{2},{3},{4},{5}`n", IsoTime(p["start"]), IsoTime(p["end"])
-            , DateDiff(p["end"], p["start"], "Seconds"), p["desk"] + 1, CsvQuote(p["name"])), file, "UTF-8")
+        LogHeader(file)
+        FileAppend(Format("{1},{2},{3},{4},{5},{6}`n", IsoTime(p["start"]), IsoTime(p["end"])
+            , DateDiff(p["end"], p["start"], "Seconds"), p["desk"] + 1, CsvQuote(p["name"]), CsvQuote(p.Has("sub") ? p["sub"] : "")), file, "UTF-8")
     }
+}
+
+; Kopfzeile sicherstellen. Seit dem Unterprojekt gibt es eine sechste Spalte; eine
+; Monatsdatei mit alter Kopfzeile bekommt sie einmal ergaenzt (alte Zeilen bleiben, die
+; Spalte ist dort leer).
+LogHeader(file) {
+    static done := Map()
+    if (done.Has(file))
+        return
+    head := "start,end,seconds,desktop_index,desktop_name,subproject"
+    if !FileExist(file)
+        FileAppend(head "`n", file, "UTF-8")
+    else {
+        txt := FileRead(file, "UTF-8")
+        first := SubStr(txt, 1, InStr(txt, "`n") - 1)
+        if (!InStr(first, "subproject")) {
+            pos := InStr(txt, "desktop_name")
+            if (pos && pos < StrLen(first) + 2) {
+                txt := SubStr(txt, 1, pos + 11) ",subproject" SubStr(txt, pos + 12)
+                f := FileOpen(file, "w", "UTF-8")       ; mit BOM, wie FileAppend sie anlegt
+                f.Write(txt), f.Close()
+            }
+        }
+    }
+    done[file] := true
 }
 
 ; Desktop-Wechsel ins Log uebernehmen (aus UpdateHighlight)
@@ -754,6 +779,11 @@ global gAttention := Map(), gShellMsg := 0  ; Desktops mit blinkendem Programm (
 global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
+global gOd := Map(), gOdNext := 0x10000, gMenuGlyphs := Map(), gMenuSwatches := Map()   ; selbst gezeichnete Menues
+global gBarReused := false, gBarPos := [0, 0]   ; Neuaufbau im vorhandenen Fenster (kein Aufblitzen)
+global gNameCache := 0         ; Desktop-Namen, nur waehrend eines Aufbaus gemerkt
+global gIniGen := 0            ; zaehlt eigene Schreibzugriffe auf settings.ini (Zwischenspeicher ungueltig)
+global gFsHit := ""            ; Fenster, das zuletzt als Vollbild galt (nur fuer _debug.txt)
 global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
 global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
@@ -769,6 +799,15 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; sind eingebaut. Eine Datei lang\<code>.ini (UTF-8, Zeilen "schluessel=Text")
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
+    "menu.sub", "Unterprojekt",
+    "menu.sub.current", "Unterprojekt: {1}",
+    "menu.sub.none", "(keins)",
+    "menu.sub.add", "Neues Unterprojekt…",
+    "menu.sub.remove", "Entfernen",
+    "prompt.sub.title", "Unterprojekt für „{1}“",
+    "prompt.sub.text", "Name des Unterprojekts (z. B. ein Kunde oder „Wartung“). Es wird gleich aktiv:",
+    "sc.k.altclick", "{1} + Klick auf einen Tab",
+    "sc.d.altclick", "Unterprojekt wählen (steht im Tab und im Zeit-Log)",
     "menu.help.shortcuts", "Tastenkürzel und Gesten…",
     "sc.title", "DeskTabs: Tastenkürzel und Gesten",
     "sc.hkoff", "Die Tastenkürzel sind gerade aus (grau). Einschalten: Rechtsklick auf die Leiste › Tastenkürzel.",
@@ -983,6 +1022,15 @@ global LANG_DE := Map(
     "feedback.mail.body.feedback", "Hallo Henning,`n`nzu DeskTabs habe ich folgende Idee oder Frage:`n`n`nViele Grüße"
 )
 global LANG_EN := Map(
+    "menu.sub", "Sub-project",
+    "menu.sub.current", "Sub-project: {1}",
+    "menu.sub.none", "(none)",
+    "menu.sub.add", "New sub-project…",
+    "menu.sub.remove", "Remove",
+    "prompt.sub.title", "Sub-project for “{1}”",
+    "prompt.sub.text", "Name of the sub-project (a client, or “maintenance”). It becomes active right away:",
+    "sc.k.altclick", "{1} + click a tab",
+    "sc.d.altclick", "pick a sub-project (shown in the tab and in the time log)",
     "menu.help.shortcuts", "Keyboard shortcuts and gestures…",
     "sc.title", "DeskTabs: keyboard shortcuts and gestures",
     "sc.hkoff", "The keyboard shortcuts are off right now (grey). Turn them on: right-click the bar › Keyboard shortcuts.",
@@ -1460,11 +1508,8 @@ GlyphHBitmap(spec, size, rgb, bgRgb) {
 
 ; Symbol vor einem Menue-Eintrag
 MenuGlyph(menu, item, code) {
-    hbm := GlyphHBitmap("glyph:" code, 16, 0x1F1F1F, 0xF0F0F0)
-    if (hbm) {
-        try menu.SetIcon(item, "HBITMAP:*" hbm, , 16)
-        DllCall("DeleteObject", "Ptr", hbm)
-    }
+    global gMenuGlyphs
+    gMenuGlyphs[menu.Handle "|" item] := code          ; gezeichnet wird in OdDraw aus der Symbolschrift
 }
 
 ; Auswahlfenster: Suchfeld, Schnellfilter und ein rollbares Raster ueber die
@@ -2225,6 +2270,136 @@ HeadFonts() {
     return fonts
 }
 
+; ---------------- Menues komplett selbst zeichnen (Windows-11-Stil) ----------------
+; Sobald ein Menue einen selbst gezeichneten Eintrag hat (Kopfzeile, Aktionszeile),
+; zeichnet Windows den Rest im alten Stil: blauer Balken ueber die volle Breite,
+; Symbol-Bildchen wirken darin ausgestanzt. Deshalb zeichnet DeskTabs alle Eintraege
+; selbst: heller, abgerundeter Hover, Symbole aus der Symbolschrift, eigener Haken und
+; Untermenue-Pfeil. Zustand (Haken, grau, fett) kommt beim Zeichnen von Windows.
+OD_BG() => 0xF9F9F9                    ; Menue-Grund (GDI, BGR = RGB bei Grau)
+OD_HOVER() => 0xEAEAEA
+OwnerDrawAll(hMenu) {
+    global gOd, gOdNext, gMenuGlyphs, gMenuSwatches
+    static bgBrush := 0
+    if (!bgBrush)
+        bgBrush := DllCall("CreateSolidBrush", "UInt", OD_BG(), "Ptr")
+    mi := Buffer(A_PtrSize = 8 ? 40 : 28, 0)            ; MENUINFO: einheitlicher heller Grund
+    NumPut("UInt", mi.Size, mi, 0), NumPut("UInt", 0x2, mi, 4)          ; MIM_BACKGROUND
+    NumPut("Ptr", bgBrush, mi, A_PtrSize = 8 ? 16 : 16)
+    DllCall("SetMenuInfo", "Ptr", hMenu, "Ptr", mi)
+    Loop DllCall("GetMenuItemCount", "Ptr", hMenu, "Int") {
+        pos := A_Index - 1
+        mii := Buffer(80, 0)
+        NumPut("UInt", 80, mii, 0), NumPut("UInt", 0x100 | 0x20 | 0x4 | 0x40, mii, 4)   ; FTYPE|DATA|SUBMENU|STRING
+        DllCall("GetMenuItemInfoW", "Ptr", hMenu, "UInt", pos, "Int", 1, "Ptr", mii)
+        ftype := NumGet(mii, 8, "UInt"), sub := NumGet(mii, 24, "Ptr")
+        if (sub)
+            OwnerDrawAll(sub)
+        if (ftype & 0x100)                               ; schon selbst gezeichnet (Kopf, Aktion, frueherer Lauf)
+            continue
+        text := ""
+        if (!(ftype & 0x800)) {
+            cch := NumGet(mii, 64, "UInt")
+            buf := Buffer((cch + 1) * 2, 0)
+            NumPut("UInt", 0x40, mii, 4), NumPut("Ptr", buf.Ptr, mii, 56), NumPut("UInt", cch + 1, mii, 64)
+            DllCall("GetMenuItemInfoW", "Ptr", hMenu, "UInt", pos, "Int", 1, "Ptr", mii)
+            text := StrGet(buf, "UTF-16")
+        }
+        key := hMenu "|" text
+        id := gOdNext++
+        gOd[id] := Map("text", text, "sep", (ftype & 0x800) ? 1 : 0, "sub", sub ? 1 : 0
+            , "glyph", gMenuGlyphs.Has(key) ? gMenuGlyphs[key] : "", "swatch", gMenuSwatches.Has(key) ? gMenuSwatches[key] : -1)
+        set := Buffer(80, 0)
+        NumPut("UInt", 80, set, 0), NumPut("UInt", 0x100 | 0x20, set, 4)     ; FTYPE|DATA
+        NumPut("UInt", ftype | 0x100, set, 8)                                ; MFT_OWNERDRAW dazu
+        NumPut("UPtr", id, set, 48)
+        DllCall("SetMenuItemInfoW", "Ptr", hMenu, "UInt", pos, "Int", 1, "Ptr", set)
+    }
+}
+OdIconFont(px) {
+    static fonts := Map()
+    if (!fonts.Has(px))
+        fonts[px] := DllCall("CreateFontW", "Int", -px, "Int", 0, "Int", 0, "Int", 0, "Int", 400, "UInt", 0, "UInt", 0, "UInt", 0
+            , "UInt", 1, "UInt", 0, "UInt", 0, "UInt", 5, "UInt", 0, "Str", CONF["IconFont"], "Ptr")
+    return fonts[px]
+}
+OdMeasure(lParam, rec) {
+    s := A_ScreenDPI / 96
+    if (rec["sep"]) {
+        NumPut("UInt", Round(20 * s), lParam, 12), NumPut("UInt", Round(9 * s), lParam, 16)
+        return 1
+    }
+    f := HeadFonts()
+    hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
+    w := HeadTextW(hdc, f[1], rec["text"])                ; fett messen: Standard-Eintraege sind fett
+    DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
+    NumPut("UInt", w + Round(70 * s), lParam, 12)         ; Symbolspalte + Text + Pfeilspalte
+    NumPut("UInt", Round(30 * s), lParam, 16)
+    return 1
+}
+OdDraw(lParam, rec) {
+    s := A_ScreenDPI / 96
+    hdc := NumGet(lParam, 32, "Ptr"), st := NumGet(lParam, 16, "UInt")
+    l := NumGet(lParam, 40, "Int"), t := NumGet(lParam, 44, "Int"), r := NumGet(lParam, 48, "Int"), b := NumGet(lParam, 52, "Int")
+    sel := (st & 1) && !(st & 6), dis := (st & 6), chk := (st & 8), def := (st & 0x20)
+    rc := Buffer(16, 0)
+    NumPut("Int", l, "Int", t, "Int", r, "Int", b, rc)
+    br := DllCall("CreateSolidBrush", "UInt", OD_BG(), "Ptr")
+    DllCall("FillRect", "Ptr", hdc, "Ptr", rc, "Ptr", br)
+    DllCall("DeleteObject", "Ptr", br)
+    if (rec["sep"]) {
+        pen := DllCall("CreatePen", "Int", 0, "Int", 1, "UInt", 0xE0E0E0, "Ptr")
+        op := DllCall("SelectObject", "Ptr", hdc, "Ptr", pen, "Ptr")
+        my := (t + b) // 2
+        DllCall("MoveToEx", "Ptr", hdc, "Int", l + Round(8 * s), "Int", my, "Ptr", 0)
+        DllCall("LineTo", "Ptr", hdc, "Int", r - Round(8 * s), "Int", my)
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", op), DllCall("DeleteObject", "Ptr", pen)
+        return 1
+    }
+    if (sel) {                                           ; Hover: hell, abgerundet, eingerueckt
+        br := DllCall("CreateSolidBrush", "UInt", OD_HOVER(), "Ptr")
+        oB := DllCall("SelectObject", "Ptr", hdc, "Ptr", br, "Ptr")
+        oP := DllCall("SelectObject", "Ptr", hdc, "Ptr", DllCall("GetStockObject", "Int", 8, "Ptr"), "Ptr")   ; NULL_PEN
+        DllCall("RoundRect", "Ptr", hdc, "Int", l + Round(4 * s), "Int", t + Round(1 * s), "Int", r - Round(4 * s) + 1
+            , "Int", b - Round(1 * s) + 1, "Int", Round(8 * s), "Int", Round(8 * s))
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", oB), DllCall("SelectObject", "Ptr", hdc, "Ptr", oP)
+        DllCall("DeleteObject", "Ptr", br)
+    }
+    fg := dis ? 0xA0A0A0 : 0x1A1A1A
+    DllCall("SetBkMode", "Ptr", hdc, "Int", 1)
+    DllCall("SetTextColor", "Ptr", hdc, "UInt", fg)
+    rt := Buffer(16, 0)
+    gx := l + Round(10 * s), gw := Round(22 * s)
+    if (rec["swatch"] >= 0) {                            ; Farbfeld (Farbmenue)
+        c := rec["swatch"], bgr := ((c & 0xFF) << 16) | (c & 0xFF00) | ((c >> 16) & 0xFF)
+        br := DllCall("CreateSolidBrush", "UInt", bgr, "Ptr")
+        oB := DllCall("SelectObject", "Ptr", hdc, "Ptr", br, "Ptr")
+        oP := DllCall("SelectObject", "Ptr", hdc, "Ptr", DllCall("GetStockObject", "Int", 8, "Ptr"), "Ptr")
+        sz := Round(14 * s), sx := gx + (gw - sz) // 2, sy := t + (b - t - sz) // 2
+        DllCall("RoundRect", "Ptr", hdc, "Int", sx, "Int", sy, "Int", sx + sz + 1, "Int", sy + sz + 1, "Int", Round(4 * s), "Int", Round(4 * s))
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", oB), DllCall("SelectObject", "Ptr", hdc, "Ptr", oP)
+        DllCall("DeleteObject", "Ptr", br)
+    } else if (chk || rec["glyph"] != "") {
+        old := DllCall("SelectObject", "Ptr", hdc, "Ptr", OdIconFont(Round(16 * s)), "Ptr")
+        NumPut("Int", gx, "Int", t, "Int", gx + gw, "Int", b, rt)
+        DllCall("DrawTextW", "Ptr", hdc, "Str", Chr(chk ? 0xE73E : Integer("0x" rec["glyph"])), "Int", 1, "Ptr", rt, "UInt", 0x25)   ; CENTER|VCENTER|SINGLELINE
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+    }
+    f := HeadFonts()
+    old := DllCall("SelectObject", "Ptr", hdc, "Ptr", def ? f[1] : f[3], "Ptr")
+    NumPut("Int", l + Round(40 * s), "Int", t, "Int", r - Round(28 * s), "Int", b, rt)
+    DllCall("DrawTextW", "Ptr", hdc, "Str", rec["text"], "Int", -1, "Ptr", rt, "UInt", 0x8024)   ; VCENTER|SINGLELINE|END_ELLIPSIS
+    DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+    if (rec["sub"]) {                                    ; eigener Pfeil, den von Windows wegschneiden
+        old := DllCall("SelectObject", "Ptr", hdc, "Ptr", OdIconFont(Round(10 * s)), "Ptr")
+        NumPut("Int", r - Round(26 * s), "Int", t, "Int", r - Round(10 * s), "Int", b, rt)
+        DllCall("DrawTextW", "Ptr", hdc, "Str", Chr(0xE76C), "Int", 1, "Ptr", rt, "UInt", 0x25)
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+        DllCall("ExcludeClipRect", "Ptr", hdc, "Int", r - Round(30 * s), "Int", t, "Int", r, "Int", b)
+    }
+    return 1
+}
+
 HeadTextW(hdc, font, s) {
     old := DllCall("SelectObject", "Ptr", hdc, "Ptr", font, "Ptr")
     sz := Buffer(8, 0)
@@ -2234,8 +2409,10 @@ HeadTextW(hdc, font, s) {
 }
 
 HeadMeasure(wParam, lParam, msg, hwnd) {
-    global gMenuCaption, gMenuAction
+    global gMenuCaption, gMenuAction, gOd
     kind := NumGet(lParam, 24, "UPtr")
+    if (NumGet(lParam, 0, "UInt") = 1 && gOd.Has(kind))
+        return OdMeasure(lParam, gOd[kind])
     if (NumGet(lParam, 0, "UInt") != 1 || (kind != 0xDE5C && kind != 0xDE5D && kind != 0xDE5E))   ; ODT_MENU + unsere Kennung
         return
     f := HeadFonts(), s := A_ScreenDPI / 96
@@ -2264,8 +2441,10 @@ HeadMeasure(wParam, lParam, msg, hwnd) {
 }
 
 HeadDraw(wParam, lParam, msg, hwnd) {
-    global gMenuCaption, gMenuAction, gMenuActionCol
+    global gMenuCaption, gMenuAction, gMenuActionCol, gOd
     kind := NumGet(lParam, 56, "UPtr")
+    if (NumGet(lParam, 0, "UInt") = 1 && gOd.Has(kind))
+        return OdDraw(lParam, gOd[kind])
     if (NumGet(lParam, 0, "UInt") != 1 || (kind != 0xDE5C && kind != 0xDE5D && kind != 0xDE5E))
         return
     static icon := 0
@@ -2273,9 +2452,7 @@ HeadDraw(wParam, lParam, msg, hwnd) {
     hdc := NumGet(lParam, 32, "Ptr")
     l := NumGet(lParam, 40, "Int"), t := NumGet(lParam, 44, "Int"), r := NumGet(lParam, 48, "Int"), b := NumGet(lParam, 52, "Int")
     ; Grund: die Farbe, die Windows fuer das Menue gemalt hat (rechte obere Ecke der Zeile)
-    bgc := DllCall("GetPixel", "Ptr", hdc, "Int", r - 1, "Int", t, "UInt")
-    if (bgc = 0xFFFFFFFF)
-        bgc := DllCall("GetSysColor", "Int", 4, "UInt")            ; COLOR_MENU
+    bgc := OD_BG()                                                ; derselbe Grund wie alle Eintraege (OwnerDrawAll)
     br := DllCall("CreateSolidBrush", "UInt", bgc, "Ptr")
     rc := Buffer(16, 0)
     NumPut("Int", l, "Int", t, "Int", r, "Int", b, rc)
@@ -2447,6 +2624,10 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.tab.color"), "E790")
         m.Add(T("menu.tab.short"), PromptShort.Bind(num))
         MenuGlyph(m, T("menu.tab.short"), "E8AC")
+        subCur := SubActive(num)
+        subLbl := (subCur != "") ? T("menu.sub.current", subCur) : T("menu.sub")
+        m.Add(subLbl, SubMenu(num))
+        MenuGlyph(m, subLbl, "E8EC")
         m.Add(T("menu.tab.compact"), ToggleCompact.Bind(num))
         if (IsCompactDesk(num))
             m.Check(T("menu.tab.compact"))
@@ -2479,6 +2660,7 @@ ShowContextMenu(num, *) {
         m.Add()
     }
     FillSettingsMenu(m)
+    OwnerDrawAll(m.Handle)
     m.Show()
 }
 
@@ -2713,24 +2895,8 @@ ColorName(col) {
 ; Farbfeld als Menue-Icon: 16x16-Bitmap in der Farbe mit 1 px dunklerem Rand.
 ; "HBITMAP:*" laesst AHK eine Kopie anlegen, das Original wird sofort freigegeben.
 MenuSwatch(menu, item, col) {
-    size := 16
-    r := (col >> 16) & 0xFF, g := (col >> 8) & 0xFF, b := col & 0xFF
-    fill := 0xFF000000 | (r << 16) | (g << 8) | b
-    edge := 0xFF000000 | ((r * 2 // 3) << 16) | ((g * 2 // 3) << 8) | (b * 2 // 3)
-    px := Buffer(size * size * 4)
-    Loop size {
-        y := A_Index - 1
-        Loop size {
-            x := A_Index - 1
-            onEdge := (x = 0 || y = 0 || x = size - 1 || y = size - 1)
-            NumPut("UInt", onEdge ? edge : fill, px, (y * size + x) * 4)
-        }
-    }
-    hbm := DllCall("CreateBitmap", "Int", size, "Int", size, "UInt", 1, "UInt", 32, "Ptr", px, "Ptr")
-    if (hbm) {
-        try menu.SetIcon(item, "HBITMAP:*" hbm, , size)
-        DllCall("DeleteObject", "Ptr", hbm)
-    }
+    global gMenuSwatches
+    gMenuSwatches[menu.Handle "|" item] := col         ; gezeichnet wird in OdDraw
 }
 
 PromptColor(num, *) {
@@ -2914,6 +3080,7 @@ ShowShortcuts(*) {
         rows.Push([T("sc.k.dragtab"), T("sc.d.dragtab")])
     rows.Push([T("sc.k.rgrip"), T("sc.d.rgrip")])
     rows.Push([T("sc.k.rtab"), T("sc.d.rtabdesk")])
+    rows.Push([T("sc.k.altclick", T("key.alt")), T("sc.d.altclick")])
     rows.Push([T("sc.sec.bar")])
     rows.Push([T("sc.k.draggrip"), T("sc.d.draggrip")])
     rows.Push([T("sc.k.ctrlwheel", C), T("sc.d.ctrlwheel")])
@@ -3015,7 +3182,9 @@ VD(fn, args*) {
 ; Muss nach jedem (Neu-)Aufbau der Leiste aufgerufen werden, da sich die Hwnd aendert.
 ApplyWindowHooks() {
     global MyGui, MSG_VD_CHANGED
-    DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", MyGui.Hwnd)
+    ; nur anheften, wenn noetig: erneutes Anheften liess Windows die Leiste kurz neu darstellen
+    if (DllCall("VirtualDesktopAccessor\IsPinnedWindow", "Ptr", MyGui.Hwnd, "Int") != 1)
+        DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", MyGui.Hwnd)
     DllCall("VirtualDesktopAccessor\RegisterPostMessageHook", "Ptr", MyGui.Hwnd, "Int", MSG_VD_CHANGED)
 }
 
@@ -3054,10 +3223,19 @@ GetDesktopCount() => VD("GetDesktopCount", "Int")
 GetCurrentDesktop() => VD("GetCurrentDesktopNumber", "Int")
 
 GetDesktopNameRaw(num) {
+    global gBuilding, gNameCache
+    ; Waehrend eines Aufbaus wird jeder Name rund zehnmal gebraucht; jede Abfrage geht
+    ; ueber die Windows-Schnittstelle. Deshalb nur fuer die Dauer des Aufbaus merken -
+    ; ausserhalb (Abgleich, Umbenennen) wird immer frisch gefragt.
+    if (gBuilding && IsObject(gNameCache) && gNameCache.Has(num))
+        return gNameCache[num]
     buf := Buffer(1024, 0)
     ok := VD("GetDesktopName", "Int", num, "Ptr", buf, "Int", buf.Size, "Int")
     name := (ok ? StrGet(buf, "UTF-8") : "")
-    return (name = "") ? "Desktop " (num + 1) : name
+    name := (name = "") ? "Desktop " (num + 1) : name
+    if (gBuilding && IsObject(gNameCache))
+        gNameCache[num] := name
+    return name
 }
 
 ; Name auf maxLen Zeichen kuerzen (mit "…")
@@ -3111,7 +3289,7 @@ DesktopGuid(num) {
 MoveDesktopSettings(oldName, newName) {
     if (oldName = "" || newName = "" || NormName(oldName) = NormName(newName))
         return
-    for , sec in ["Colors", "Icons", "Short", "Compact"] {
+    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject"] {
         v := IniLookup(sec, oldName)
         if (v = "" || IniLookup(sec, newName) != "")
             continue
@@ -3223,7 +3401,126 @@ RemoveDesktopAsk(num, *) {
 }
 
 ; Woraus ein Tab gebaut wurde; aendert sich das, muss die Leiste neu vermessen werden
-TabSource(num) => LabelFor(num) "|" IsCompactDesk(num)
+; ---------------- Unterprojekte (Sammel-Desktops) ----------------
+; Ein Desktop fuer mehrere kleine Projekte ("Webprojekte") bekommt eine Liste von
+; Unterprojekten; eins davon (oder keins) ist aktiv. Es steht klein unter dem Namen im
+; Tab und als eigene Spalte im Zeit-Log; ein Wechsel beginnt dort eine neue Zeile.
+; settings.ini: [Subprojects] Desktopname=A|B|C  und  [Subproject] Desktopname=A
+SubList(num) {
+    out := []
+    for , s in StrSplit(IniLookup("Subprojects", GetDesktopNameRaw(num)), "|")
+        if ((s := Trim(s)) != "")
+            out.Push(s)
+    return out
+}
+SubActive(num) {
+    a := IniLookup("Subproject", GetDesktopNameRaw(num))
+    for , s in SubList(num)
+        if (s = a)
+            return s
+    return ""
+}
+SetSub(num, val, *) {
+    global gCurrent, gSegDesk
+    raw := GetDesktopNameRaw(num)
+    if (val = "")
+        IniDelLoose("Subproject", raw)
+    else
+        IniSet("Subproject", raw, val)
+    if (num = gCurrent && num = gSegDesk && CONF["TimeLog"]) {   ; Zeit-Log: neue Zeile ab jetzt
+        LogClose("", false)
+        LogOpen(num)
+    }
+    RebuildAll()
+}
+AddSub(num, *) {
+    raw := GetDesktopNameRaw(num)
+    ib := InputBox(T("prompt.sub.text"), T("prompt.sub.title", raw), "w380 h130")
+    if (ib.Result != "OK" || (v := Trim(StrReplace(ib.Value, "|", "/"))) = "")
+        return
+    list := SubList(num)
+    for , s in list
+        if (s = v)
+            return SetSub(num, s)
+    list.Push(v)
+    IniSet("Subprojects", raw, JoinList(list))
+    SetSub(num, v)
+}
+RemoveSub(num, val, *) {
+    raw := GetDesktopNameRaw(num)
+    list := []
+    for , s in SubList(num)
+        if (s != val)
+            list.Push(s)
+    if (list.Length)
+        IniSet("Subprojects", raw, JoinList(list))
+    else
+        IniDelLoose("Subprojects", raw)
+    if (SubActive(num) = "" || IniLookup("Subproject", raw) = val)
+        SetSub(num, "")
+    else
+        RebuildAll()
+}
+JoinList(list) {
+    s := ""
+    for , v in list
+        s .= (s = "" ? "" : "|") v
+    return s
+}
+; Untermenue "Unterprojekt" (Tab-Menue und Alt+Klick)
+SubMenu(num) {
+    sm := Menu()
+    cur := SubActive(num)
+    sm.Add(T("menu.sub.none"), SetSub.Bind(num, ""))
+    if (cur = "")
+        sm.Check(T("menu.sub.none"))
+    list := SubList(num)
+    if (list.Length)
+        sm.Add()
+    for , s in list {
+        sm.Add(s, SetSub.Bind(num, s))
+        if (s = cur)
+            sm.Check(s)
+    }
+    sm.Add()
+    sm.Add(T("menu.sub.add"), AddSub.Bind(num))
+    MenuGlyph(sm, T("menu.sub.add"), "E710")
+    if (list.Length) {
+        rm := Menu()
+        for , s in list
+            rm.Add(s, RemoveSub.Bind(num, s))
+        sm.Add(T("menu.sub.remove"), rm)
+    }
+    return sm
+}
+; Alt+Klick auf einen Tab: Unterprojekt direkt waehlen
+; Das Menue erscheint sofort beim Klick. Ein Loslassen von Alt wuerde ein offenes Menue
+; aber schliessen (Windows wertet Alt als "Menue verlassen"). Deshalb gilt Alt fuer das
+; System schon jetzt als losgelassen, und die echte Alt-Taste wird abgefangen, bis sie
+; physisch losgelassen ist - so bleibt das Menue offen, bis etwas gewaehlt ist.
+ShowSubMenu(num, *) {
+    ToolTip(, , , 4)
+    if (GetKeyState("Alt", "P")) {
+        AltSwallow(true)
+        Send("{Blind}{vkE8}{LAlt up}{RAlt up}")       ; vkE8: kein Menueleisten-Effekt im Vordergrund-Programm
+        SetTimer(AltReleaseWatch, 50)
+    }
+    sm := SubMenu(num)
+    OwnerDrawAll(sm.Handle)
+    sm.Show()
+}
+AltSwallow(on) {
+    static noop := (*) => 0
+    for , k in ["*LAlt", "*RAlt", "*LAlt Up", "*RAlt Up"]
+        try Hotkey(k, noop, on ? "On" : "Off")
+}
+AltReleaseWatch() {
+    if (GetKeyState("Alt", "P"))
+        return
+    SetTimer(AltReleaseWatch, 0)
+    AltSwallow(false)
+}
+TabSource(num) => LabelFor(num) "|" IsCompactDesk(num) "|" SubActive(num)
 ToggleCompact(num, *) {
     if (IsCompactDesk(num))
         IniDelLoose("Compact", GetDesktopNameRaw(num))
@@ -3280,6 +3577,9 @@ BuildBar() {
     if (gBuilding)              ; verschachtelten Neuaufbau verhindern (Geometrie-Race)
         return
     gBuilding := true
+    crit := A_IsCritical            ; Aufbau nicht unterbrechen lassen (siehe RenderBar)
+    Critical
+    global gNameCache := Map()       ; Desktop-Namen fuer die Dauer des Aufbaus merken
     mode := CONF["CompactMode"]
     level := (mode = "auto") ? "bigtext" : mode   ; grosszuegig anfangen, dann bei Platzmangel herunter
     pads := []
@@ -3303,22 +3603,37 @@ BuildBar() {
             break
         level := next               ; zu breit -> eine Stufe kleiner, nochmal bauen
     }
+    global gBarReused, gBarPos, MyGui
+    if (gBarReused) {               ; vorhandenes Fenster: erst das neue Bild fertig zeichnen,
+        RenderBar(2)                ; dann in einem Schritt auf die neue Groesse - sonst fuellte
+        DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", 0, "Int", gBarPos[1], "Int", gBarPos[2]   ; Windows die neue Flaeche
+            , "Int", GUIW, "Int", GUIH, "UInt", 0x0114)                                            ; kurz mit dem alten (Zucken)
+        BarBlit()                                                                                  ; NOZORDER|NOACTIVATE|NOCOPYBITS
+    }
+    gNameCache := 0
     gBuilding := false
+    Critical(crit)
 }
 
 BuildBarAt() {
     global MyGui, BTNS, GUIW, GUIH, gTaskbarW, gLayout, gOrdCache
+    global gBarReused, gBarPos
     gOrdCache := Map()
-    if (MyGui) {
+    ; Das vorhandene Fenster wird weiterverwendet: nur neu vermessen, verschieben und
+    ; zeichnen. Frueher wurde es zerstoert und neu angelegt - die Leiste verschwand dabei
+    ; jedes Mal kurz (Unterprojekt wechseln, Kompakt, Ansicht, Umbenennen).
+    gBarReused := MyGui ? true : false
+    if (gBarReused)
         try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
-        try MyGui.Destroy()
-    }
     BTNS := []
 
-    ; NOACTIVATE (0x08000000): Klicks klauen nicht den Fokus vom Arbeitsfenster
-    MyGui := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08000000 -DPIScale")
-    MyGui.BackColor := CONF["ColBarBg"]
-    MyGui.SetFont("s" CONF["FontSizePt"] " c" Fmt(CONF["ColInactiveTx"]), CONF["FontName"])
+    if (!gBarReused) {
+        ; NOACTIVATE (0x08000000): Klicks klauen nicht den Fokus vom Arbeitsfenster
+        MyGui := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08000000 -DPIScale")
+        MyGui.SetFont("s" CONF["FontSizePt"] " c" Fmt(CONF["ColInactiveTx"]), CONF["FontName"])
+    }
+    if (!gBarReused || MyGui.BackColor != Format("{:06X}", CONF["ColBarBg"]))
+        MyGui.BackColor := CONF["ColBarBg"]      ; Setzen loest ein Neuzeichnen aus: nur bei echter Aenderung
 
     ; Taskleisten-Geometrie holen (Hoehe + untere Kante als Standard-Y)
     hTray := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
@@ -3349,7 +3664,7 @@ BuildBarAt() {
     mBmp := 0, mG := 0
     DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", 1, "Int", 1, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &mBmp)
     DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", mBmp, "Ptr*", &mG)
-    font := MakeFont(), sf := MakeFormat()
+    font := MakeFont(), sf := MakeFormat(), fontSub := MakeFont(false, CONF["FontSizePt"] - 2)
     gap := px(CONF["Gap"])
     x := px(CONF["GripW"]) + gap
     iconSize := px(CONF["IconSize"]), iconGap := px(CONF["IconGap"])
@@ -3365,6 +3680,9 @@ BuildBarAt() {
             label := (icon != "") ? "" : ((ShortNameFor(num) != "") ? ShortNameFor(num) : String(num + 1))
         iw := (icon != "") ? (big ? bigSize : iconSize) : 0
         tw := (label != "") ? MeasureText(mG, font, sf, label) : 0
+        sub := (label != "") ? SubActive(num) : ""              ; nur in Stufen mit Text (Symbol-Tabs: Kurzinfo)
+        if (sub != "")
+            tw := Max(tw, MeasureText(mG, fontSub, sf, sub))
         w := px(gPadX) * 2 + iw + tw + ((iw && tw) ? iconGap : 0)
         if (iw && label = "")
             w := Max(btnH, iw + px(12) * 2)       ; quadratische Kachel wie die Taskleisten-Buttons
@@ -3372,12 +3690,13 @@ BuildBarAt() {
         if (badge != "" && iw && label != "")
             w += px(5)                            ; das Abzeichen ragt links uebers Symbol: dort etwas mehr Luft
         BTNS.Push(Map("num", num, "label", label, "icon", icon, "iw", iw, "x", x, "w", w, "hover", false, "badge", badge
-            , "src", TabSource(num)))
+            , "src", TabSource(num), "sub", sub))
         x += w
         if (A_Index < cnt)
             x += gap
     }
     DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fontSub)
     DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
     DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG)
     DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
@@ -3406,8 +3725,11 @@ BuildBarAt() {
     ; unterdrueckt -> kein Flackern bei Hover/Refresh
     OnMessage(0x000F, OnPaint)        ; WM_PAINT
     OnMessage(0x0014, OnEraseBkgnd)   ; WM_ERASEBKGND
-    RenderBar(true)
-    MyGui.Show(Format("x{1} y{2} w{3} h{4} NoActivate", posX, posY, GUIW, GUIH))
+    gBarPos := [posX, posY]
+    if (!gBarReused) {
+        RenderBar(2)
+        MyGui.Show(Format("x{1} y{2} w{3} h{4} NoActivate", posX, posY, GUIW, GUIH))
+    }                                  ; sonst: BuildBar verschiebt und zeichnet einmal am Ende
     UpdateStripe()
 
     ; Maus: Ziehen am Griff (LBUTTONDOWN), Tab-Klick (LBUTTONUP)
@@ -3596,12 +3918,12 @@ TintFill(col) {
     return HslToRgb(hsl["h"], Min(1, hsl["s"] * CONF["TintS"] / 100), CONF["TintL"] / 100)
 }
 
-MakeFont(bold := false) {
+MakeFont(bold := false, sizePt := 0) {
     fam := 0, font := 0
     DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", CONF["FontName"], "Ptr", 0, "Ptr*", &fam)
     if (!fam)
         DllCall("gdiplus\GdipGetGenericFontFamilySansSerif", "Ptr*", &fam)
-    sizePx := CONF["FontSizePt"] * SCALE * 96 / 72
+    sizePx := (sizePt ? sizePt : CONF["FontSizePt"]) * SCALE * 96 / 72
     DllCall("gdiplus\GdipCreateFont", "Ptr", fam, "Float", sizePx, "Int", bold ? 1 : 0, "Int", 2, "Ptr*", &font)  ; Unit 2 = Pixel
     DllCall("gdiplus\GdipDeleteFontFamily", "Ptr", fam)
     return font
@@ -3776,6 +4098,9 @@ RenderBar(force := false) {
     global gAlertNum, gAlertPhase, gAttention, gDragTipNum, gDragHwnd, gConfirmNum, gConfirmPhase
     if (!MyGui || !gLayout)
         return
+    global gBuilding
+    if (gBuilding && force != 2)    ; mitten im Aufbau (halbfertige Tab-Liste): nur BuildBar zeichnet, ganz am Ende
+        return
     global gReorderFrom
     sig := gReorderFrom "|" RegisterOn() "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
     for item in BTNS
@@ -3783,6 +4108,11 @@ RenderBar(force := false) {
     if (!force && sig = gRenderSig)
         return
     gRenderSig := sig
+    ; nicht unterbrechbar: ein Menue-Aufruf (Unterprojekt waehlen) baute sonst mitten in ein
+    ; laufendes Zeichnen hinein die Leiste neu, und das unterbrochene Zeichnen setzte danach
+    ; das alte Bild obendrauf (Name zuckte, neuer Stand erschien erst beim naechsten Hover)
+    crit := A_IsCritical
+    Critical
     L := gLayout
     W := GUIW, H := GUIH     ; Achtung: AHK-Namen sind case-insensitiv - die Tab-Schleife unten ueberschreibt
                              ; W/H mit w/h des jeweiligen Tabs. Nach der Schleife GUIW/GUIH nehmen!
@@ -3795,7 +4125,7 @@ RenderBar(force := false) {
     DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
     bg := CONF["ColBarBg"]
     DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", ARGB(bg))
-    font := MakeFont(), fontBold := MakeFont(true), sf := MakeFormat()
+    font := MakeFont(), fontBold := MakeFont(true), sf := MakeFormat(), fontSub := MakeFont(false, CONF["FontSizePt"] - 2)
     y := L["margin"], h := L["btnH"], r := L["radius"]
 
     ; Griff (beim Drueberfahren leicht hervorgehoben)
@@ -3896,7 +4226,13 @@ RenderBar(force := false) {
             tx0 += iw ? iw + L["iconGap"] : 0
             tw -= iw ? iw + L["iconGap"] : 0
         }
-        if (item["label"] != "")
+        if (item["label"] != "" && item.Has("sub") && item["sub"] != "") {
+            ; zwei Zeilen: Name oben, Unterprojekt klein darunter (63 % Deckkraft der Textfarbe)
+            nH := Round(CONF["FontSizePt"] * SCALE * 96 / 72 * 1.25), sH := Round((CONF["FontSizePt"] - 2) * SCALE * 96 / 72 * 1.25)
+            ty := y + (h - nH - sH) // 2 + px(1)
+            DrawText(g, (active && CONF["ActiveBold"]) ? fontBold : font, sf, item["label"], tx0, ty, tw, nH, ARGB(tx))
+            DrawText(g, fontSub, sf, item["sub"], tx0, ty + nH - px(1), tw, sH, 0xA0000000 | (tx & 0xFFFFFF))
+        } else if (item["label"] != "")
             DrawText(g, (active && CONF["ActiveBold"]) ? fontBold : font, sf, item["label"], tx0, y, tw, h, ARGB(tx))
         ; Farbbalken unten im Tab (abgerundet, eingerueckt)
         if (CONF["ColorCoding"]) {
@@ -3950,16 +4286,24 @@ RenderBar(force := false) {
     ; einem Timer ging sonst manchmal verloren, sichtbar als haengende Markierung beim
     ; Ziehen eines Fensters auf einen Tab) UND Windows neu zeichnen lassen - waehrend
     ; eines Desktop-Wechsels landet das direkte Zeichnen im Leeren, dann greift WM_PAINT.
+    if (!gBuilding)                 ; im Aufbau: nur das Pufferbild, BuildBar bringt es nach dem Groessenwechsel
+        BarBlit()                   ; auf den Schirm (sonst landete das neue Bild kurz im alten Fenster: Zucken)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fontBold)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fontSub)
+    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    DllCall("gdiplus\GdipDisposeImage", "Ptr", pBmp)
+    Critical(crit)
+}
+
+BarBlit() {
+    global MyGui, GUIW, GUIH, gBarDC
     wdc := DllCall("GetDC", "Ptr", MyGui.Hwnd, "Ptr")
     DllCall("BitBlt", "Ptr", wdc, "Int", 0, "Int", 0, "Int", GUIW, "Int", GUIH, "Ptr", gBarDC, "Int", 0, "Int", 0, "UInt", 0x00CC0020)
     DllCall("ReleaseDC", "Ptr", MyGui.Hwnd, "Ptr", wdc)
     DllCall("InvalidateRect", "Ptr", MyGui.Hwnd, "Ptr", 0, "Int", 0)   ; ohne Loeschen
     DllCall("UpdateWindow", "Ptr", MyGui.Hwnd)
-    DllCall("gdiplus\GdipDeleteFont", "Ptr", font)
-    DllCall("gdiplus\GdipDeleteFont", "Ptr", fontBold)
-    DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
-    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
-    DllCall("gdiplus\GdipDisposeImage", "Ptr", pBmp)
 }
 
 OnPaint(wParam, lParam, msg, hwnd) {
@@ -4234,10 +4578,25 @@ SavePosDeferred() {
 ; Pixeln Weg gilt es als Ziehen - ein Klick (auch Umschalt+Klick) bleibt ein Klick.
 ; Braucht die selbst gebaute DLL mit dem Export MoveDesktop (siehe vda\move_desktop.rs).
 ReorderDrag() {
+    global gReorderFrom
+    ; Mit Alt, Strg oder Umschalt ist ein Klick immer eine Geste (Unterprojekt, Fenster
+    ; schicken/mitnehmen), nie ein Ziehen - sonst sortierte ein leicht verwackelter
+    ; Alt-Klick die Desktops um.
+    if (GetKeyState("Alt") || GetKeyState("Ctrl") || GetKeyState("Shift"))
+        return
+    ; Sicherheitsnetz: wie auch immer das Ziehen endet (auch mit Fehler), der Zieh-Zustand
+    ; wird zurueckgesetzt. Blieb er stehen, verschluckte die Leiste danach jeden Klick.
+    try
+        return ReorderDragRun()
+    finally
+        gReorderFrom := -1
+}
+ReorderDragRun() {
     global BTNS, gLayout, gReorderFrom, gSkipUpUntil, MyGui
     item := ItemAtX(BarMouseX())
     if (!item || !CanMoveDesktop())
         return
+    tabs := BTNS                                   ; wird die Leiste waehrend des Ziehens neu aufgebaut -> abbrechen
     CoordMode("Mouse", "Screen")
     MouseGetPos(&sx)
     wx := 0
@@ -4250,7 +4609,11 @@ ReorderDrag() {
     dragging := false, target := item["num"]
     while GetKeyState("LButton", "P") {
         MouseGetPos(&mx)
-        if (!dragging && Abs(mx - sx) > px(6)) {
+        if (BTNS != tabs) {                          ; Neuaufbau mitten im Ziehen (z. B. aus einem Menue): sauber abbrechen
+            gReorderFrom := -1
+            return
+        }
+        if (!dragging && Abs(mx - sx) > px(10)) {
             dragging := true
             gReorderFrom := item["num"], item["hover"] := true
             ToolTip(, , , 4)
@@ -4273,6 +4636,10 @@ ReorderDrag() {
     if (!dragging)
         return                                       ; nur geklickt: OnLButtonUp entscheidet wie immer
     gSkipUpUntil := A_TickCount + 600                ; das WM_LBUTTONUP gehoert zum Ziehen
+    if (BTNS != tabs) {
+        gReorderFrom := -1
+        return 0
+    }
     ReorderSlots(item, x0, gap)
     Loop 10 {                                        ; beim Loslassen in die Luecke gleiten
         for it in BTNS
@@ -4368,7 +4735,7 @@ ReorderSlots(drag, x0, gap) {
     ; unter den gezogenen, bei schmalen kam das Ausweichen zu spaet.)
     L := drag["x"], R := drag["x"] + drag["w"], t := 0
     for it in others {
-        c := it["x0"] + it["w"] / 2
+        c := (it.Has("x0") ? it["x0"] : it["x"]) + it["w"] / 2
         if (it["num"] < drag["num"] ? (L > c) : (R > c))
             t += 1
     }
@@ -4418,6 +4785,11 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
         return 0
     }
     item := ItemAtX(BarMouseX())
+    if (item && GetKeyState("Alt")) {             ; Alt+Klick: Unterprojekt waehlen
+        Send("{Blind}{vkE8}")                     ; verhindert, dass das Loslassen von Alt die Menueleiste des Vordergrund-Programms oeffnet
+        SetTimer(ShowSubMenu.Bind(item["num"]), -1)
+        return 0
+    }
     if (item && GetKeyState("Shift") && item["num"] != GetCurrentDesktop()) {
         if (GetKeyState("Ctrl")) {
             TakeActiveTo(item["num"])          ; Strg+Umschalt+Klick: Fenster mitnehmen und selbst mitgehen
@@ -4500,6 +4872,8 @@ ShowHoverName() {
         raw := GetDesktopNameRaw(item["num"])
         if (raw = "" || InStr(item["label"], raw))  ; Name steht schon voll im Tab
             return
+        if ((sb := SubActive(item["num"])) != "")
+            raw .= " · " sb
         bx := 0, by := 0
         MyGui.GetPos(&bx, &by)
         CoordMode("ToolTip", "Screen")
@@ -4517,6 +4891,8 @@ FullscreenTick() {
         gHidden := true
         MyGui.Hide()
         UpdateStripe()
+        global gFsHit
+        try FileAppend(FormatTime(, "yyyy-MM-dd HH:mm:ss") "  ausgeblendet wegen Vollbild: " gFsHit "`n", A_ScriptDir "\_debug.txt", "UTF-8")
     } else if (!fs && gHidden) {
         gHidden := false
         MyGui.Show("NoActivate")
@@ -4546,8 +4922,14 @@ IsForegroundFullscreen() {
         if (h != MyGui.Hwnd && DllCall("IsWindowVisible", "Ptr", h)) {
             cls := ""
             try cls := WinGetClass("ahk_id " h)
-            ; Desktop/Taskleiste ueberspringen: die fuellen den Monitor immer
-            if (cls != "" && cls != "WorkerW" && cls != "Progman" && cls != "Shell_TrayWnd" && cls != "Shell_SecondaryTrayWnd") {
+            ; Desktop/Taskleiste und die unsichtbaren, bildschirmgrossen Traegerfenster der
+            ; Shell (Startmenue, Suche, Info-Center, Taskansicht) ueberspringen - sonst
+            ; verschwand die Leiste mit dem Startmenue und kam erst beim naechsten Klick wieder
+            static shellCls := ",WorkerW,Progman,Shell_TrayWnd,Shell_SecondaryTrayWnd,Windows.UI.Core.CoreWindow,"
+                . "XamlExplorerHostIslandWindow,ForegroundStaging,MultitaskingViewFrame,Shell_InputSwitchTopLevelWindow,"
+                . "TopLevelWindowForOverflowXamlIsland,Xaml_WindowedPopupClass,NotifyIconOverflowWindow,TaskListThumbnailWnd,"
+                . "ApplicationManager_ImmersiveShellWindow,Windows.Internal.Shell.TabProxyWindow,"
+            if (cls != "" && !InStr(shellCls, "," cls ",")) {
                 ex := DllCall("GetWindowLongPtr", "Ptr", h, "Int", -20, "Ptr")   ; GWL_EXSTYLE
                 cloaked := 0
                 DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cloaked, "UInt", 4)  ; DWMWA_CLOAKED
@@ -4570,7 +4952,14 @@ IsForegroundFullscreen() {
                         ; maximiertes Normalfenster endet an der Arbeitsflaeche ueber
                         ; der Taskleiste (wb << mb) und zaehlt nicht als Vollbild.
                         tol := 8
-                        return (wl <= ml + tol && wt <= mt + tol && wri >= mr - tol && wb >= mb - tol)
+                        full := (wl <= ml + tol && wt <= mt + tol && wri >= mr - tol && wb >= mb - tol)
+                        if (full) {                  ; fuer die Fehlersuche: wer hat die Leiste ausgeblendet?
+                            global gFsHit
+                            ttl := ""
+                            try ttl := WinGetTitle("ahk_id " h)
+                            gFsHit := cls " | " SubStr(ttl, 1, 60)
+                        }
+                        return full
                     }
                 }
             }
@@ -4727,12 +5116,14 @@ Refresh() {
         ; Text: der ist bei Symbol-Tabs absichtlich leer und loeste sonst jede 1,2 s einen
         ; Neuaufbau aus (Leiste zuckte).
         nameChanged := false
-        for item in BTNS {
+        Critical                   ; Vergleich am Stueck: sonst baute ein dazwischen gewaehltes
+        for item in BTNS {         ; Unterprojekt neu und der Rest verglich die alte Liste (zweiter Neuaufbau)
             if (item["src"] != TabSource(item["num"])) {
                 nameChanged := true
                 break
             }
         }
+        Critical "Off"
         if (nameChanged) {
             SyncDesktopIds()       ; in Windows umbenannt? Farbe, Symbol, Kuerzel ziehen mit
             BuildBar()
@@ -4859,6 +5250,7 @@ BuildTray() {
     AddAppHeader(A_TrayMenu)
     FillSettingsMenu(A_TrayMenu)
     A_TrayMenu.Default := T("menu.about")     ; Doppelklick aufs Tray-Symbol = "Ueber DeskTabs"
+    OwnerDrawAll(A_TrayMenu.Handle)
     ; kompiliert: die exe traegt das Icon bereits (Ahk2Exe-SetMainIcon)
     if (!A_IsCompiled && FileExist(AppIconPath()))
         TraySetIcon(AppIconPath(), 1)
@@ -4901,14 +5293,21 @@ NormName(s) {
 ; Abschnitt der settings.ini als Map (normalisierter Schluessel -> Wert),
 ; zwischengespeichert bis die Datei sich aendert
 IniSectionMap(sec) {
+    global gIniGen
     static cache := Map()
     stamp := ""
+    ; Zeitstempel (fuer Aenderungen von aussen) plus Zaehler der eigenen Schreibzugriffe:
+    ; der Zeitstempel ist nur sekundengenau, im selben Takt Geschriebenes lieferte sonst
+    ; den alten Wert (z. B. Unterprojekt "(keins)" erschien erst ~1-2 s spaeter)
     try stamp := FileGetTime(CONF["IniPath"], "M")
+    stamp .= "|" gIniGen
     if (cache.Has(sec) && cache[sec]["stamp"] = stamp)
         return cache[sec]["map"]
     m := Map()
-    for key, val in ReadIniSection(sec)
+    for key, val in ReadIniSection(sec) {
         m[NormName(key)] := val
+        m["=" key] := val
+    }
     cache[sec] := Map("stamp", stamp, "map", m)
     return m
 }
@@ -4946,11 +5345,13 @@ ReadIniSection(sec) {
 }
 
 ; Wert zu einem Desktop-Namen: erst genau, dann tolerant. "" = nichts hinterlegt.
+; Ohne IniRead: das liest bei jedem Aufruf die ganze Datei ueber die Windows-Schnittstelle
+; (beim Aufbau der Leiste rund hundertmal, das kostete ~0,1 s). Der Zwischenspeicher in
+; IniSectionMap ist nach eigenen Schreibzugriffen sofort aktuell (gIniGen).
 IniLookup(sec, name) {
-    v := IniRead(CONF["IniPath"], sec, name, "")
-    if (v != "")
-        return v
     m := IniSectionMap(sec)
+    if (m.Has("=" name))                         ; genaue Schreibweise zuerst
+        return m["=" name]
     key := NormName(name)
     return m.Has(key) ? m[key] : ""
 }
@@ -4960,8 +5361,9 @@ IniGet(sec, key, default) {
     return (val = "") ? default : val + 0
 }
 IniSet(sec, key, val) {
-    global gIniStamp
+    global gIniStamp, gIniGen
     IniWrite(val, CONF["IniPath"], sec, key)
+    gIniGen += 1
     try gIniStamp := FileGetTime(CONF["IniPath"], "M")   ; eigener Schreibzugriff, kein Live-Reload
 }
 ; Eintrag entfernen, auch wenn er unter einer anderen Schreibweise steht
@@ -4974,8 +5376,9 @@ IniDelLoose(sec, name) {
 }
 
 IniDel(sec, key) {
-    global gIniStamp
+    global gIniStamp, gIniGen
     try IniDelete(CONF["IniPath"], sec, key)
+    gIniGen += 1
     try gIniStamp := FileGetTime(CONF["IniPath"], "M")
 }
 

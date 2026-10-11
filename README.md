@@ -70,6 +70,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
 - **Compact single desktops:** right-click a tab → *Compact (icon only)* for projects that rest for a while but stay open. Their tab shows only its icon (or abbreviation/number), the busy desktops keep their full size. Hover a tab that does not show its whole name and a tooltip tells you which desktop it is.
+- **Sub-projects for catch-all desktops:** one desktop for several small projects (say *Web projects*) gets a list of sub-projects. Right-click the tab → *Sub-project ›*, or **Alt + click** the tab, and pick one (or none). It shows in small grey type under the desktop name and as its own column in the time log; switching sub-project starts a new row, just like switching desktops.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`timelog\desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
 - **Right-click menu:** right-click a tab to move windows there and for its icon, colour and abbreviation, plus all app settings: *View* (what a tab shows, icons, numbers, colour bars), *Active desktop*, *Light or dark*, *Keyboard shortcuts*, *Language*, and under *More settings* direct jumping, snapping, switch alerts, the attention dot, dragging windows onto tabs and the time log. No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
 - **Help menu:** an overview of all keyboard shortcuts and gestures (with your current modifier keys), documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
@@ -264,13 +265,14 @@ DeskTabs speaks German and English out of the box and picks the language from yo
 With `TimeLog=1` (default) DeskTabs writes one line per stay on a desktop into `desktop-log_YYYY-MM.csv` in the subfolder `timelog\` of the program folder (up to v1.1.4 the files sat directly next to the program; they are moved on the next start). *More settings › Time log › Open folder* shows the files:
 
 ```csv
-start,end,seconds,desktop_index,desktop_name
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery"
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,2,"Miller & Sons"
+start,end,seconds,desktop_index,desktop_name,subproject
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery",""
+2026-09-22T10:47:30,2026-09-22T11:15:02,1652,1,"Web projects","Miller & Sons"
 ```
 
 - A stay ends when you switch desktops, lock the screen, or stop giving input for `TimeLogIdleMin` minutes (the stay is then closed at the moment the inactivity began, so breaks are not counted).
 - Stays shorter than `TimeLogMinSec` seconds (default 5) are transitions, not work: stepping 1 → 2 → 3 → 4 gives one row for 4 (including the travel time), and a quick glance from A to B and back continues the row for A. Because of that, the newest row is written once the next real stay is certain; locking, idling or quitting writes it immediately.
+- `subproject` is the sub-project that was active on that desktop (empty if none). Files started before version 1.1.12 got the column added to their header; their older rows simply have five fields.
 - Times are local, ISO 8601. `desktop_index` is 1-based like the bar's numbers; `desktop_name` is the name at the start of the stay.
 - The file is plain UTF-8 CSV: open it in Excel, or let a coding agent sum it up per client for your invoice. It is personal data and git-ignored.
 
