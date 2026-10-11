@@ -66,11 +66,11 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Desktop numbers:** a small numbered badge on the top left of each icon shows which number key jumps there (on automatically while the keyboard shortcuts are on; desktop 10 shows `0`). Or use the number itself as the icon: a filled circle in the desktop colour, per desktop via *Icon → Number as icon* (`[Icons] Desktop = number`) or for all desktops without an icon of their own.
 - **Tab icons:** give a desktop an icon from a website (DeskTabs fetches the site icon in the best resolution it can find and caches it) or from your own image file. Right-click a tab → *Icon*, or set `[Icons] Desktop name = URL or path` in `settings.ini`. The bare domain is enough, no `https://www.` needed.
 - **Fluent look:** rounded tabs, the active desktop tinted in its own colour (hue kept, lightness from the theme), subtle vertical gradients, hover lightens the tab like the Windows taskbar buttons. The active style is switchable: own desktop colour, uniform accent colour, or a solid fill.
-- **Click on the active desktop:** opens Task View (Win+Tab).
+- **Click on the active desktop:** opens the sub-project picker if the desktop has sub-projects, otherwise does nothing (a stray click doesn't get in the way). Set `ClickActiveTaskView = 1` to open Task View (Win+Tab) instead.
 - **Fullscreen auto-hide:** hides itself while a fullscreen app is on top on the bar's monitor (a fullscreen video on another monitor does not hide it; a fullscreen app stays respected even when you focus another monitor).
 - **Compact levels:** `full` / `short` / `icon`, automatic by available width or manual via **Ctrl + mouse wheel** over the bar. Fits narrow laptop taskbars.
 - **Compact single desktops:** right-click a tab → *Compact (icon only)* for projects that rest for a while but stay open. Their tab shows only its icon (or abbreviation/number), the busy desktops keep their full size. Hover a tab that does not show its whole name and a tooltip tells you which desktop it is.
-- **Sub-projects for catch-all desktops:** one desktop for several small projects (say *Web projects*) gets a list of sub-projects. Right-click the tab → *Sub-project ›*, or **Alt + click** the tab, and pick one (or none). It shows in small grey type under the desktop name and as its own column in the time log; switching sub-project starts a new row, just like switching desktops.
+- **Sub-projects for catch-all desktops:** one desktop for several small projects (say *Web projects*) gets a list of sub-projects. Right-click the tab → *Sub-project ›*, or **Alt + click** the tab, to pick one (or none), add or remove. A plain **click on the active tab** opens a slim picker just for switching. It shows in small grey type under the desktop name and as its own column in the time log; switching sub-project starts a new row, just like switching desktops.
 - **Built-in time log:** writes how long you stayed on which desktop to a monthly CSV (`timelog\desktop-log_YYYY-MM.csv`), pauses on lock screen and after 5 min without input. For anyone without a time tracker, and for coding agents that do your billing. See [Time log](#time-log).
 - **Right-click menu:** right-click a tab to move windows there and for its icon, colour and abbreviation, plus all app settings: *View* (what a tab shows, icons, numbers, colour bars), *Active desktop*, *Light or dark*, *Keyboard shortcuts*, *Language*, and under *More settings* direct jumping, snapping, switch alerts, the attention dot, dragging windows onto tabs and the time log. No file editing needed; everything is saved to `settings.ini`. The tray icon offers the same menu directly.
 - **Help menu:** an overview of all keyboard shortcuts and gestures (with your current modifier keys), documentation, changelog, bug report and feature request (opens a pre-filled GitHub issue), e-mail to the author, update check and *About DeskTabs* (version, licence, links).
@@ -187,7 +187,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `ColorCoding` | 1 | Colour bar per desktop. |
 | `AccentBarH` | 3 | Height of the colour bar (px). |
 | `AutoHideFullscreen` | 1 | Hide when a fullscreen app is in front. |
-| `ClickActiveTaskView` | 1 | Clicking the active desktop opens Win+Tab. |
+| `ClickActiveTaskView` | 0 | 1 = clicking the active desktop opens Win+Tab. |
 | `WheelSwitch` | 1 | Mouse wheel pages through desktops. |
 | `Palette` | 8 colours | Colour palette for the colour coding (by index). |
 | `FontSizePt` | 10 | Font size. |

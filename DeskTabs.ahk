@@ -87,7 +87,7 @@ global CONF := Map(
     "ActiveBold",    0,       ; 1 = Beschriftung des aktiven Desktops fett (im Ansicht-Menue schaltbar)
     "ActiveBarBoost", 2,      ; um so viele px waechst der Farbbalken des aktiven Desktops (px @100%)
     "AutoHideFullscreen", 1,   ; 1 = Leiste ausblenden, wenn Vollbild-App im Vordergrund
-    "ClickActiveTaskView", 1,  ; 1 = Klick auf aktiven Desktop oeffnet Task-Ansicht (Win+Tab)
+    "ClickActiveTaskView", 0,  ; 1 = Klick auf aktiven Desktop oeffnet Task-Ansicht (Win+Tab); aus: versehentliche Klicks nervten
     "Palette",        [0xE5471D, 0x2E7D32, 0x1565C0, 0x6A1B9A, 0xEF6C00, 0x00838F, 0xC2185B, 0x558B2F],
     "MaxNameLen",     22,      ; Stufe "full": Namen laenger als das werden gekuerzt
     "CompactMode",    "auto",  ; "auto" = Stufe nach Platz waehlen | "full" | "short" | "icon" (fest)
@@ -807,7 +807,9 @@ global LANG_DE := Map(
     "prompt.sub.title", "Unterprojekt für „{1}“",
     "prompt.sub.text", "Name des Unterprojekts (z. B. ein Kunde oder „Wartung“). Es wird gleich aktiv:",
     "sc.k.altclick", "{1} + Klick auf einen Tab",
-    "sc.d.altclick", "Unterprojekt wählen (steht im Tab und im Zeit-Log)",
+    "sc.d.altclick", "Unterprojekte: wählen, anlegen, entfernen (stehen im Tab und im Zeit-Log)",
+    "sc.k.clickactivesub", "Klick auf den aktiven Tab",
+    "sc.d.clickactivesub", "Unterprojekt schnell wählen (wenn der Desktop welche hat)",
     "menu.help.shortcuts", "Tastenkürzel und Gesten…",
     "sc.title", "DeskTabs: Tastenkürzel und Gesten",
     "sc.hkoff", "Die Tastenkürzel sind gerade aus (grau). Einschalten: Rechtsklick auf die Leiste › Tastenkürzel.",
@@ -1030,7 +1032,9 @@ global LANG_EN := Map(
     "prompt.sub.title", "Sub-project for “{1}”",
     "prompt.sub.text", "Name of the sub-project (a client, or “maintenance”). It becomes active right away:",
     "sc.k.altclick", "{1} + click a tab",
-    "sc.d.altclick", "pick a sub-project (shown in the tab and in the time log)",
+    "sc.d.altclick", "sub-projects: pick, add, remove (shown in the tab and in the time log)",
+    "sc.k.clickactivesub", "Click the active tab",
+    "sc.d.clickactivesub", "quick sub-project pick (if the desktop has any)",
     "menu.help.shortcuts", "Keyboard shortcuts and gestures…",
     "sc.title", "DeskTabs: keyboard shortcuts and gestures",
     "sc.hkoff", "The keyboard shortcuts are off right now (grey). Turn them on: right-click the bar › Keyboard shortcuts.",
@@ -3058,7 +3062,7 @@ ShowShortcuts(*) {
     rows := []
     rows.Push([T("sc.sec.switch")])
     rows.Push([T("sc.k.click"), T("sc.d.click")])
-    if (CONF["ClickActiveTaskView"])
+    if (CONF["ClickActiveTaskView"])     ; (bei Desktops mit Unterprojekten oeffnet der Klick die Auswahl)
         rows.Push([T("sc.k.clickactive"), T("sc.d.clickactive")])
     if (CONF["WheelSwitch"])
         rows.Push([T("sc.k.wheel"), T("sc.d.wheel")])
@@ -3080,6 +3084,7 @@ ShowShortcuts(*) {
         rows.Push([T("sc.k.dragtab"), T("sc.d.dragtab")])
     rows.Push([T("sc.k.rgrip"), T("sc.d.rgrip")])
     rows.Push([T("sc.k.rtab"), T("sc.d.rtabdesk")])
+    rows.Push([T("sc.k.clickactivesub"), T("sc.d.clickactivesub")])
     rows.Push([T("sc.k.altclick", T("key.alt")), T("sc.d.altclick")])
     rows.Push([T("sc.sec.bar")])
     rows.Push([T("sc.k.draggrip"), T("sc.d.draggrip")])
@@ -3468,7 +3473,9 @@ JoinList(list) {
     return s
 }
 ; Untermenue "Unterprojekt" (Tab-Menue und Alt+Klick)
-SubMenu(num) {
+; full = false: schlanke Auswahl (Klick auf den aktiven Tab) - nur keins und die Liste,
+; ohne Anlegen und Entfernen
+SubMenu(num, full := true) {
     sm := Menu()
     cur := SubActive(num)
     sm.Add(T("menu.sub.none"), SetSub.Bind(num, ""))
@@ -3482,6 +3489,8 @@ SubMenu(num) {
         if (s = cur)
             sm.Check(s)
     }
+    if (!full)
+        return sm
     sm.Add()
     sm.Add(T("menu.sub.add"), AddSub.Bind(num))
     MenuGlyph(sm, T("menu.sub.add"), "E710")
@@ -3498,14 +3507,14 @@ SubMenu(num) {
 ; aber schliessen (Windows wertet Alt als "Menue verlassen"). Deshalb gilt Alt fuer das
 ; System schon jetzt als losgelassen, und die echte Alt-Taste wird abgefangen, bis sie
 ; physisch losgelassen ist - so bleibt das Menue offen, bis etwas gewaehlt ist.
-ShowSubMenu(num, *) {
+ShowSubMenu(num, full := true, *) {
     ToolTip(, , , 4)
     if (GetKeyState("Alt", "P")) {
         AltSwallow(true)
         Send("{Blind}{vkE8}{LAlt up}{RAlt up}")       ; vkE8: kein Menueleisten-Effekt im Vordergrund-Programm
         SetTimer(AltReleaseWatch, 50)
     }
-    sm := SubMenu(num)
+    sm := SubMenu(num, full)
     OwnerDrawAll(sm.Handle)
     sm.Show()
 }
@@ -4446,9 +4455,12 @@ FocusTopWindow() {
 }
 
 BtnClick(num, *) {
-    ; Klick auf den bereits aktiven Desktop -> Task-Ansicht oeffnen
+    ; Klick auf den bereits aktiven Desktop: hat er Unterprojekte, die schlanke Auswahl
+    ; (Alt + Klick bleibt das volle Menue mit Anlegen/Entfernen); sonst auf Wunsch die Taskansicht
     if (num = GetCurrentDesktop()) {
-        if (CONF["ClickActiveTaskView"]) {
+        if (SubList(num).Length)
+            SetTimer(ShowSubMenu.Bind(num, false), -1)
+        else if (CONF["ClickActiveTaskView"]) {
             MarkTaskView()
             Send("#{Tab}")
         }
@@ -4582,7 +4594,7 @@ ReorderDrag() {
     ; Mit Alt, Strg oder Umschalt ist ein Klick immer eine Geste (Unterprojekt, Fenster
     ; schicken/mitnehmen), nie ein Ziehen - sonst sortierte ein leicht verwackelter
     ; Alt-Klick die Desktops um.
-    if (GetKeyState("Alt") || GetKeyState("Ctrl") || GetKeyState("Shift"))
+    if (GetKeyState("Alt", "P") || GetKeyState("Ctrl") || GetKeyState("Shift"))
         return
     ; Sicherheitsnetz: wie auch immer das Ziehen endet (auch mit Fehler), der Zieh-Zustand
     ; wird zurueckgesetzt. Blieb er stehen, verschluckte die Leiste danach jeden Klick.
@@ -4785,7 +4797,7 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
         return 0
     }
     item := ItemAtX(BarMouseX())
-    if (item && GetKeyState("Alt")) {             ; Alt+Klick: Unterprojekt waehlen
+    if (item && GetKeyState("Alt", "P")) {        ; Alt+Klick: Unterprojekt waehlen (physisch: logisch ist Alt nach dem ersten Alt-Menue schon "los")
         Send("{Blind}{vkE8}")                     ; verhindert, dass das Loslassen von Alt die Menueleiste des Vordergrund-Programms oeffnet
         SetTimer(ShowSubMenu.Bind(item["num"]), -1)
         return 0
