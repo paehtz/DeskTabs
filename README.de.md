@@ -14,6 +14,10 @@ Entwickelt von [Henning Pähtz](https://paehtz.de) als schlankes Werkzeug fürs 
 
 ![DeskTabs, dunkles Farbschema](docs/screenshot-dark-de.png)
 
+![DeskTabs, Register-Look: eine Linie in der Farbe des aktiven Desktops läuft über die Taskleiste](docs/screenshot-register-de.png)
+
+![DeskTabs, Unterprojekt-Auswahl über dem aktiven Tab](docs/screenshot-subprojects-de.png)
+
 ---
 
 ## ⬇ Herunterladen

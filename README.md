@@ -14,6 +14,10 @@ Built by [Henning Pähtz](https://paehtz.de) as a lean tool for per-project time
 
 ![DeskTabs, dark theme](docs/screenshot-dark.png)
 
+![DeskTabs, register look: a line in the active desktop's colour runs along the taskbar](docs/screenshot-register.png)
+
+![DeskTabs, sub-project picker above the active tab](docs/screenshot-subprojects.png)
+
 ---
 
 ## ⬇ Download
