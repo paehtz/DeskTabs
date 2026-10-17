@@ -3,6 +3,10 @@
 
 ## 1.1.16
 - **Jeder Desktop behält seine Fenster vorne:** Fenster, die auf allen Desktops liegen, drängen sich nicht mehr überall nach vorne. Kommst Du auf einen Desktop zurück, liegen dort wieder die Fenster vorne, mit denen Du dort zuletzt gearbeitet hast, auf allen Monitoren, und das zuletzt benutzte hat den Fokus. Abschaltbar unter **Weitere Einstellungen**.
+- **Gespräche mit Timer:** Ruft ein Kunde an, startest Du per Rechtsklick auf seinen Tab **Gespräch starten** oder mit **Strg + Win + T**. Über dem Tab läuft ein Timer, und das Zeit-Log ordnet die ganze Gesprächszeit diesem Kunden zu, auch wenn Du zwischendurch auf anderen Desktops nachschaust. Ein Klick auf den Timer beendet es.
+- **Genaueres Zeit-Log:** Pausen stehen jetzt als eigene Zeilen im Log (keine Eingabe, gesperrt, Ruhezustand, DeskTabs aus), Aufenthalte über Mitternacht werden geteilt, und jede Zeile trägt eine feste Desktop-Kennung. Zum Testen lässt sich das Log unter **Weitere Einstellungen › Zeit-Log** pausieren.
+- **DeskTabs mit KI anpassen:** Im Programmordner liegt jetzt eine Anleitung für KI-Assistenten wie Claude Code oder Codex. Sag Deinem Assistenten einfach, was Du willst, etwa „gib dem Desktop Acme eine grüne Farbe“, und er weiß, wo er es einstellt. Zu finden unter **Hilfe › Anleitung für KI-Assistenten**.
+- **Umlaute bleiben heil:** Desktop-Namen mit Umlauten in den Einstellungen werden nicht mehr verstümmelt, auch wenn ein Programm die Datei bearbeitet hat.
 - **Umsortieren ohne Ruckeln:** Auch beim ersten Verschieben eines Tabs nach dem Start gleitet er ruhig an seinen Platz.
 
 ## 1.1.15

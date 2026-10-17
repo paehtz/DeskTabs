@@ -3,6 +3,10 @@
 
 ## 1.1.16
 - **Each desktop keeps its windows in front:** windows shown on all desktops no longer push themselves to the front everywhere. When you return to a desktop, the windows you last worked with there are back in front, on all monitors, and the last one used has the focus. Turn it off under **More settings**.
+- **Calls with a timer:** when a client calls, right-click their tab and choose **Start a call**, or press **Ctrl + Win + T**. A timer runs above the tab, and the time log assigns the whole call to that client, even while you look things up on other desktops. Click the timer to end it.
+- **A more precise time log:** breaks are now rows of their own (no input, locked, sleep, DeskTabs off), stays across midnight are split, and every row carries a stable desktop ID. For testing you can pause the log under **More settings › Time log**.
+- **Customise DeskTabs with AI:** the program folder now contains a guide for AI assistants such as Claude Code or Codex. Just tell your assistant what you want, say "give the desktop Acme a green colour", and it knows where to set it. Find it under **Help › Guide for AI assistants**.
+- **Umlauts stay intact:** desktop names with accents or umlauts in the settings no longer get garbled, even after another program edited the file.
 - **Smoother reordering:** even the first tab you drag after a start glides calmly into place.
 
 ## 1.1.15

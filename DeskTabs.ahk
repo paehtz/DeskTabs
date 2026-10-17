@@ -96,6 +96,7 @@ global CONF := Map(
     "TimeLog",        1,       ; 1 = Aufenthaltszeit pro Desktop als CSV protokollieren (timelog\desktop-log_YYYY-MM.csv)
     "TimeLogMinSec",  5,       ; kuerzere Aufenthalte (Durchfahrten) nicht eintragen, Zeit zaehlt zum Ziel-Desktop
     "TimeLogIdleMin", 5,       ; nach so vielen Minuten ohne Eingabe gilt "Pause": Segment wird geschlossen
+    "CallHotkey",     "^#t",   ; Gespraech auf dem aktuellen Desktop starten/beenden ("" = kein Kuerzel)
     "Language",       "auto",  ; "auto" = Windows-Anzeigesprache | "de" | "en" | Code einer lang\xx.ini
     "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
     "Hotkeys",        0,       ; 1 = Tastenkuerzel fuer den Direktsprung (Ziffernreihe UND Ziffernblock)
@@ -144,6 +145,12 @@ global gSegStart := ""          ; Zeit-Log: Beginn des laufenden Aufenthalts (YY
 global gSegDesk := -1           ; Zeit-Log: Desktop-Index des laufenden Aufenthalts
 global gSegName := ""           ; Zeit-Log: Desktop-Name beim Segmentstart
 global gLogPaused := false      ; Zeit-Log: Pause (Bildschirm gesperrt oder laenger inaktiv)
+global gSegSrc := "", gSegId := "", gSegAct := ""   ; Zeit-Log: Herkunft, Desktop-GUID, laufender Vorgang (Gespraech)
+global gSwitchSrc := ""          ; Herkunft des naechsten eigenen Wechsels (click|key|wheel), fuer das Zeit-Log
+global gGap := 0                 ; Zeit-Log: laufende Luecke Map(state, start, info) - idle|locked|suspended|paused
+global gWasLocked := false       ; vor dem Ruhezustand gesperrt? (dann nach dem Aufwachen weiter "locked")
+global gCall := 0                ; laufendes Gespraech Map(id, name, sub, start, tick), siehe StartCall
+global gCallGui := 0, gCallDC := 0, gCallHbm := 0, gCallObm := 0, gCallConfirm := 0
 global gSegSub := ""          ; Zeit-Log: Unterprojekt des laufenden Aufenthalts
 global gLogCarry := "", gLogPend := 0   ; Zeit-Log-Filter: mitgenommene Uebergangszeit, wartender Eintrag
 
@@ -606,11 +613,12 @@ MigrateLogs() {
 IsoTime(ts) => FormatTime(ts, "yyyy-MM-dd'T'HH:mm:ss")
 CsvQuote(s) => '"' StrReplace(s, '"', '""') '"'
 
-LogOpen(num) {
-    global gSegStart, gSegDesk, gSegName, gSegSub
+LogOpen(num, src := "") {
+    global gSegStart, gSegDesk, gSegName, gSegSub, gSegSrc, gSegId, gSegAct
     if (!CONF["TimeLog"])
         return
     gSegStart := A_Now, gSegDesk := num, gSegName := GetDesktopNameRaw(num), gSegSub := SubActive(num)
+    gSegSrc := src, gSegId := DesktopGuid(num), gSegAct := CallLabel()
 }
 
 ; Laufendes Segment abschliessen. endTime optional (z.B. Beginn einer Pause).
@@ -624,7 +632,7 @@ LogOpen(num) {
 ; in gLogPend, bis der naechste feststeht; setzt dieser denselben Desktop nahtlos
 ; fort, wird der wartende Eintrag einfach verlaengert.
 LogClose(endTime := "", hard := true) {
-    global gSegStart, gSegDesk, gSegName, gSegSub, gLogCarry, gLogPend
+    global gSegStart, gSegDesk, gSegName, gSegSub, gLogCarry, gLogPend, gSegSrc, gSegId, gSegAct
     if (!CONF["TimeLog"] || gSegStart = "") {
         if (hard)
             LogFlush()
@@ -645,11 +653,13 @@ LogClose(endTime := "", hard := true) {
             LogFlush()
         return
     }
-    if (IsObject(gLogPend) && gLogPend["desk"] = gSegDesk && gLogPend["sub"] == gSegSub && gLogPend["end"] = start)
-        gLogPend["end"] := end                           ; nahtlose Fortsetzung desselben Desktops (und Unterprojekts)
+    if (IsObject(gLogPend) && gLogPend["desk"] = gSegDesk && gLogPend["sub"] == gSegSub
+        && gLogPend["act"] == gSegAct && gLogPend["end"] = start)
+        gLogPend["end"] := end                           ; nahtlose Fortsetzung desselben Desktops (Unterprojekt, Gespraech)
     else {
         LogFlush()
-        gLogPend := Map("start", start, "end", end, "desk", gSegDesk, "name", gSegName, "sub", gSegSub)
+        gLogPend := Map("start", start, "end", end, "desk", gSegDesk, "name", gSegName, "sub", gSegSub
+            , "src", gSegSrc, "id", gSegId, "act", gSegAct)
     }
     if (hard)
         LogFlush()
@@ -662,35 +672,43 @@ LogFlush() {
     if (!IsObject(gLogPend))
         return
     p := gLogPend, gLogPend := 0
-    file := LogFile(p["start"])
-    try {
-        DirCreate(LogDir())
-        LogHeader(file)
-        FileAppend(Format("{1},{2},{3},{4},{5},{6}`n", IsoTime(p["start"]), IsoTime(p["end"])
-            , DateDiff(p["end"], p["start"], "Seconds"), p["desk"] + 1, CsvQuote(p["name"]), CsvQuote(p.Has("sub") ? p["sub"] : "")), file, "UTF-8")
+    LogWriteRow(p["start"], p["end"], p["desk"] + 1, p["name"], p["sub"], "active", p["id"], p["src"], p["act"])
+}
+
+; Eine Zeile schreiben. Ueber Mitternacht wird geteilt: jeder Tag (und jede Monatsdatei)
+; bekommt seinen eigenen Teil, der Folgeteil traegt als Herkunft "midnight".
+LogWriteRow(start, end, idx, name, sub, state, id, src, act) {
+    while (DateDiff(end, start, "Seconds") > 0) {
+        midnight := DateAdd(SubStr(start, 1, 8), 1, "Days")
+        cut := (DateDiff(end, midnight, "Seconds") > 0) ? midnight : end
+        file := LogFile(start)
+        try {
+            DirCreate(LogDir())
+            LogHeader(file)
+            FileAppend(Format("{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}`n", IsoTime(start), IsoTime(cut)
+                , DateDiff(cut, start, "Seconds"), idx, CsvQuote(name), CsvQuote(sub), state, id, src, CsvQuote(act)), file, "UTF-8")
+        }
+        start := cut, src := "midnight"
     }
 }
 
-; Kopfzeile sicherstellen. Seit dem Unterprojekt gibt es eine sechste Spalte; eine
-; Monatsdatei mit alter Kopfzeile bekommt sie einmal ergaenzt (alte Zeilen bleiben, die
-; Spalte ist dort leer).
+; Kopfzeile sicherstellen. Das Format waechst nur nach rechts: 1.1.12 kam "subproject" dazu,
+; 1.1.16 "state", "desktop_id", "source" und "activity". Eine Monatsdatei mit aelterer
+; Kopfzeile bekommt die neue (alte Zeilen bleiben, ihnen fehlen nur die neuen Spalten).
 LogHeader(file) {
     static done := Map()
     if (done.Has(file))
         return
-    head := "start,end,seconds,desktop_index,desktop_name,subproject"
+    head := "start,end,seconds,desktop_index,desktop_name,subproject,state,desktop_id,source,activity"
     if !FileExist(file)
         FileAppend(head "`n", file, "UTF-8")
     else {
         txt := FileRead(file, "UTF-8")
-        first := SubStr(txt, 1, InStr(txt, "`n") - 1)
-        if (!InStr(first, "subproject")) {
-            pos := InStr(txt, "desktop_name")
-            if (pos && pos < StrLen(first) + 2) {
-                txt := SubStr(txt, 1, pos + 11) ",subproject" SubStr(txt, pos + 12)
-                f := FileOpen(file, "w", "UTF-8")       ; mit BOM, wie FileAppend sie anlegt
-                f.Write(txt), f.Close()
-            }
+        p := InStr(txt, "`n")
+        first := RTrim(SubStr(txt, 1, p - 1), "`r")
+        if (p && first != head && SubStr(first, 1, 17) = "start,end,seconds") {
+            f := FileOpen(file, "w", "UTF-8")       ; mit BOM, wie FileAppend sie anlegt
+            f.Write(head "`n" SubStr(txt, p + 1)), f.Close()
         }
     }
     done[file] := true
@@ -699,40 +717,304 @@ LogHeader(file) {
 ; Desktop-Wechsel ins Log uebernehmen (aus UpdateHighlight)
 LogDesktop(num) {
     global gSegDesk, gLogPaused
+    static first := true
     if (!CONF["TimeLog"] || gLogPaused || num = gSegDesk)
         return
     LogClose("", false)
-    LogOpen(num)
+    LogOpen(num, first ? "start" : SwitchSource())
+    first := false
+}
+; Woher kam der Wechsel? click|wheel|key (DeskTabs-Tasten oder Strg+Win+Pfeil)|taskview|other
+SwitchSource() {
+    global gSelfTick, gKeyTick, gTaskViewTick, gSwitchSrc
+    now := A_TickCount
+    if (now - gSelfTick < 2000) {
+        s := (gSwitchSrc != "") ? gSwitchSrc : "click"
+        gSwitchSrc := ""
+        return s
+    }
+    if (now - gKeyTick < 2000)
+        return "key"
+    if (now - gTaskViewTick < 60000)
+        return "taskview"
+    return "other"
 }
 
-; Inaktivitaet: laeuft im Refresh-Takt. Nach TimeLogIdleMin Minuten ohne Eingabe
-; wird das Segment rueckwirkend zum Beginn der Inaktivitaet geschlossen; bei
-; der naechsten Eingabe beginnt ein neues.
+; ---- Luecken im Zeit-Log: statt still zu fehlen, steht jede Pause als eigene Zeile da ----
+; state: idle (keine Eingabe), locked (Sperre), suspended (Ruhezustand), paused (vom Nutzer
+; angehalten), off (DeskTabs lief nicht; beim Start nachgetragen). Desktop-Spalten leer.
+GapBegin(state, ts := "", info := "") {
+    global gGap, gLogPaused
+    if (!CONF["TimeLog"])
+        return
+    ts := (ts = "") ? A_Now : ts
+    if (IsObject(gGap))
+        GapEnd(ts, false)
+    else
+        LogClose(ts)
+    gGap := Map("state", state, "start", ts, "info", info)
+    gLogPaused := true
+}
+GapEnd(ts := "", reopen := true, src := "resume") {
+    global gGap, gLogPaused
+    ts := (ts = "") ? A_Now : ts
+    if (IsObject(gGap)) {
+        g := gGap, gGap := 0
+        LogFlush()
+        if (DateDiff(ts, g["start"], "Seconds") >= 1)
+            LogWriteRow(g["start"], ts, "", "", "", g["state"], "", g["info"], "")
+    }
+    gLogPaused := false
+    if (reopen && CONF["TimeLog"])
+        LogOpen(GetCurrentDesktop(), src)
+}
+GapIs(state) {
+    global gGap
+    return IsObject(gGap) && gGap["state"] = state
+}
+
+; Inaktivitaet: laeuft im Refresh-Takt. Nach TimeLogIdleMin Minuten ohne Eingabe beginnt
+; rueckwirkend eine Luecke "idle"; mit der naechsten Eingabe endet sie. Waehrend eines
+; Gespraechs zaehlt Stille am Rechner nicht als Pause.
 LogIdleTick() {
-    global gLogPaused
+    global gLogPaused, gCall
     if (!CONF["TimeLog"])
         return
     idleMs := A_TimeIdle
     thr := CONF["TimeLogIdleMin"] * 60000
-    if (!gLogPaused && idleMs >= thr) {
-        LogClose(DateAdd(A_Now, -Round(idleMs / 1000), "Seconds"))
-        gLogPaused := true
-    } else if (gLogPaused && idleMs < thr) {
-        gLogPaused := false
-        LogOpen(GetCurrentDesktop())
-    }
+    if (!gLogPaused && idleMs >= thr && !IsObject(gCall))
+        GapBegin("idle", DateAdd(A_Now, -Round(idleMs / 1000), "Seconds"), "idle>" CONF["TimeLogIdleMin"] "min")
+    else if (GapIs("idle") && idleMs < thr)
+        GapEnd(DateAdd(A_Now, -Round(idleMs / 1000), "Seconds"))
 }
 
-; Bildschirm gesperrt/entsperrt (WM_WTSSESSION_CHANGE): Sperre = Pause
+; Bildschirm gesperrt/entsperrt (WM_WTSSESSION_CHANGE)
 OnSessionChange(wParam, lParam, msg, hwnd) {
-    global gLogPaused
-    if (wParam = 7) {                 ; WTS_SESSION_LOCK
-        LogClose()
-        gLogPaused := true
-    } else if (wParam = 8) {          ; WTS_SESSION_UNLOCK
-        gLogPaused := false
-        LogOpen(GetCurrentDesktop())
+    if (GapIs("paused"))
+        return
+    if (wParam = 7)                   ; WTS_SESSION_LOCK
+        GapBegin("locked")
+    else if (wParam = 8 && GapIs("locked"))   ; WTS_SESSION_UNLOCK
+        GapEnd()
+}
+; Ruhezustand (WM_POWERBROADCAST)
+OnPowerBroadcast(wParam, lParam, msg, hwnd) {
+    global gWasLocked
+    if (!CONF["TimeLog"] || GapIs("paused"))
+        return
+    if (wParam = 4) {                 ; PBT_APMSUSPEND
+        gWasLocked := GapIs("locked")
+        GapBegin("suspended")
+    } else if ((wParam = 7 || wParam = 0x12) && GapIs("suspended")) {   ; aufgewacht
+        if (gWasLocked)
+            GapBegin("locked")        ; weiter gesperrt bis zum Entsperren
+        else
+            GapEnd()
     }
+}
+; Beim Start: Zeit zwischen dem letzten Eintrag und jetzt als "off" nachtragen
+LogOffGap() {
+    if (!CONF["TimeLog"])
+        return
+    last := ""
+    for , m in [A_Now, DateAdd(SubStr(A_Now, 1, 6) "01", -1, "Days")] {
+        f := LogFile(m)
+        if !FileExist(f)
+            continue
+        txt := ""
+        try txt := FileRead(f, "UTF-8")
+        lines := StrSplit(RTrim(txt, "`r`n"), "`n", "`r")
+        if (lines.Length < 2)
+            continue
+        flds := StrSplit(lines[lines.Length], ",")
+        if (flds.Length >= 2 && RegExMatch(flds[2], "^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$"))
+            last := RegExReplace(flds[2], "[-T:]")
+        break
+    }
+    if (last != "" && DateDiff(A_Now, last, "Seconds") >= 60)
+        LogWriteRow(last, A_Now, "", "", "", "off", "", "", "")
+}
+; Vom Nutzer angehalten (Menue Zeit-Log), z. B. beim Testen
+ToggleLogPause(*) {
+    if (GapIs("paused"))
+        GapEnd(, true, "resume")
+    else
+        GapBegin("paused")
+    BuildTray()
+}
+
+; ---- Gespraeche: Timer ueber dem Tab, eigene Spalte "activity" im Zeit-Log ----
+; Ein Anruf fuer Projekt X laeuft weiter, auch wenn man zwischendurch auf andere Desktops
+; schaut: jede Zeile traegt bis zum Beenden "call:<Desktop>[ / <Unterprojekt>]", und
+; Stille am Rechner gilt in der Zeit nicht als Pause. Start/Ende per Tab-Menue oder
+; Tastenkuerzel (CallHotkey, Standard Strg+Win+T, gilt fuer den aktuellen Desktop).
+CallLabel() {
+    global gCall
+    return IsObject(gCall) ? "call:" gCall["name"] (gCall["sub"] != "" ? " / " gCall["sub"] : "") : ""
+}
+CallActiveOn(num) {
+    global gCall
+    return IsObject(gCall) && gCall["id"] = DesktopGuid(num)
+}
+CallDuration() {
+    global gCall
+    s := IsObject(gCall) ? DateDiff(A_Now, gCall["start"], "Seconds") : 0
+    return (s >= 3600) ? Format("{}:{:02}:{:02}", s // 3600, Mod(s // 60, 60), Mod(s, 60)) : Format("{}:{:02}", s // 60, Mod(s, 60))
+}
+StartCall(num, *) {
+    global gCall, gSegStart, gLogPaused
+    if (IsObject(gCall))
+        StopCall()
+    if (GapIs("idle"))
+        GapEnd()
+    gCall := Map("id", DesktopGuid(num), "name", GetDesktopNameRaw(num), "sub", SubActive(num), "start", A_Now)
+    IniSet("State", "Call", gCall["start"] "|" gCall["id"] "|" gCall["name"] "|" gCall["sub"])
+    if (CONF["TimeLog"] && !gLogPaused && gSegStart != "") {   ; ab jetzt mit Gespraech
+        LogClose(A_Now, true)
+        LogOpen(GetCurrentDesktop(), "call-start")
+    }
+    CallPillPaint()
+    SetTimer(CallTick, 1000)
+}
+StopCall(*) {
+    global gCall, gSegStart, gLogPaused
+    if (!IsObject(gCall))
+        return
+    dur := CallDuration()
+    if (CONF["TimeLog"] && !gLogPaused && gSegStart != "")
+        LogClose(A_Now, true)
+    gCall := 0
+    if (CONF["TimeLog"] && !gLogPaused && gSegStart = "")
+        LogOpen(GetCurrentDesktop(), "call-end")
+    IniDel("State", "Call")
+    SetTimer(CallTick, 0)
+    CallPillHide()
+    ToolTip(T("call.ended", dur), , , 3)
+    SetTimer(() => ToolTip(, , , 3), -2500)
+}
+ToggleCallHere(*) {
+    global gCall
+    if (IsObject(gCall))
+        StopCall()
+    else
+        StartCall(GetCurrentDesktop())
+}
+; Nach einem Neustart von DeskTabs ein laufendes Gespraech fortsetzen (hoechstens 12 h alt)
+RestoreCall() {
+    global gCall
+    v := IniRead(CONF["IniPath"], "State", "Call", "")
+    p := StrSplit(v, "|")
+    if (p.Length < 3 || !RegExMatch(p[1], "^\d{14}$") || DateDiff(A_Now, p[1], "Hours") >= 12) {
+        if (v != "")
+            IniDel("State", "Call")
+        return
+    }
+    gCall := Map("start", p[1], "id", p[2], "name", p[3], "sub", (p.Length >= 4) ? p[4] : "")
+    SetTimer(CallTick, 1000)
+    SetTimer(CallPillPaint, -1500)            ; wenn die Leiste steht
+}
+CallTick() {
+    global gCall, gCallConfirm
+    if (!IsObject(gCall))
+        return SetTimer(CallTick, 0)
+    if (gCallConfirm && A_TickCount - gCallConfirm > 3000)
+        gCallConfirm := 0
+    CallPillPaint()
+}
+; Kleine Pille mit Hoerer und Laufzeit, mittig ueber dem Tab des Gespraechs. Klick: "Beenden?",
+; zweiter Klick binnen 3 s beendet.
+CallPillPaint() {
+    global gCall, gCallGui, gCallDC, gCallHbm, gCallObm, gCallConfirm, MyGui, BTNS, gHidden, gLayout
+    if (!IsObject(gCall) || !MyGui || !gLayout)
+        return
+    num := -1, item := 0
+    for it in BTNS
+        if (DesktopGuid(it["num"]) = gCall["id"]) {
+            num := it["num"], item := it
+            break
+        }
+    col := (num >= 0) ? DesktopColor(num) : CONF["ColActiveBg"]
+    txt := gCallConfirm ? T("call.stopq") : CallDuration()
+    GdipStart()
+    mBmp := 0, mG := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", 1, "Int", 1, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &mBmp)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", mBmp, "Ptr*", &mG)
+    fB := MakeFont(true, CONF["FontSizePt"] - 1), sf := MakeFormat()
+    fam := 0, fI := 0
+    DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", CONF["IconFont"], "Ptr", 0, "Ptr*", &fam)
+    if (fam)
+        DllCall("gdiplus\GdipCreateFont", "Ptr", fam, "Float", px(12), "Int", 0, "Int", 2, "Ptr*", &fI)
+    tw := MeasureText(mG, fB, sf, txt)
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG), DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
+    w := px(10) + px(14) + px(5) + tw + px(10), h := px(22)
+    bx := 0, by := 0
+    try MyGui.GetPos(&bx, &by)
+    cx := item ? bx + item["x"] + item["w"] // 2 : bx + gLayout["gripW"] // 2 + w // 2
+    x := cx - w // 2, y := by - h + px(6)
+    if (!gCallGui) {
+        gCallGui := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08080000 -DPIScale")   ; NOACTIVATE | LAYERED
+        gCallGui.Show(Format("NA x{1} y{2} w1 h1", x, y))
+        try DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", gCallGui.Hwnd)
+    }
+    if (gCallDC) {
+        DllCall("SelectObject", "Ptr", gCallDC, "Ptr", gCallObm), DllCall("DeleteObject", "Ptr", gCallHbm), DllCall("DeleteDC", "Ptr", gCallDC)
+    }
+    bi := Buffer(40, 0)
+    NumPut("UInt", 40, bi, 0), NumPut("Int", w, bi, 4), NumPut("Int", -h, bi, 8), NumPut("UShort", 1, bi, 12), NumPut("UShort", 32, bi, 14)
+    gCallDC := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr")
+    bits := 0
+    gCallHbm := DllCall("CreateDIBSection", "Ptr", gCallDC, "Ptr", bi, "UInt", 0, "Ptr*", &bits, "Ptr", 0, "UInt", 0, "Ptr")
+    gCallObm := DllCall("SelectObject", "Ptr", gCallDC, "Ptr", gCallHbm, "Ptr")
+    g := 0
+    DllCall("gdiplus\GdipCreateFromHDC", "Ptr", gCallDC, "Ptr*", &g)
+    DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", 0)
+    fill := gCallConfirm ? Mix(0x000000, col, 25) : col
+    fg := ReadableOn(fill)
+    FillRoundRect(g, 0, 0, w, h, h / 2, ARGB(fill))
+    if (fI)
+        DrawText(g, fI, sf, Chr(0xE717), px(10), 0, px(14), h, ARGB(fg))      ; Hoerer
+    DrawText(g, fB, sf, txt, px(10) + px(14) + px(5), 0, tw, h, ARGB(fg))
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", fB), DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
+    if (fI)
+        DllCall("gdiplus\GdipDeleteFont", "Ptr", fI)
+    if (fam)
+        DllCall("gdiplus\GdipDeleteFontFamily", "Ptr", fam)
+    pt := Buffer(8, 0), sz := Buffer(8, 0), src := Buffer(8, 0)
+    NumPut("Int", x, "Int", y, pt), NumPut("Int", w, "Int", h, sz)
+    DllCall("UpdateLayeredWindow", "Ptr", gCallGui.Hwnd, "Ptr", 0, "Ptr", pt, "Ptr", sz, "Ptr", gCallDC
+        , "Ptr", src, "UInt", 0, "UInt*", gHidden ? 0x01000000 : 0x01FF0000, "UInt", 2)   ; im Vollbild unsichtbar
+}
+CallPillHide() {
+    global gCallGui, gCallDC, gCallHbm, gCallObm, gCallConfirm
+    gCallConfirm := 0
+    try gCallGui.Destroy()
+    gCallGui := 0
+    if (gCallDC) {
+        DllCall("SelectObject", "Ptr", gCallDC, "Ptr", gCallObm), DllCall("DeleteObject", "Ptr", gCallHbm), DllCall("DeleteDC", "Ptr", gCallDC)
+        gCallDC := 0
+    }
+}
+CallPillUp(wParam, lParam, msg, hwnd) {
+    global gCallGui, gCallConfirm
+    if (!gCallGui || hwnd != gCallGui.Hwnd)
+        return
+    if (gCallConfirm)
+        StopCall()
+    else {
+        gCallConfirm := A_TickCount
+        CallPillPaint()
+    }
+    return 0
+}
+CallPillCursor(wParam, lParam, msg, hwnd) {
+    global gCallGui
+    if (!gCallGui || hwnd != gCallGui.Hwnd)
+        return
+    DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", 32649, "Ptr"))   ; IDC_HAND
+    return 1
 }
 
 ; Hat sich settings.ini seit dem letzten Blick geaendert? Erster Aufruf merkt
@@ -805,6 +1087,12 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
     "menu.sub", "Unterprojekt",
+    "menu.call.start", "Gespräch starten (Timer)",
+    "menu.call.stop", "Gespräch beenden ({1})",
+    "call.stopq", "Beenden?",
+    "call.ended", "Gespräch beendet: {1}",
+    "sc.d.call", "Gespräch auf diesem Desktop starten oder beenden (Timer über dem Tab, eigene Spalte im Zeit-Log)",
+    "menu.timelog.pause", "Zeit-Log pausieren",
     "menu.sub.current", "Unterprojekt: {1}",
     "menu.sub.none", "(keins)",
     "sub.panel.none", "ohne Unterprojekt",
@@ -1000,6 +1288,7 @@ global LANG_DE := Map(
     "firstrun.text",   "Klick auf einen Tab wechselt den Desktop.`nRechtsklick öffnet alle Einstellungen: Symbole, Farben, Ansicht, Sprache.",
     "menu.help",       "Hilfe",
     "menu.help.docs",  "Anleitung und Dokumentation…",
+    "menu.help.agents", "Anleitung für KI-Assistenten…",
     "menu.help.changelog", "Was ist neu (Änderungsverlauf)…",
     "menu.feedback.bug", "Fehler melden (GitHub)…",
     "menu.feedback.idea", "Idee einreichen (GitHub)…",
@@ -1042,6 +1331,12 @@ global LANG_DE := Map(
 )
 global LANG_EN := Map(
     "menu.sub", "Sub-project",
+    "menu.call.start", "Start a call (timer)",
+    "menu.call.stop", "End the call ({1})",
+    "call.stopq", "End?",
+    "call.ended", "Call ended: {1}",
+    "sc.d.call", "start or end a call on this desktop (timer above the tab, own column in the time log)",
+    "menu.timelog.pause", "Pause the time log",
     "menu.sub.current", "Sub-project: {1}",
     "menu.sub.none", "(none)",
     "sub.panel.none", "no sub-project",
@@ -1237,6 +1532,7 @@ global LANG_EN := Map(
     "firstrun.text",   "Click a tab to switch desktops.`nRight-click opens every setting: icons, colours, view, language.",
     "menu.help",       "Help",
     "menu.help.docs",  "Guide and documentation…",
+    "menu.help.agents", "Guide for AI assistants…",
     "menu.help.changelog", "What's new (changelog)…",
     "menu.feedback.bug", "Report a bug (GitHub)…",
     "menu.feedback.idea", "Suggest an idea (GitHub)…",
@@ -1359,10 +1655,15 @@ Main() {
     ; Vollbild-Erkennung (Leiste aus-/einblenden)
     if (CONF["AutoHideFullscreen"])
         SetTimer(FullscreenTick, 500)
+    LogOffGap()                              ; Zeit-Log: Zeit seit dem letzten Eintrag als "off" nachtragen
+    RestoreCall()                            ; laufendes Gespraech nach einem Neustart fortsetzen
     UpdateHighlight()                        ; oeffnet auch das erste Zeit-Log-Segment
     ; Zeit-Log: Sperren/Entsperren des Bildschirms als Pause erkennen (immer
     ; registrieren, TimeLog kann zur Laufzeit ueber das Menue eingeschaltet werden)
     DllCall("Wtsapi32\WTSRegisterSessionNotification", "Ptr", A_ScriptHwnd, "UInt", 0)
+    OnMessage(0x0218, OnPowerBroadcast)      ; WM_POWERBROADCAST: Ruhezustand als Luecke im Zeit-Log
+    OnMessage(0x0202, CallPillUp)            ; Klick auf die Gespraechs-Pille
+    OnMessage(0x0020, CallPillCursor)
     OnMessage(0x02B1, OnSessionChange)      ; WM_WTSSESSION_CHANGE
     BuildTray()
     OnMessage(0x0202, CardUp)                ; Klicks in die Hinweis-Karten
@@ -1415,6 +1716,9 @@ ApplyIniOverrides() {
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
     }
+    v := IniRead(CONF["IniPath"], "View", "CallHotkey", "-")
+    if (v = "" || RegExMatch(v, "^[\^+!#]{1,4}\w+$"))
+        CONF["CallHotkey"] := v
     v := IniRead(CONF["IniPath"], "View", "TimeLogMinSec", "")
     if (RegExMatch(v, "^\d{1,3}$"))
         CONF["TimeLogMinSec"] := Integer(v)
@@ -2663,6 +2967,9 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.tab.color"), "E790")
         m.Add(T("menu.tab.short"), PromptShort.Bind(num))
         MenuGlyph(m, T("menu.tab.short"), "E8AC")
+        callLbl := CallActiveOn(num) ? T("menu.call.stop", CallDuration()) : T("menu.call.start")
+        m.Add(callLbl, CallActiveOn(num) ? StopCall : StartCall.Bind(num))
+        MenuGlyph(m, callLbl, "E717")
         subCur := SubActive(num)
         subLbl := (subCur != "") ? T("menu.sub.current", subCur) : T("menu.sub")
         m.Add(subLbl, SubMenu(num))
@@ -2860,6 +3167,9 @@ FillSettingsMenu(m) {
     lgm.Add(T("menu.timelog.on"), ToggleView.Bind("TimeLog"))
     if (CONF["TimeLog"])
         lgm.Check(T("menu.timelog.on"))
+    lgm.Add(T("menu.timelog.pause"), ToggleLogPause)
+    if (GapIs("paused"))
+        lgm.Check(T("menu.timelog.pause"))
     lgm.Add(T("menu.timelog.open"), OpenLogFolder)
     MenuGlyph(lgm, T("menu.timelog.open"), "E838")
     xm.Add(T("menu.timelog"), lgm)
@@ -2900,6 +3210,8 @@ HelpMenu() {
     MenuGlyph(hm, T("menu.help.shortcuts"), "E765")
     hm.Add(T("menu.help.docs"), OpenDocs)
     MenuGlyph(hm, T("menu.help.docs"), "E8F1")
+    hm.Add(T("menu.help.agents"), OpenAgentsGuide)
+    MenuGlyph(hm, T("menu.help.agents"), "E99A")
     hm.Add(T("menu.help.news"), (*) => ShowNews(PrevVersion(APP_VERSION)))
     MenuGlyph(hm, T("menu.help.news"), "E789")
     hm.Add(T("menu.help.changelog"), (*) => Run(APP_CHANGELOG_URL))
@@ -3095,6 +3407,18 @@ AutoUpdateTick() {
     }
 }
 
+; Anleitung fuer KI-Assistenten: im Programmordner (Installation) bzw. im Repo die Fassung
+; fuer die Installation; sonst online
+OpenAgentsGuide(*) {
+    global APP_URL
+    for , f in [A_ScriptDir "\package\AGENTS.md", A_ScriptDir "\AGENTS.md"]
+        if FileExist(f) && (InStr(f, "\package\") || A_IsCompiled) {
+            try Run('notepad.exe "' f '"')
+            return
+        }
+    Run(APP_URL "/blob/main/package/AGENTS.md")
+}
+
 OpenReleasePage(*) {
     global APP_URL
     Run(APP_URL "/releases/latest")
@@ -3136,6 +3460,8 @@ ShowShortcuts(*) {
     rows.Push([T("sc.k.rtab"), T("sc.d.rtabdesk")])
     rows.Push([T("sc.k.clickactivesub"), T("sc.d.clickactivesub")])
     rows.Push([T("sc.k.altclick", T("key.alt")), T("sc.d.altclick")])
+    if (CONF["CallHotkey"] != "")
+        rows.Push([CallHotkeyText(), T("sc.d.call")])
     rows.Push([T("sc.sec.bar")])
     rows.Push([T("sc.k.draggrip"), T("sc.d.draggrip")])
     rows.Push([T("sc.k.ctrlwheel", C), T("sc.d.ctrlwheel")])
@@ -3482,9 +3808,10 @@ SetSub(num, val, *) {
         IniDelLoose("Subproject", raw)
     else
         IniSet("Subproject", raw, val)
-    if (num = gCurrent && num = gSegDesk && CONF["TimeLog"]) {   ; Zeit-Log: neue Zeile ab jetzt
+    global gLogPaused
+    if (num = gCurrent && num = gSegDesk && CONF["TimeLog"] && !gLogPaused) {   ; Zeit-Log: neue Zeile ab jetzt
         LogClose("", false)
-        LogOpen(num)
+        LogOpen(num, "subproject")
     }
     RebuildAll()
 }
@@ -5410,8 +5737,10 @@ OnWheel(wParam, lParam, msg, hwnd) {
         target := (cur - 1 < 0) ? 0 : cur - 1
     else
         target := (cur + 1 >= cnt) ? cnt - 1 : cur + 1
-    if (target != cur)
+    if (target != cur) {
+        global gSwitchSrc := "wheel"
         SwitchToDesktop(target)
+    }
     return 0
 }
 
@@ -6090,6 +6419,12 @@ ApplyHotkeys() {
     for , key in gHotkeys
         try Hotkey(key, "Off")
     gHotkeys := []
+    if (CONF["CallHotkey"] != "") {             ; Gespraech: unabhaengig von den Ziffern-Kuerzeln
+        try {
+            Hotkey(CONF["CallHotkey"], ToggleCallHere, "On")
+            gHotkeys.Push(CONF["CallHotkey"])
+        }
+    }
     if (!CONF["Hotkeys"])
         return
     mk := CONF["HotkeyMod"]                 ; nicht "mod" nennen: das ist die eingebaute Funktion Mod()
@@ -6155,11 +6490,20 @@ ToggleHotkeyMod(sign, *) {
 }
 
 JumpToDesktop(idx, *) {
-    if (idx < GetDesktopCount())
+    global gSwitchSrc
+    if (idx < GetDesktopCount()) {
+        gSwitchSrc := "key"
         SwitchToDesktop(idx)
+    }
 }
 
 ; Lesbare Beschriftung eines Modifikators, z.B. "Strg + Windows + 1 … 0"
+; "^#t" -> "Strg + Win + T"
+CallHotkeyText() {
+    k := CONF["CallHotkey"]
+    RegExMatch(k, "^([\^+!#]*)(.+)$", &m)
+    return StrReplace(HotkeyLabel(m[1]), " + 1 … 0", "") " + " StrUpper(m[2])
+}
 HotkeyLabel(mk) {
     parts := []
     if (InStr(mk, "^"))
@@ -6353,8 +6697,11 @@ IniDel(sec, key) {
 }
 
 OnExitCleanup(*) {
-    global VDA, gWinEventHook, gWinEventCb, gDragHook, gDragCb
-    LogClose()                                  ; Zeit-Log: letztes Segment abschliessen
+    global VDA, gWinEventHook, gWinEventCb, gDragHook, gDragCb, gGap
+    if (IsObject(gGap))
+        GapEnd(, false)                         ; laufende Luecke (Sperre, Pause ...) schreiben
+    else
+        LogClose()                              ; Zeit-Log: letztes Segment abschliessen
     if (CONF["TimeLog"])
         try DllCall("Wtsapi32\WTSUnRegisterSessionNotification", "Ptr", A_ScriptHwnd)
     if (gWinEventHook)

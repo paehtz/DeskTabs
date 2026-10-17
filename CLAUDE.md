@@ -61,16 +61,18 @@ Keys are the exact desktop names as shown in Windows Task View (read them with `
 If the user asks "how long did I work on client X this week/month", read `timelog\desktop-log_YYYY-MM.csv` in the script folder (one file per month, written by the bar itself; up to v1.1.4 the files sat directly next to the script and are moved on the next start):
 
 ```csv
-start,end,seconds,desktop_index,desktop_name,subproject
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery",""
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,1,"Web projects","Miller & Sons"
+start,end,seconds,desktop_index,desktop_name,subproject,state,desktop_id,source,activity
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery","",active,{0F88F7EF-…},click,""
+2026-09-22T10:47:30,2026-09-22T10:58:10,640,,"","",idle,,idle>5min,""
+2026-09-22T10:58:10,2026-09-22T11:15:02,1012,1,"Web projects","Miller & Sons",active,{F7C1A70E-…},resume,"call:Acme Bakery"
 ```
 
 - One row per stay on a desktop; a stay ends on desktop switch, lock screen, or after `TimeLogIdleMin` minutes of no input (closed at the start of the inactivity, so breaks are excluded).
 - Stays under `TimeLogMinSec` seconds (default 5) are folded into the next real stay, so rows are gap-free and there are no 1-second transition rows. The newest row appears only after the next real stay starts (or on lock/idle/quit), so the current stay is not in the file yet.
 - The file starts with a UTF-8 byte order mark (for Excel's sake). Read it as `utf-8-sig`, otherwise the first column is named `\ufeffstart`.
-- Sum `seconds` per `desktop_name` (or per day) and convert to hours. On catch-all desktops (several small clients on one desktop) group by `desktop_name` + `subproject`: the sub-project names the client or activity. Files begun before 1.1.12 have five fields in their older rows (no `subproject`). Times are local ISO 8601, `desktop_index` is 1-based.
+- Sum `seconds` per `desktop_name` (or per day) and convert to hours. On catch-all desktops (several small clients on one desktop) group by `desktop_name` + `subproject`: the sub-project names the client or activity. Since 1.1.16: `state` (`active`, or a break row `idle`/`locked`/`suspended`/`paused`/`off`; count only `active` as working time), `desktop_id` (stable GUID), `source` (how the row began), `activity` (`call:<desktop>` while a call runs: that time belongs to the call's client, even on rows of other desktops). Rows are split at midnight. Older rows have fewer fields (5 before 1.1.12, 6 before 1.1.16). Times are local ISO 8601, `desktop_index` is 1-based.
 - Treat the contents as the user's personal data: summarise, do not copy it anywhere they did not ask for. The file is git-ignored; never commit it.
+- **Design principle (maintainer, 17.10.2026): tracking needs no input.** The user just works: switches desktops, apps, tasks. Desktops separate the projects; that is the whole model. The only manual steps are optional: sub-projects and calls. Do not add features that require defining rules, categories, or entering anything up front, no prompts after breaks, and no per-application logging (apps say little about the task and make logging much heavier).
 
 ## Where to change things
 

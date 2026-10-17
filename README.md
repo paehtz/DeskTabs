@@ -61,6 +61,7 @@ For this to stay clean, I need to see at any moment which desktop I am on. In th
 - **Send windows to another desktop:** right-click a tab and choose *Move “…” here* to send the window you are working in to that desktop, or press Ctrl+Win+Shift+1 … 0 (with the keyboard shortcuts on). Quickest: **Shift + click** a tab; **Ctrl + Shift + click** takes the window along and switches there too. *Bring a window here ›* lists every window of your current desktop. Or simply drag a window by its title bar onto a tab and let go: it moves there and keeps its size and position. You stay where you are.
 - **Show a window on all desktops:** right-click the grip ≡ and tick *Show “…” on all desktops* (or *All windows of “…” on all desktops* for the whole app), or drag the window by its title bar onto ≡. Drag it onto ≡ again, or onto a tab, and it lives on one desktop only again. A right-click on any tab shows the tick as well; untick it there to keep the window on that desktop only. DeskTabs respects the Windows setting: a window shown on all desktops that you move to a tab loses that setting openly (the tip says so); an app set to all desktops is left untouched.
 - **Each desktop keeps its window order:** windows shown on all desktops no longer push themselves to the front everywhere. When you come back to a desktop, DeskTabs brings back the windows that were in front there, in their order and on all monitors, and focuses the one you last used. Only the windows that are out of place are moved, in one step. Off under *More settings* (`RestoreZOrder = 0`).
+- **Calls with a timer:** a client calls about another project? Right-click their tab › *Start a call* (or Ctrl+Win+T for the current desktop). A small timer pill runs above that tab, and the time log assigns the whole call to that client, even while you look things up on other desktops; silence at the PC does not count as idle meanwhile. Click the pill twice to end it.
 - **Back to the last desktop:** middle-click the bar or press Ctrl+Win+Backspace to return to the desktop you last worked on (quick pass-throughs don't count).
 - **Attention dot:** when an app on another desktop flashes for attention, its tab gets a small orange dot until you go there.
 - **Visible on all desktops:** the bar itself is pinned to every desktop.
@@ -123,6 +124,9 @@ DeskTabs is free and open source (GPL v3). The setup installs per user without a
 Other tools cover parts of this: hotkey scripts for switching, tray icons that show the desktop number, or full desktop managers. DeskTabs combines a visible, clickable indicator on the taskbar with names, colours, icons and a time log.
 
 ---
+
+**After switching, a window flashes in front for a moment before the right one comes up. Why?**
+Windows decides which window gets the focus on arrival, before DeskTabs can act: it takes the last used window that belongs to that desktop and ignores windows shown on all desktops. So if a window on all desktops (say your main chat app) was in front, and right behind it a window of this desktop only, that window flashes up briefly until DeskTabs puts your order back, usually within a tenth of a second. It is a Windows quirk, not a fault. To avoid it, minimise that desktop's window while you don't need it, or work last in a window that belongs to this desktop only.
 
 ## Requirements
 
@@ -261,6 +265,10 @@ ShowIndex=1
 
 ---
 
+## Customise it with an AI assistant
+
+DeskTabs is easy to adjust with an AI coding assistant such as Claude Code, Codex or Cursor that can read and write files: "give the desktop Acme a green colour and the shop icon", "turn on the register look", "how many hours did I spend on Acme this month?". The program folder contains an `AGENTS.md` (and a `CLAUDE.md` pointing to it) that tells the assistant where every setting lives, which values are allowed, how to read the time log, and that it should offer to report useful ideas and bugs back as a GitHub issue, only with your okay. Open it via *Help › Guide for AI assistants*, or see [package/AGENTS.md](package/AGENTS.md).
+
 ## Languages
 
 DeskTabs speaks German and English out of the box and picks the language from your Windows display language. To add a language, copy `lang\en.ini` to `lang\<code>.ini` (e.g. `lang\fr.ini`), translate the lines (`key=Text`, keep the `{1}` placeholders, `\n` is a line break, file is UTF-8) and set `Language=fr` in `settings.ini` under `[View]`. Pull requests with new languages are welcome.
@@ -272,14 +280,19 @@ DeskTabs speaks German and English out of the box and picks the language from yo
 With `TimeLog=1` (default) DeskTabs writes one line per stay on a desktop into `desktop-log_YYYY-MM.csv` in the subfolder `timelog\` of the program folder (up to v1.1.4 the files sat directly next to the program; they are moved on the next start). *More settings › Time log › Open folder* shows the files:
 
 ```csv
-start,end,seconds,desktop_index,desktop_name,subproject
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery",""
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,1,"Web projects","Miller & Sons"
+start,end,seconds,desktop_index,desktop_name,subproject,state,desktop_id,source,activity
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery","",active,{0F88F7EF-…},click,""
+2026-09-22T10:47:30,2026-09-22T10:58:10,640,,"","",idle,,idle>5min,""
+2026-09-22T10:58:10,2026-09-22T11:15:02,1012,1,"Web projects","Miller & Sons",active,{F7C1A70E-…},resume,"call:Acme Bakery"
 ```
 
 - A stay ends when you switch desktops, lock the screen, or stop giving input for `TimeLogIdleMin` minutes (the stay is then closed at the moment the inactivity began, so breaks are not counted).
 - Stays shorter than `TimeLogMinSec` seconds (default 5) are transitions, not work: stepping 1 → 2 → 3 → 4 gives one row for 4 (including the travel time), and a quick glance from A to B and back continues the row for A. Because of that, the newest row is written once the next real stay is certain; locking, idling or quitting writes it immediately.
-- `subproject` is the sub-project that was active on that desktop (empty if none). Files started before version 1.1.12 got the column added to their header; their older rows simply have five fields.
+- `subproject` is the sub-project that was active on that desktop (empty if none).
+- `state` (since 1.1.16): `active` for a stay on a desktop. Breaks are rows of their own instead of gaps: `idle` (no input), `locked`, `suspended` (sleep), `paused` (*Time log › Pause*), `off` (DeskTabs was not running; added on the next start). Their desktop columns are empty.
+- `desktop_id`: the desktop's Windows GUID, stable across renames. `source`: how the row began (`click`, `key`, `wheel`, `taskview`, `other` = another app switched, `start`, `resume`, `subproject`, `call-start`, `call-end`, `midnight`); for `idle` rows it holds the threshold (`idle>5min`).
+- `activity`: a running call (`call:<desktop>[ / <sub-project>]`, see *Start a call* in the tab menu or Ctrl+Win+T). It stays on every row until the call ends, whichever desktop you look at meanwhile, and silence at the PC does not count as idle during a call.
+- Rows are split at midnight. The format only ever grows to the right: files started with an older version get the new header, their older rows just have fewer fields (5 before 1.1.12, 6 before 1.1.16).
 - Times are local, ISO 8601. `desktop_index` is 1-based like the bar's numbers; `desktop_name` is the name at the start of the stay.
 - The file is plain UTF-8 CSV: open it in Excel, or let a coding agent sum it up per client for your invoice. It is personal data and git-ignored.
 

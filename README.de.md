@@ -61,6 +61,7 @@ Damit das sauber funktioniert, muss ich jederzeit sehen, auf welchem Desktop ich
 - **Fenster auf einen anderen Desktop schicken:** Rechtsklick auf einen Tab, *„…“ hierher verschieben*, schickt das Fenster, an dem Du gerade arbeitest, auf diesen Desktop; alternativ Strg+Win+Umschalt+1 … 0 (bei eingeschalteten Tastenkürzeln). Am schnellsten: **Umschalt + Klick** auf einen Tab; **Strg + Umschalt + Klick** nimmt das Fenster mit und wechselt gleich dorthin. *Fenster hierher holen ›* listet alle Fenster Deines aktuellen Desktops. Oder Du ziehst ein Fenster an der Titelleiste auf einen Tab und lässt los: Es wandert dorthin und behält Größe und Position. Du selbst bleibst, wo Du bist.
 - **Fenster auf allen Desktops anzeigen:** Rechtsklick auf den Griff ≡ und *„…“ auf allen Desktops anzeigen* anhaken (oder *Alle Fenster von „…“ auf allen Desktops* für die ganze App), oder das Fenster an der Titelleiste auf ≡ ziehen. Noch einmal auf ≡ oder auf einen Tab gezogen, lebt es wieder nur auf einem Desktop. Auch der Rechtsklick auf einen Tab zeigt den Haken; dort abgewählt, bleibt das Fenster nur auf diesem Desktop. DeskTabs respektiert die Windows-Einstellung: Ein Fenster auf allen Desktops, das Du auf einen Tab schiebst, verliert sie offen angesagt (der Hinweis nennt es); eine App auf allen Desktops bleibt unangetastet.
 - **Jeder Desktop behält seine Fensterreihenfolge:** Fenster, die auf allen Desktops liegen, drängen sich nicht mehr überall nach vorne. Kommst Du auf einen Desktop zurück, holt DeskTabs die Fenster wieder nach vorne, die dort vorne lagen, in ihrer Reihenfolge und auf allen Monitoren, und gibt dem zuletzt benutzten den Fokus. Dabei rückt es nur die Fenster zurecht, die falsch liegen, in einem Schritt. Abschaltbar unter *Weitere Einstellungen* (`RestoreZOrder = 0`).
+- **Gespräche mit Timer:** Ruft ein Kunde wegen eines anderen Projekts an? Rechtsklick auf seinen Tab › *Gespräch starten* (oder Strg+Win+T für den aktuellen Desktop). Über dem Tab läuft eine kleine Timer-Pille, und das Zeit-Log ordnet die ganze Gesprächszeit diesem Kunden zu, auch wenn Du zwischendurch auf anderen Desktops nachschaust; Stille am Rechner gilt in der Zeit nicht als Pause. Zweimal auf die Pille klicken beendet es.
 - **Zurück zum letzten Desktop:** Mittelklick auf die Leiste oder Strg+Win+Rücktaste bringt Dich zum Desktop, auf dem Du zuletzt gearbeitet hast (kurze Durchfahrten zählen nicht).
 - **Hinweispunkt:** Blinkt ein Programm auf einem anderen Desktop, bekommt dessen Tab einen kleinen orangen Punkt, bis Du dort bist.
 - **Auf allen Desktops sichtbar:** die Leiste selbst ist an alle Desktops gepinnt.
@@ -123,6 +124,9 @@ DeskTabs ist kostenlos und quelloffen (GPL v3). Das Setup installiert pro Benutz
 Andere Werkzeuge decken Teile davon ab: Tastenkürzel-Skripte zum Wechseln, Tray-Symbole mit der Desktop-Nummer oder komplette Desktop-Manager. DeskTabs verbindet eine sichtbare, anklickbare Anzeige in der Taskleiste mit Namen, Farben, Symbolen und einem Zeit-Log.
 
 ---
+
+**Nach dem Wechsel blitzt kurz ein anderes Fenster auf, bevor das richtige vorne ist. Warum?**
+Welches Fenster beim Ankommen den Fokus bekommt, entscheidet Windows, bevor DeskTabs eingreifen kann: Es nimmt das zuletzt benutzte Fenster, das zu diesem Desktop gehört, und lässt Fenster auf allen Desktops dabei aus. Lag also ein Fenster auf allen Desktops vorne (etwa Deine Chat-App) und direkt dahinter ein Fenster nur dieses Desktops, blitzt dieses kurz auf, bis DeskTabs Deine Reihenfolge wiederherstellt, meist innerhalb einer Zehntelsekunde. Das ist eine Eigenheit von Windows, kein Fehler. Vermeiden lässt es sich, indem Du dieses Fenster minimierst, solange Du es nicht brauchst, oder zuletzt in einem Fenster arbeitest, das nur zu diesem Desktop gehört.
 
 ## Voraussetzungen
 
@@ -261,6 +265,10 @@ ShowIndex=1
 
 ---
 
+## Mit einem KI-Assistenten anpassen
+
+DeskTabs lässt sich bequem mit einem KI-Assistenten anpassen, der Dateien lesen und schreiben kann, etwa Claude Code, Codex oder Cursor: „gib dem Desktop Acme eine grüne Farbe und das Shop-Symbol“, „schalte den Register-Look ein“, „wie viele Stunden habe ich diesen Monat für Acme gearbeitet?“. Im Programmordner liegt dafür eine `AGENTS.md` (und eine `CLAUDE.md`, die darauf verweist). Sie sagt dem Assistenten, wo jede Einstellung steht, welche Werte erlaubt sind, wie das Zeit-Log zu lesen ist und dass er nützliche Ideen und Fehler als GitHub-Issue zurückmelden soll, nur mit Deinem Okay. Öffnen über *Hilfe › Anleitung für KI-Assistenten* oder hier: [package/AGENTS.md](package/AGENTS.md).
+
 ## Sprachen
 
 DeskTabs spricht von Haus aus Deutsch und Englisch und wählt die Sprache nach Deiner Windows-Anzeigesprache. Eine weitere Sprache ergänzt Du, indem Du `lang\en.ini` nach `lang\<code>.ini` kopierst (z.B. `lang\fr.ini`), die Zeilen übersetzt (`schlüssel=Text`, Platzhalter `{1}` stehen lassen, `\n` ist ein Zeilenumbruch, Datei ist UTF-8) und in `settings.ini` unter `[View]` `Language=fr` setzt. Pull Requests mit neuen Sprachen sind willkommen.
@@ -272,14 +280,19 @@ DeskTabs spricht von Haus aus Deutsch und Englisch und wählt die Sprache nach D
 Mit `TimeLog=1` (Standard) schreibt DeskTabs pro Aufenthalt auf einem Desktop eine Zeile in `desktop-log_YYYY-MM.csv` im Unterordner `timelog\` des Programmordners (bis v1.1.4 lagen die Dateien direkt neben dem Programm; sie werden beim nächsten Start umgezogen). *Weitere Einstellungen › Zeit-Log › Ordner öffnen* zeigt die Dateien:
 
 ```csv
-start,end,seconds,desktop_index,desktop_name,subproject
-2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery",""
-2026-09-22T10:47:30,2026-09-22T11:15:02,1652,1,"Webprojekte","Miller & Sons"
+start,end,seconds,desktop_index,desktop_name,subproject,state,desktop_id,source,activity
+2026-09-22T09:02:11,2026-09-22T10:47:30,6319,4,"Acme Bakery","",active,{0F88F7EF-…},click,""
+2026-09-22T10:47:30,2026-09-22T10:58:10,640,,"","",idle,,idle>5min,""
+2026-09-22T10:58:10,2026-09-22T11:15:02,1012,1,"Webprojekte","Miller & Sons",active,{F7C1A70E-…},resume,"call:Acme Bakery"
 ```
 
 - Ein Aufenthalt endet beim Desktop-Wechsel, beim Sperren des Bildschirms oder nach `TimeLogIdleMin` Minuten ohne Eingabe (dann wird er rückwirkend zum Beginn der Inaktivität geschlossen, Pausen zählen also nicht mit).
 - Aufenthalte unter `TimeLogMinSec` Sekunden (Standard 5) sind Übergänge, keine Arbeit: Durchschalten von 1 über 2 und 3 nach 4 ergibt eine Zeile für 4 (samt Fahrzeit), ein kurzer Blick von A nach B und zurück setzt die Zeile für A fort. Deshalb wird die neueste Zeile erst geschrieben, wenn der nächste echte Aufenthalt feststeht; Sperren, Inaktivität oder Beenden schreiben sie sofort.
-- `subproject` ist das Unterprojekt, das auf diesem Desktop aktiv war (leer, wenn keins). Dateien, die vor Version 1.1.12 begonnen wurden, bekamen die Spalte in der Kopfzeile ergänzt; ihre älteren Zeilen haben einfach fünf Felder.
+- `subproject` ist das Unterprojekt, das auf diesem Desktop aktiv war (leer, wenn keins).
+- `state` (seit 1.1.16): `active` für einen Aufenthalt auf einem Desktop. Pausen stehen als eigene Zeilen statt als Lücke da: `idle` (keine Eingabe), `locked` (gesperrt), `suspended` (Ruhezustand), `paused` (*Zeit-Log › pausieren*), `off` (DeskTabs lief nicht; beim nächsten Start nachgetragen). Ihre Desktop-Spalten sind leer.
+- `desktop_id`: die Windows-Kennung des Desktops, bleibt beim Umbenennen gleich. `source`: wie die Zeile begann (`click`, `key`, `wheel`, `taskview`, `other` = ein anderes Programm hat gewechselt, `start`, `resume`, `subproject`, `call-start`, `call-end`, `midnight`); bei `idle`-Zeilen steht dort die Schwelle (`idle>5min`).
+- `activity`: ein laufendes Gespräch (`call:<Desktop>[ / <Unterprojekt>]`, siehe *Gespräch starten* im Tab-Menü oder Strg+Win+T). Es steht bis zum Beenden auf jeder Zeile, egal welchen Desktop Du zwischendurch ansiehst, und Stille am Rechner gilt dabei nicht als Pause.
+- Zeilen werden um Mitternacht geteilt. Das Format wächst nur nach rechts: Dateien aus älteren Versionen bekommen die neue Kopfzeile, ihre älteren Zeilen haben einfach weniger Felder (5 vor 1.1.12, 6 vor 1.1.16).
 - Zeiten sind lokal, ISO 8601. `desktop_index` ist 1-basiert wie die Nummern in der Leiste; `desktop_name` ist der Name beim Start des Aufenthalts.
 - Die Datei ist reines UTF-8-CSV: in Excel öffnen, oder einen Coding-Agenten die Zeiten pro Kunde für die Rechnung aufsummieren lassen. Es sind persönliche Daten, die Datei ist git-ignoriert.
 

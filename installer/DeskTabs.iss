@@ -77,6 +77,8 @@ Source: "{#SourceDir}\LICENSE";                     DestDir: "{app}"; Flags: ign
 Source: "{#SourceDir}\NOTICE";                      DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\LICENSE-AutoHotkey.txt";      DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SourceDir}\THIRD-PARTY-LICENSES.md";     DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\AGENTS.md";                   DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\CLAUDE.md";                   DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\DeskTabs"; Filename: "{app}\{#AppExe}"; WorkingDir: "{app}"
