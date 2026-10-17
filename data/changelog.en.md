@@ -1,6 +1,9 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.17
+- **Time report:** the menu now has **Time report…**. It shows in your browser how much time you spent on which desktop and sub-project. Browse day by day with the arrow keys, or pick a week, month, year or any range. Each day appears as a coloured timeline, plus hours per day, your typical working hours across the day, weekdays, all calls and the comparison with last week. Hide desktops you don't need, export any table as CSV straight into Excel, and use **Print / PDF** for a timesheet. Everything stays on your computer.
+
 ## 1.1.16
 - **Each desktop keeps its windows in front:** windows shown on all desktops no longer push themselves to the front everywhere. When you return to a desktop, the windows you last worked with there are back in front, on all monitors, and the last one used has the focus. Turn it off under **More settings**.
 - **Calls with a timer:** when a client calls, right-click their tab and choose **Start a call**, or press **Ctrl + Win + T**. A timer runs above the tab, and the time log assigns the whole call to that client, even while you look things up on other desktops. Click the timer to end it.

@@ -96,6 +96,10 @@ start,end,seconds,desktop_index,desktop_name,subproject,state,desktop_id,source,
 - `desktop_id` is the stable desktop GUID (`desktop_index` changes when desktops are reordered). `source` tells how a row began. Rows are split at midnight.
 - Older rows may have fewer fields (5 before 1.1.12, 6 before 1.1.16). This is personal data: summarise it for the user, do not copy it anywhere they did not ask for.
 
+## Time report
+
+The user can open **menu › Time report…**: a browser page with totals per desktop, sub-project and day, a timeline of each day and CSV export. It follows the same rules as above. Point users there before you build them a spreadsheet; use the CSV yourself when they ask something the page does not show.
+
 ## Things that need a code change
 
 Anything that is not a setting above (new features, other behaviour, layout details) needs the source code. Do not try to patch `DeskTabs.exe`. Instead:

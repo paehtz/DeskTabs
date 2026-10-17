@@ -1,6 +1,9 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.17
+- **Zeit-Auswertung:** Im Menü steht jetzt **Zeit-Auswertung…**. Sie zeigt im Browser, wie viel Zeit Du auf welchem Desktop und Unterprojekt verbracht hast. Du blätterst Tag für Tag mit den Pfeiltasten oder wählst Woche, Monat, Jahr oder einen freien Zeitraum. Jeder Tag erscheint als farbige Zeitleiste, dazu Stunden je Tag, Deine typischen Arbeitszeiten über den Tag, Wochentage, alle Gespräche und der Vergleich zur Vorwoche. Desktops lassen sich ausblenden, jede Tabelle geht als CSV direkt nach Excel, und **Drucken / PDF** macht daraus einen Stundennachweis. Alles bleibt auf Deinem Rechner.
+
 ## 1.1.16
 - **Jeder Desktop behält seine Fenster vorne:** Fenster, die auf allen Desktops liegen, drängen sich nicht mehr überall nach vorne. Kommst Du auf einen Desktop zurück, liegen dort wieder die Fenster vorne, mit denen Du dort zuletzt gearbeitet hast, auf allen Monitoren, und das zuletzt benutzte hat den Fokus. Abschaltbar unter **Weitere Einstellungen**.
 - **Gespräche mit Timer:** Ruft ein Kunde an, startest Du per Rechtsklick auf seinen Tab **Gespräch starten** oder mit **Strg + Win + T**. Über dem Tab läuft ein Timer, und das Zeit-Log ordnet die ganze Gesprächszeit diesem Kunden zu, auch wenn Du zwischendurch auf anderen Desktops nachschaust. Ein Klick auf den Timer beendet es.

@@ -1093,6 +1093,9 @@ global LANG_DE := Map(
     "call.ended", "Gespräch beendet: {1}",
     "sc.d.call", "Gespräch auf diesem Desktop starten oder beenden (Timer über dem Tab, eigene Spalte im Zeit-Log)",
     "menu.timelog.pause", "Zeit-Log pausieren",
+    "menu.report", "Zeit-Auswertung…",
+    "report.missing", "Die Vorlage data\report.html fehlt. Bitte DeskTabs neu installieren oder das Paket vollständig entpacken.",
+    "report.failed", "Die Zeit-Auswertung ließ sich nicht öffnen:`n{1}",
     "menu.sub.current", "Unterprojekt: {1}",
     "menu.sub.none", "(keins)",
     "sub.panel.none", "ohne Unterprojekt",
@@ -1337,6 +1340,9 @@ global LANG_EN := Map(
     "call.ended", "Call ended: {1}",
     "sc.d.call", "start or end a call on this desktop (timer above the tab, own column in the time log)",
     "menu.timelog.pause", "Pause the time log",
+    "menu.report", "Time report…",
+    "report.missing", "The template data\report.html is missing. Please reinstall DeskTabs or unpack the full package.",
+    "report.failed", "The time report could not be opened:`n{1}",
     "menu.sub.current", "Sub-project: {1}",
     "menu.sub.none", "(none)",
     "sub.panel.none", "no sub-project",
@@ -3164,6 +3170,9 @@ FillSettingsMenu(m) {
     if (CONF["UpdateCheck"])
         xm.Check(T("menu.update.auto"))
     lgm := Menu()
+    lgm.Add(T("menu.report"), OpenTimeReport)
+    MenuGlyph(lgm, T("menu.report"), "E9D2")
+    lgm.Add()
     lgm.Add(T("menu.timelog.on"), ToggleView.Bind("TimeLog"))
     if (CONF["TimeLog"])
         lgm.Check(T("menu.timelog.on"))
@@ -3182,6 +3191,8 @@ FillSettingsMenu(m) {
     MenuGlyph(m, T("menu.more"), "E713")
 
     m.Add()
+    m.Add(T("menu.report"), OpenTimeReport)
+    MenuGlyph(m, T("menu.report"), "E9D2")
     m.Add(T("menu.help"), HelpMenu())
     MenuGlyph(m, T("menu.help"), "E897")
     if (gUpdateTag != "")
@@ -3201,6 +3212,77 @@ OpenLogFolder(*) {
         Run('explorer.exe /select,"' file '"')
     else
         Run('explorer.exe "' LogDir() '"')
+}
+
+; ---- Zeit-Auswertung: data\report.html mit den Log-Zeilen fuellen und im Browser oeffnen ----
+; Die Seite rechnet alles selbst (JavaScript, offline). DeskTabs liefert nur die Rohdaten:
+; alle Monatsdateien unveraendert, dazu was noch nicht in der Datei steht (wartender Eintrag,
+; laufender Aufenthalt, laufende Pause), die heutigen Desktops mit Farbe, Sprache und Theme.
+OpenTimeReport(*) {
+    global gTheme, gLangCode
+    tpl := A_ScriptDir "\data\report.html"
+    if !FileExist(tpl) {
+        MsgBox(T("report.missing"), "DeskTabs", "Iconx")
+        return
+    }
+    fl := ""
+    Loop Files, LogDir() "\desktop-log_*.csv" {
+        try fl .= (fl = "" ? "" : ",") '{"name":' JsonStr(A_LoopFileName) ',"text":' JsonStr(FileRead(A_LoopFileFullPath, "UTF-8")) '}'
+    }
+    dk := ""
+    Loop GetDesktopCount() {
+        i := A_Index - 1
+        dk .= (dk = "" ? "" : ",") '{"index":' A_Index ',"id":' JsonStr(DesktopGuid(i)) ',"name":' JsonStr(GetDesktopNameRaw(i))
+            . ',"color":"#' Format("{:06X}", DesktopColor(i)) '"}'
+    }
+    pal := ""
+    for col in CONF["Palette"]
+        pal .= (pal = "" ? "" : ",") '"#' Format("{:06X}", col) '"'
+    lv := ""
+    for r in LiveRows()
+        lv .= (lv = "" ? "" : ",") r
+    json := '{"lang":' JsonStr(gLangCode) ',"theme":' JsonStr(gTheme) ',"version":' JsonStr(APP_VERSION)
+        . ',"generated":' JsonStr(IsoTime(A_Now)) ',"desks":[' dk '],"palette":[' pal '],"files":[' fl '],"live":[' lv ']}'
+    html := StrReplace(FileRead(tpl, "UTF-8"), "/*DESKTABS_DATA*/", json, , , 1)
+    dir := A_Temp "\DeskTabs-report"
+    path := dir "\DeskTabs-" (gLangCode = "de" ? "Zeit-Auswertung" : "time-report") ".html"
+    try {
+        DirCreate(dir)
+        f := FileOpen(path, "w", "UTF-8")
+        f.Write(html), f.Close()
+        Run('"' path '"')
+    } catch as e
+        MsgBox(T("report.failed", e.Message), "DeskTabs", "Iconx")
+}
+; Was noch nicht in der Monatsdatei steht, als Zeilen fuer die Auswertung (nicht geschrieben)
+LiveRows() {
+    global gSegStart, gSegDesk, gSegName, gSegSub, gSegSrc, gSegId, gSegAct, gLogCarry, gLogPend, gGap
+    rows := []
+    if (!CONF["TimeLog"])
+        return rows
+    if (IsObject(gLogPend))
+        rows.Push(LiveRow(gLogPend["start"], gLogPend["end"], gLogPend["desk"] + 1, gLogPend["name"], gLogPend["sub"]
+            , "active", gLogPend["id"], gLogPend["src"], gLogPend["act"]))
+    if (gSegStart != "")
+        rows.Push(LiveRow(gLogCarry != "" ? gLogCarry : gSegStart, A_Now, gSegDesk + 1, gSegName, gSegSub
+            , "active", gSegId, gSegSrc, gSegAct))
+    if (IsObject(gGap))
+        rows.Push(LiveRow(gGap["start"], A_Now, "", "", "", gGap["state"], "", gGap["info"], ""))
+    return rows
+}
+LiveRow(start, end, idx, name, sub, state, id, src, act) => '{"start":' JsonStr(IsoTime(start)) ',"end":' JsonStr(IsoTime(end))
+    . ',"desktop_index":' JsonStr(String(idx)) ',"desktop_name":' JsonStr(name) ',"subproject":' JsonStr(sub)
+    . ',"state":' JsonStr(state) ',"desktop_id":' JsonStr(id) ',"source":' JsonStr(src) ',"activity":' JsonStr(act) '}'
+; JSON-Zeichenkette; "<" maskiert, damit Daten den <script>-Block nicht beenden koennen
+JsonStr(s) {
+    s := RegExReplace(String(s), "[\x00-\x08\x0B\x0C\x0E-\x1F]")     ; uebrige Steuerzeichen waeren ungueltiges JSON
+    s := StrReplace(s, "\", "\\")
+    s := StrReplace(s, '"', '\"')
+    s := StrReplace(s, "`r", "\r")
+    s := StrReplace(s, "`n", "\n")
+    s := StrReplace(s, "`t", "\t")
+    s := StrReplace(s, "<", "\u003c")
+    return '"' s '"'
 }
 
 ; Untermenue "Hilfe": Doku, Changelog, Feedback-Wege, Update-Pruefung

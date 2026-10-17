@@ -14,7 +14,7 @@ A single-file **AutoHotkey v2** script that draws a clickable bar of buttons (on
 - `DeskTabs.ahk` — the entire app (GUI, DLL calls, timers, WinEvent hook). All logic lives here.
 - `VirtualDesktopAccessor.dll` — must sit in the same folder as the script/exe at runtime.
 - `settings.ini` — user runtime file (position, per-desktop colours, abbreviations, icons, view settings). Auto-created, git-ignored.
-- `lang\de.ini`, `lang\en.ini` — UI texts (override the built-in maps); `data\glyph-names.txt` — names and search words for the icon library.
+- `lang\de.ini`, `lang\en.ini` — UI texts (override the built-in maps); `data\glyph-names.txt` — names and search words for the icon library; `data\report.html` — the time report (plain HTML/JS, no libraries). `OpenTimeReport()` replaces `/*DESKTABS_DATA*/` with JSON (raw CSV texts, live rows, today's desktops with colours, language, theme) and opens the copy from `%TEMP%\DeskTabs-report\`. Opened directly, the page shows sample data. Counting rules live in its JavaScript and must match the time log section below.
 - `icons\` (fetched site icons) and `timelog\` (monthly CSVs) — created at runtime, git-ignored.
 - `installer\DeskTabs.iss`, `setup.ps1`, `.github/workflows/build.yml` — setup, one-line installer, release build.
 
