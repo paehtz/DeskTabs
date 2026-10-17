@@ -1,6 +1,10 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.16
+- **Each desktop keeps its windows in front:** windows shown on all desktops no longer push themselves to the front everywhere. When you return to a desktop, the windows you last worked with there are back in front, on all monitors, and the last one used has the focus. Turn it off under **More settings**.
+- **Smoother reordering:** even the first tab you drag after a start glides calmly into place.
+
 ## 1.1.15
 - **Leaves nothing behind:** after a one-click update, DeskTabs removes the downloaded setup file again, so your disk stays tidy.
 

@@ -1,6 +1,10 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.16
+- **Jeder Desktop behält seine Fenster vorne:** Fenster, die auf allen Desktops liegen, drängen sich nicht mehr überall nach vorne. Kommst Du auf einen Desktop zurück, liegen dort wieder die Fenster vorne, mit denen Du dort zuletzt gearbeitet hast, auf allen Monitoren, und das zuletzt benutzte hat den Fokus. Abschaltbar unter **Weitere Einstellungen**.
+- **Umsortieren ohne Ruckeln:** Auch beim ersten Verschieben eines Tabs nach dem Start gleitet er ruhig an seinen Platz.
+
 ## 1.1.15
 - **Hinterlässt keinen Ballast:** Nach einem Update mit einem Klick räumt DeskTabs die heruntergeladene Setup-Datei wieder weg. Deine Festplatte bleibt sauber.
 

@@ -100,6 +100,7 @@ global CONF := Map(
     "UpdateCheck",    1,       ; 1 = einmal taeglich bei GitHub nach einer neueren Version fragen (nur Versionsnummer, keine Daten)
     "Hotkeys",        0,       ; 1 = Tastenkuerzel fuer den Direktsprung (Ziffernreihe UND Ziffernblock)
     "DragToTab",      1,       ; 1 = Fenster an der Titelleiste auf einen Tab ziehen schickt es auf diesen Desktop
+    "RestoreZOrder",  1,       ; 1 = je Desktop merken, welche Fenster vorne lagen, und das beim Zurueckkommen wiederherstellen
     "AttentionDot",   1,       ; 1 = Punkt am Tab, wenn ein Programm auf einem anderen Desktop blinkt
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
@@ -781,6 +782,8 @@ global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem V
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
 global gOd := Map(), gOdNext := 0x10000, gMenuGlyphs := Map(), gMenuSwatches := Map()   ; selbst gezeichnete Menues
 global gCard := 0, gNoticeDismissed := "", gWasWelcomed := ""   ; Hinweis-Karten (Update, Neu in dieser Version)
+global gZBlockUntil := 0         ; bis dahin kein Abbild (Wechsel laeuft, Wiederherstellung steht aus)
+global gZSnap := Map()          ; Desktop-GUID -> Fenster in Z-Reihenfolge (oberstes zuerst), siehe ZSnapCurrent
 global gSP := 0, gSPClosed := 0   ; Unterprojekt-Auswahl am aktiven Tab (SubPanelOpen)
 global gBarReused := false, gBarPos := [0, 0]   ; Neuaufbau im vorhandenen Fenster (kein Aufblitzen)
 global gNameCache := 0         ; Desktop-Namen, nur waehrend eines Aufbaus gemerkt
@@ -883,6 +886,7 @@ global LANG_DE := Map(
     "menu.hotkeys.shiftclick", "Umschalt + Klick auf einen Tab: aktives Fenster dorthin schicken",
     "tip.dropmove", "Loslassen: Fenster nach „{1}“ verschieben",
     "menu.dragtotab", "Fenster an der Titelleiste auf einen Tab ziehen = dorthin verschieben",
+    "menu.zorder", "Fensterreihenfolge je Desktop wiederherstellen",
     "menu.tab.fetch", "Fenster hierher holen",
     "key.backspace", "Rücktaste",
     "menu.hotkeys.back", "{1}: zurück zum letzten Desktop (auch Mittelklick auf die Leiste)",
@@ -1119,6 +1123,7 @@ global LANG_EN := Map(
     "menu.hotkeys.shiftclick", "Shift + click a tab: send the active window there",
     "tip.dropmove", "Release to move the window to “{1}”",
     "menu.dragtotab", "Drag a window by its title bar onto a tab to move it there",
+    "menu.zorder", "Restore each desktop's window order",
     "menu.tab.fetch", "Bring a window here",
     "key.backspace", "Backspace",
     "menu.hotkeys.back", "{1}: back to the last desktop (or middle-click the bar)",
@@ -1404,7 +1409,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -2832,6 +2837,9 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.directjump"), (*) => SetView("SwitchMethod", CONF["SwitchMethod"] = "dll" ? "native" : "dll"))
     if (CONF["SwitchMethod"] = "dll")
         xm.Check(T("menu.directjump"))
+    xm.Add(T("menu.zorder"), ToggleView.Bind("RestoreZOrder"))
+    if (CONF["RestoreZOrder"])
+        xm.Check(T("menu.zorder"))
     xm.Add(T("menu.dragtotab"), ToggleView.Bind("DragToTab"))
     if (CONF["DragToTab"])
         xm.Check(T("menu.dragtotab"))
@@ -5163,6 +5171,11 @@ SwitchToDesktop(target) {
     cnt := GetDesktopCount()
     if (target < 0 || target >= cnt || target = cur)
         return
+    if (CONF["RestoreZOrder"]) {
+        SetTimer(ZSnapCurrent, 0)
+        ZSnapCurrent()            ; Reihenfolge des Desktops festhalten, den wir verlassen
+        global gZBlockUntil := A_TickCount + 5000
+    }
     gSwitching := true            ; sperrt Rebuilds + Mausrad-Folgeticks waehrend des Wechsels
     global gSelfTick := A_TickCount
     if (CONF["SwitchMethod"] = "native") {
@@ -5185,17 +5198,138 @@ SwitchToDesktop(target) {
         VD("GoToDesktopNumber", "Int", target)
         if (fgDesk >= 0 && VD("GetWindowDesktopNumber", "Ptr", fg, "Int") != fgDesk)
             VD("MoveWindowToDesktopNumber", "Ptr", fg, "Int", fgDesk)
+        ArriveDesk()              ; sofort: Reihenfolge des Ziels, bevor man das Fenster sieht, das Windows gewaehlt hat
     }
     gSwitching := false
     gSelfTick := A_TickCount
-    UpdateHighlight()
-    SetTimer(FocusTopWindow, -80)     ; kurz warten, bis Windows den Wechsel abgeschlossen hat
+    UpdateHighlight()                 ; Zeit-Log, Leiste; ArriveDesk lief schon (oben), laeuft dort nochmal leer
 }
 
 ; Nach einem Wechsel das oberste Fenster des Ziel-Desktops nach vorne holen. Windows laesst
 ; den Fokus sonst gern an einem unsichtbaren Fenster des alten Desktops haengen; Programme
 ; mit Fenstern auf mehreren Desktops (Firefox, Chrome) versuchen dann nach vorne zu kommen,
 ; werden abgewiesen und blinken - samt Taskleisten-Knopf auf fremden Desktops.
+; ------------- Fensterreihenfolge je Desktop -------------------------------
+; Windows fuehrt EINE Z-Reihenfolge fuer alle Desktops. Ein Fenster, das auf allen Desktops
+; liegt und auf Desktop B nach vorne geholt wurde, liegt deshalb auch auf A vorn. DeskTabs
+; merkt sich je Desktop, wie seine Fenster uebereinander lagen (alle Monitore, bis 24), und
+; setzt das beim Zurueckkommen in EINEM Schritt (DeferWindowPos) wieder ein - nur wenn es
+; nicht ohnehin schon stimmt. Positionen und Groessen aendern sich beim Wechsel nicht.
+ZCandidate(hwnd) {
+    global MyGui, gStripe, gCard, gSP
+    if ((MyGui && hwnd = MyGui.Hwnd) || (gStripe && hwnd = gStripe.Hwnd))
+        return false
+    if ((gCard && hwnd = gCard["gui"].Hwnd) || (gSP && hwnd = gSP["gui"].Hwnd))
+        return false
+    try {
+        if !(WinGetStyle("ahk_id " hwnd) & 0x10000000) || WinGetMinMax("ahk_id " hwnd) = -1
+            return false
+        ex := WinGetExStyle("ahk_id " hwnd)
+        if ((ex & 0x80) && !(ex & 0x40000)) || (ex & 0x08000000)     ; Werkzeug-/Nicht-aktivierbare Fenster
+            return false
+        if (DllCall("GetWindow", "Ptr", hwnd, "UInt", 4, "Ptr"))         ; Dialog mit Besitzer
+            return false
+        if (WinGetTitle("ahk_id " hwnd) = "" || InStr(",Shell_TrayWnd,Shell_SecondaryTrayWnd,Progman,WorkerW,", "," WinGetClass("ahk_id " hwnd) ","))
+            return false
+        return true
+    }
+    return false
+}
+; Fenster des aktuellen Desktops (inkl. der auf allen Desktops) in Z-Reihenfolge, oberstes zuerst
+ZOrderCurrent(limit := 24) {
+    out := []
+    for hwnd in WinGetList() {
+        if !ZCandidate(hwnd)
+            continue
+        if (VD("IsWindowOnCurrentVirtualDesktop", "Ptr", hwnd, "Int") != 1)
+            continue
+        out.Push(hwnd)
+        if (out.Length >= limit)
+            break
+    }
+    return out
+}
+ZSnapCurrent() {
+    global gZSnap, gSwitching, gZBlockUntil, gCurrent
+    if (gSwitching || !CONF["RestoreZOrder"])
+        return
+    if (A_TickCount < gZBlockUntil || GetCurrentDesktop() != gCurrent) {
+        SetTimer(ZSnapCurrent, -400)          ; Wechsel noch nicht verarbeitet: spaeter nochmal
+        return
+    }
+    id := DesktopGuid(GetCurrentDesktop())
+    if (id != "")
+        gZSnap[id] := ZOrderCurrent()
+}
+; Angekommen auf einem Desktop: gemerkte Reihenfolge wiederherstellen, dann Fokus
+; Angekommen auf einem Desktop: gemerkte Reihenfolge in einem Schritt einsetzen, Fokus auf das
+; oberste. Bewusst schlank (kein Abgleich, keine Fensterabfragen): Windows hat beim Wechsel
+; schon ein Fenster nach vorne geholt, je schneller das korrigiert ist, desto weniger sieht man.
+; Unveraenderte Reihenfolge einzusetzen aendert sichtbar nichts.
+ArriveDesk() {
+    global gZSnap, gZBlockUntil
+    SetWinDelay(-1)                           ; ohne die Pause, die AutoHotkey sonst nach WinActivate einlegt
+    t0 := A_TickCount
+    try ArriveDeskRun(t0)
+    gZBlockUntil := A_TickCount + 300         ; danach darf wieder gemerkt werden ...
+    SetTimer(ZSnapCurrent, -500)              ; ... und der wiederhergestellte Stand wird das neue Abbild
+}
+; Sichtbares Fenster dieses Desktops (nicht verborgen, nicht minimiert, nicht "immer oben")?
+ZVisibleHere(h) {
+    if (!DllCall("IsWindowVisible", "Ptr", h) || DllCall("IsIconic", "Ptr", h))
+        return false
+    if (DllCall("GetWindowLongPtr", "Ptr", h, "Int", -20, "Ptr") & 0x8)   ; WS_EX_TOPMOST (u. a. die Leiste)
+        return false
+    cloaked := 0
+    DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cloaked, "UInt", 4)   ; DWMWA_CLOAKED
+    return !cloaked
+}
+ArriveDeskRun(t0) {
+    global gZSnap
+    if (!CONF["RestoreZOrder"])
+        return FocusTopWindow()
+    id := DesktopGuid(GetCurrentDesktop())
+    if (id = "" || !gZSnap.Has(id))
+        return FocusTopWindow()
+    want := [], pos := Map()
+    for hwnd in gZSnap[id]                    ; was es noch gibt und nicht minimiert ist
+        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd))
+            want.Push(hwnd), pos[hwnd] := want.Length
+    if (!want.Length)
+        return FocusTopWindow()
+    fg0 := DllCall("GetForegroundWindow", "Ptr")
+    ; Wie tief muss eingegriffen werden? Von oben durch die Z-Reihenfolge gehen: jedes gemerkte
+    ; Fenster, das nicht an seiner Stelle liegt oder ueber dem ein fremdes sichtbares liegt,
+    ; muss mit allem darueber neu einsortiert werden. Meist sind das zwei, drei Fenster.
+    need := 0, stranger := false, found := 0
+    h := DllCall("GetTopWindow", "Ptr", 0, "Ptr")
+    while (h && found < want.Length) {
+        if (pos.Has(h)) {
+            found++                           ; das wievielte gemerkte Fenster von oben
+            if (pos[h] != found || stranger)
+                need := Max(need, pos[h], found)
+        } else if (!stranger && ZVisibleHere(h) && ZCandidate(h))
+            stranger := true                  ; ab hier liegt ein fremdes Fenster ueber gemerkten
+        h := DllCall("GetWindow", "Ptr", h, "UInt", 2, "Ptr")   ; GW_HWNDNEXT
+    }
+    if (need) {
+        hdwp := DllCall("BeginDeferWindowPos", "Int", need, "Ptr")
+        after := 0                            ; HWND_TOP fuer das oberste, dann jeweils darunter
+        Loop need {
+            h := want[A_Index]
+            if (hdwp)
+                hdwp := DllCall("DeferWindowPos", "Ptr", hdwp, "Ptr", h, "Ptr", after
+                    , "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0213, "Ptr")   ; NOSIZE|NOMOVE|NOACTIVATE|NOOWNERZORDER
+            after := h
+        }
+        if (hdwp)
+            DllCall("EndDeferWindowPos", "Ptr", hdwp)
+    }
+    if (DllCall("GetForegroundWindow", "Ptr") != want[1])
+        if !DllCall("SetForegroundWindow", "Ptr", want[1])
+            try WinActivate("ahk_id " want[1])
+}
+
 FocusTopWindow() {
     global MyGui, gStripe
     fg := DllCall("GetForegroundWindow", "Ptr")
@@ -5608,6 +5742,8 @@ UpdateHighlight() {
         gDeskSince := A_TickCount
         if (gAttention.Has(gCurrent))
             gAttention.Delete(gCurrent)        ; angekommen: Punkt erledigt
+        global gZBlockUntil := A_TickCount + 5000   ; bis ArriveDesk fertig ist (setzt es dann kurz)
+        SetTimer(ArriveDesk, -1)               ; sofort: Windows hat beim Wechsel schon ein Fenster nach vorne geholt
     }
     LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
     RenderBar()
@@ -5848,6 +5984,8 @@ StripeBelowBar() {
 ; Wird bei jedem Vordergrund-Wechsel aufgerufen -> Leiste sofort wieder nach oben
 WinEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
     global gHidden
+    if (CONF["RestoreZOrder"])
+        SetTimer(ZSnapCurrent, -300)    ; Fensterreihenfolge dieses Desktops merken (entprellt)
     FullscreenTick()            ; ggf. aus-/einblenden bei Vollbild
     if (!gHidden) {
         AssertTop()             ; sofort ueber das neue Fenster / die Taskleiste
