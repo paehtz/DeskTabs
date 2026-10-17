@@ -1,5 +1,6 @@
 # Benutzerspezifische Laufzeit-Dateien (Position, Kuerzel, Farb-Overrides, Ansicht)
 settings.ini
+settings.ini.*.bak
 # Zeit-Log (persoenliche Nutzungsdaten, nie versionieren)
 desktop-log_*.csv
 timelog/

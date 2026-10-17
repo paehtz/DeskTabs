@@ -54,7 +54,7 @@ TimeLog=1                    ; 0|1
 Acme Bakery=acmebakery.com
 ```
 
-Keys are the exact desktop names as shown in Windows Task View (read them with `VirtualDesktopAccessor\GetDesktopName` or from the bar's labels). Write real umlauts; the file is UTF-8.
+Keys are the exact desktop names as shown in Windows Task View (read them with `VirtualDesktopAccessor\GetDesktopName` or from the bar's labels). Write real umlauts. The file is **UTF-16 LE with BOM** (DeskTabs converts it on start since 1.1.16): keep that encoding when you edit it. Windows' IniWrite writes ANSI into a UTF-8 file, which mixes encodings and garbles umlauts.
 
 ## Read the time log (billing, reports)
 

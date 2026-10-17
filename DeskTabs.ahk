@@ -1323,6 +1323,7 @@ Main()
 Main() {
     global VDA, MyGui
     OnError(LogErr)
+    NormalizeIniEncoding()
     InitLanguage()
     if !FileExist(CONF["DllPath"]) {
         MsgBox(T("err.dll_missing", CONF["DllPath"]), "DeskTabs", 0x10)
@@ -6246,6 +6247,44 @@ IniSectionMap(sec) {
 ; Abschnitt selbst aus der Datei lesen. IniRead geht ueber die Windows-INI-
 ; Schnittstelle und versteht kein UTF-8; Namen mit Umlauten kaemen dort verstuemmelt
 ; an. Deshalb: erst als UTF-8 lesen, sonst in der Systemcodierung.
+; settings.ini muss UTF-16 (mit BOM) sein: nur dann schreibt Windows' IniWrite Umlaute als
+; Unicode. In einer UTF-8- oder ANSI-Datei (etwa von Hand oder von einem KI-Agenten angelegt)
+; schreibt es ANSI dazwischen, die Datei ist dann gemischt und "Baeckerei" wird zu "BÃ¤ckerei".
+; Einmalig beim Start umwandeln; jede Zeile wird einzeln als UTF-8 oder ANSI erkannt, so
+; wird auch eine schon gemischte Datei sauber. Vorher eine Sicherungskopie daneben legen.
+NormalizeIniEncoding() {
+    path := CONF["IniPath"]
+    if !FileExist(path)
+        return
+    try {
+        raw := FileRead(path, "RAW")
+        if (raw.Size >= 2 && NumGet(raw, 0, "UChar") = 0xFF && NumGet(raw, 1, "UChar") = 0xFE)
+            return                                     ; schon UTF-16 LE
+        start := (raw.Size >= 3 && NumGet(raw, 0, "UChar") = 0xEF && NumGet(raw, 1, "UChar") = 0xBB
+            && NumGet(raw, 2, "UChar") = 0xBF) ? 3 : 0   ; UTF-8-BOM ueberspringen
+        txt := "", ls := start
+        Loop raw.Size - start + 1 {
+            i := start + A_Index - 1
+            if (i < raw.Size && NumGet(raw, i, "UChar") != 0x0A)
+                continue
+            len := i - ls
+            if (len > 0) {
+                line := StrGet(raw.Ptr + ls, len, "UTF-8")
+                if InStr(line, Chr(0xFFFD))
+                    line := StrGet(raw.Ptr + ls, len, "CP1252")
+                txt .= RTrim(line, "`r")
+            }
+            if (i < raw.Size)
+                txt .= "`r`n"
+            ls := i + 1
+        }
+        FileCopy(path, path ".vor-utf16.bak", true)
+        f := FileOpen(path, "w", "UTF-16")
+        f.Write(txt), f.Close()
+        global gIniStamp := FileGetTime(path, "M")    ; eigene Aenderung, kein Live-Reload
+    }
+}
+
 ReadIniText() {
     txt := ""
     try txt := FileRead(CONF["IniPath"], "UTF-8")
