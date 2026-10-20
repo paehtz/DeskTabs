@@ -150,7 +150,9 @@ global gSwitchSrc := ""          ; Herkunft des naechsten eigenen Wechsels (clic
 global gGap := 0                 ; Zeit-Log: laufende Luecke Map(state, start, info) - idle|locked|suspended|paused
 global gWasLocked := false       ; vor dem Ruhezustand gesperrt? (dann nach dem Aufwachen weiter "locked")
 global gCall := 0                ; laufendes Gespraech Map(id, name, sub, start, tick), siehe StartCall
-global gCallGui := 0, gCallDC := 0, gCallHbm := 0, gCallObm := 0, gCallConfirm := 0
+global gCallGui := 0, gCallDC := 0, gCallHbm := 0, gCallObm := 0, gCallConfirm := 0, gNoteGui := 0, gNoteHover := 0
+global gNoteCtrls := Map()          ; Hwnd -> [Steuerelement, Grundfarbe, Hover-Farbe] der Bubbles
+global gToast := 0, gToastDC := 0, gToastHbm := 0, gToastObm := 0, gToastXY := [0, 0, 0, 0]
 global gSegSub := ""          ; Zeit-Log: Unterprojekt des laufenden Aufenthalts
 global gLogCarry := "", gLogPend := 0   ; Zeit-Log-Filter: mitgenommene Uebergangszeit, wartender Eintrag
 
@@ -843,14 +845,17 @@ ToggleLogPause(*) {
     BuildTray()
 }
 
-; ---- Gespraeche: Timer ueber dem Tab, eigene Spalte "activity" im Zeit-Log ----
-; Ein Anruf fuer Projekt X laeuft weiter, auch wenn man zwischendurch auf andere Desktops
-; schaut: jede Zeile traegt bis zum Beenden "call:<Desktop>[ / <Unterprojekt>]", und
-; Stille am Rechner gilt in der Zeit nicht als Pause. Start/Ende per Tab-Menue oder
-; Tastenkuerzel (CallHotkey, Standard Strg+Win+T, gilt fuer den aktuellen Desktop).
+; ---- Timer: Pille ueber dem Tab, eigene Spalte "activity" im Zeit-Log ----
+; Ein Timer fuer Desktop X (Telefonat, Arbeit ueber mehrere Desktops fuer einen Kunden)
+; laeuft weiter, auch wenn man zwischendurch auf andere Desktops wechselt: jede Zeile traegt
+; bis zum Beenden "timer:<Desktop>[ / <Unterprojekt>]", und Stille am Rechner gilt in der
+; Zeit nicht als Pause. Beim Beenden fragt DeskTabs nach einer freiwilligen Notiz und traegt
+; sie in alle Zeilen des Timers nach (" | <Notiz>"). Bis 1.1.17 hiess das "Gespraech" und
+; die Zeilen "call:..." (alte Zeilen bleiben so). Start/Ende per Tab-Menue oder Tastenkuerzel
+; (CallHotkey, Standard Strg+Win+T, gilt fuer den aktuellen Desktop).
 CallLabel() {
     global gCall
-    return IsObject(gCall) ? "call:" gCall["name"] (gCall["sub"] != "" ? " / " gCall["sub"] : "") : ""
+    return IsObject(gCall) ? "timer:" gCall["name"] (gCall["sub"] != "" ? " / " gCall["sub"] : "") : ""
 }
 CallActiveOn(num) {
     global gCall
@@ -871,7 +876,7 @@ StartCall(num, *) {
     IniSet("State", "Call", gCall["start"] "|" gCall["id"] "|" gCall["name"] "|" gCall["sub"])
     if (CONF["TimeLog"] && !gLogPaused && gSegStart != "") {   ; ab jetzt mit Gespraech
         LogClose(A_Now, true)
-        LogOpen(GetCurrentDesktop(), "call-start")
+        LogOpen(GetCurrentDesktop(), "timer-start")
     }
     CallPillPaint()
     SetTimer(CallTick, 1000)
@@ -880,17 +885,399 @@ StopCall(*) {
     global gCall, gSegStart, gLogPaused
     if (!IsObject(gCall))
         return
-    dur := CallDuration()
+    dur := CallDuration(), label := CallLabel(), since := gCall["start"], nm := gCall["name"]
     if (CONF["TimeLog"] && !gLogPaused && gSegStart != "")
         LogClose(A_Now, true)
     gCall := 0
     if (CONF["TimeLog"] && !gLogPaused && gSegStart = "")
-        LogOpen(GetCurrentDesktop(), "call-end")
+        LogOpen(GetCurrentDesktop(), "timer-end")
     IniDel("State", "Call")
     SetTimer(CallTick, 0)
     CallPillHide()
+    if (CONF["TimeLog"])                      ; freiwillige Notiz, leer oder Esc = keine; danach die Bestaetigungskarte
+        return TimerNoteAsk(label, since, nm, dur)
     ToolTip(T("call.ended", dur), , , 3)
     SetTimer(() => ToolTip(, , , 3), -2500)
+}
+
+; ---- Notiz zum Timer: kleines Fenster mit den letzten Notizen dieses Desktops als Bubbles ----
+; [TimerNotes] <Desktop>=*Angeheftet|Neueste|...  ("*" = angeheftet: bleibt vorn, faellt nie heraus;
+; von den uebrigen bleiben die 6 zuletzt benutzten). Klick auf eine Bubble uebernimmt sie,
+; x entfernt sie, Rechtsklick: anheften/loesen, bearbeiten, entfernen.
+TimerNotes(desk) {
+    out := []
+    for , s in StrSplit(IniLookup("TimerNotes", desk), "|")
+        if (Trim(s, " *") != "")
+            out.Push(Map("text", Trim(LTrim(s, "*")), "pin", SubStr(s, 1, 1) = "*"))
+    return out
+}
+TimerNotesSave(desk, list) {
+    s := ""
+    for it in list
+        s .= (s = "" ? "" : "|") (it["pin"] ? "*" : "") it["text"]
+    if (s = "")
+        IniDelLoose("TimerNotes", desk)
+    else
+        IniSet("TimerNotes", desk, s)
+}
+; Benutzte Notiz nach vorn (angeheftete ganz vorn, sonst hinter die angehefteten)
+TimerNoteUse(desk, note) {
+    list := TimerNotes(desk), pin := false
+    for i, it in list
+        if (it["text"] = note) {
+            pin := it["pin"], list.RemoveAt(i)
+            break
+        }
+    pos := 1
+    if (!pin)
+        for it in list
+            if (it["pin"])
+                pos++
+    list.InsertAt(pos, Map("text", note, "pin", pin))
+    keep := [], n := 0
+    for it in list
+        if (it["pin"] || ++n <= 6)
+            keep.Push(it)
+    TimerNotesSave(desk, keep)
+}
+; "|" trennt die gespeicherten Notizen, Zeilenumbrueche haben im Log nichts zu suchen
+CleanNote(s) => SubStr(Trim(RegExReplace(StrReplace(s, "|", "/"), "\s+", " ")), 1, 120)
+
+TimerNoteAsk(label, since, desk, dur, text := "") {
+    global gNoteGui, gNoteCtrls, gNoteHover
+    static hooked := false
+    try gNoteGui.Destroy()
+    g := Gui("+AlwaysOnTop -MinimizeBox -MaximizeBox", T("timer.note.title"))
+    gNoteGui := g, gNoteCtrls := Map(), gNoteHover := 0
+    if (!hooked)
+        OnMessage(0x20, NoteSetCursor), hooked := true          ; WM_SETCURSOR: Hand ueber den Bubbles
+    g.SetFont("s10", "Segoe UI")
+    g.MarginX := 20, g.MarginY := 16
+    state := Map("done", false), names := Map()
+    g.Add("Text", "xm w460", T("timer.note.text", desk, dur))
+    ed := g.Add("Edit", "xm y+8 w460 r1", text)
+    list := TimerNotes(desk)
+    if (list.Length) {
+        lb := g.Add("Text", "xm y+14 w460 cGray", T("timer.note.recent"))
+        lb.GetPos(, &ly, , &lh)
+        cx := 20, cy := ly + lh + 6, lim := 480, bottom := cy
+        ; Eine Bubble = drei aneinanderliegende Felder mit gemeinsamem Rahmen: Notiz | ✎ | ×
+        st := "h28 Border 0x200 Center BackgroundF3F3F3"
+        for it in list {
+            b := g.Add("Text", Format("x{} y{} {}", cx, cy, st), "   " (it["pin"] ? "📌 " : "") it["text"] "   ")
+            b.GetPos(, , &bw)
+            if (cx > 20 && cx + bw + 54 > lim) {             ; passt nicht mehr in die Zeile
+                cx := 20, cy += 36
+                b.Move(cx, cy)
+            }
+            e := g.Add("Text", Format("x{} y{} w28 {}", cx + bw - 1, cy, st), "✎")
+            x := g.Add("Text", Format("x{} y{} w28 {}", cx + bw + 26, cy, st), "×")
+            names[b.Hwnd] := it["text"]
+            gNoteCtrls[b.Hwnd] := [b, "F3F3F3", "D3E3FD"], gNoteCtrls[e.Hwnd] := [e, "F3F3F3", "D3E3FD"]
+            gNoteCtrls[x.Hwnd] := [x, "F3F3F3", "F9D6D5"]
+            b.OnEvent("Click", Finish.Bind(it["text"]))
+            e.OnEvent("Click", Rename.Bind(it["text"]))
+            x.OnEvent("Click", Remove.Bind(it["text"]))
+            cx += bw + 54 + 10, bottom := cy + 28
+        }
+        by := bottom + 18
+    } else {
+        hint := g.Add("Text", "xm y+10 w460 cGray", T("timer.note.hint"))
+        hint.GetPos(, &hy, , &hh)
+        by := hy + hh + 14
+    }
+    ok := g.Add("Button", Format("x20 y{} w130 Default", by), T("timer.note.save"))
+    no := g.Add("Button", "x+10 yp w140", T("timer.note.skip"))
+    ok.OnEvent("Click", (*) => Finish(ed.Value))
+    no.OnEvent("Click", (*) => Finish(""))
+    g.OnEvent("Escape", (*) => Finish(""))
+    g.OnEvent("Close", (*) => Finish(""))
+    g.OnEvent("ContextMenu", NoteMenu)
+    SetGuiIcon(g)
+    g.Show("AutoSize Center")
+    ed.Focus()
+    SetTimer(NoteHoverTick, 40)
+
+    Finish(note, *) {
+        if (state["done"])
+            return
+        state["done"] := true
+        note := CleanNote(note)
+        try g.Destroy()
+        if (note != "") {
+            LogSetNote(label, since, note)
+            TimerNoteUse(desk, note)
+        }
+        ; sichtbare Bestaetigung am Tab des Desktops (sonst am Griff)
+        num := -2
+        Loop GetDesktopCount()
+            if (GetDesktopNameRaw(A_Index - 1) = desk) {
+                num := A_Index - 1
+                break
+            }
+        if (note != "")
+            ToastShow(num, T("timer.toast.saved", note, dur))
+        else
+            ToastShow(num, T("timer.toast.nonote", dur), 0xE916)
+        if (note != "")
+            StartConfirmBlink(num)
+    }
+    Reopen(newText) {
+        state["done"] := true
+        try g.Destroy()
+        TimerNoteAsk(label, since, desk, dur, newText)
+    }
+    Remove(txt, *) {
+        l := TimerNotes(desk)
+        for i, it in l
+            if (it["text"] = txt) {
+                l.RemoveAt(i)
+                break
+            }
+        TimerNotesSave(desk, l)
+        Reopen(ed.Value)
+    }
+    Rename(txt, *) {                               ; neuer Text an derselben Stelle, angeheftet bleibt angeheftet
+        g.Opt("+OwnDialogs")
+        ib := InputBox(T("timer.note.renameq", txt), T("timer.note.title"), "w420 h130", txt)
+        nt := CleanNote(ib.Value)
+        if (ib.Result != "OK" || nt = "" || nt == txt)
+            return
+        l := TimerNotes(desk), out := []
+        for it in l
+            if (it["text"] = txt)
+                it["text"] := nt, out.Push(it)
+            else if (it["text"] != nt)
+                out.Push(it)
+        TimerNotesSave(desk, out)
+        ; auch frueher eingetragene Notizen? Standard: nein (Enter aendert nichts rueckwirkend)
+        n := LogRenameNote(desk, txt, nt, true)
+        if (n && MsgBox(T("timer.note.retro", txt, n, desk, nt), T("timer.note.title"), "YesNo Icon? Default2") = "Yes")
+            LogRenameNote(desk, txt, nt)
+        Reopen(ed.Value)
+    }
+    TogglePin(txt, *) {
+        l := TimerNotes(desk)
+        for i, it in l
+            if (it["text"] = txt) {
+                it["pin"] := !it["pin"], l.RemoveAt(i), l.InsertAt(1, it)
+                break
+            }
+        TimerNotesSave(desk, l)
+        Reopen(ed.Value)
+    }
+    NoteMenu(gui, ctrl, *) {
+        if (!ctrl || !names.Has(ctrl.Hwnd))
+            return
+        txt := names[ctrl.Hwnd], pinned := false
+        for it in TimerNotes(desk)
+            if (it["text"] = txt)
+                pinned := it["pin"]
+        m := Menu()
+        m.Add(T(pinned ? "timer.note.unpin" : "timer.note.pin"), TogglePin.Bind(txt))
+        m.Add(T("timer.note.edit"), Rename.Bind(txt))
+        m.Add(T("timer.note.remove"), Remove.Bind(txt))
+        m.Show()
+    }
+}
+; Notiz in frueheren Timer-Zeilen eines Desktops umbenennen (alle Monatsdateien). Betroffen ist
+; nur das letzte Feld, wenn es "timer:<Desktop>[ / <Unterprojekt>] | <alt>" lautet. dry = nur zaehlen.
+LogRenameNote(desk, old, new, dry := false) {
+    head := ',"timer:' StrReplace(desk, '"', '""'), tail := " | " StrReplace(old, '"', '""') '"'
+    newTail := " | " StrReplace(new, '"', '""') '"', total := 0
+    Loop Files, LogDir() "\desktop-log_*.csv" {
+        file := A_LoopFileFullPath
+        try {
+            out := "", n := 0
+            Loop Parse, FileRead(file, "UTF-8"), "`n", "`r" {
+                line := A_LoopField
+                p := InStr(line, ',"timer:', , -1)
+                if (p && SubStr(line, -StrLen(tail)) == tail && SubStr(line, p, StrLen(head)) == head) {
+                    rest := SubStr(line, p + StrLen(head), 3)
+                    if (rest = " / " || rest = " | ")
+                        line := SubStr(line, 1, StrLen(line) - StrLen(tail)) newTail, n++
+                }
+                out .= line "`n"
+            }
+            total += n
+            if (dry || !n)
+                continue
+            f := FileOpen(file ".tmp", "w", "UTF-8")
+            f.Write(RTrim(out, "`n") "`n"), f.Close()
+            FileMove(file ".tmp", file, 1)
+        }
+    }
+    return total
+}
+; Hover der Bubbles: die Bubble unter der Maus hellt sich auf (x rot), sonst Grundfarbe
+NoteHoverTick() {
+    global gNoteGui, gNoteCtrls, gNoteHover
+    alive := false
+    try alive := WinExist("ahk_id " gNoteGui.Hwnd)
+    if (!alive) {
+        SetTimer(NoteHoverTick, 0)
+        gNoteHover := 0
+        return
+    }
+    h := 0
+    try MouseGetPos(, , , &h, 2)
+    if (h = gNoteHover)
+        return
+    if (gNoteHover && gNoteCtrls.Has(gNoteHover))
+        try NoteTint(gNoteCtrls[gNoteHover], 2)
+    gNoteHover := gNoteCtrls.Has(h) ? h : 0
+    if (gNoteHover)
+        try NoteTint(gNoteCtrls[gNoteHover], 3)
+}
+NoteTint(c, which) {
+    c[1].Opt("+Background" c[which])
+    c[1].Redraw()
+}
+; ---- Bestaetigung als schmale Lasche: gleitet wie die Unterprojekt-Auswahl aus dem Tab nach
+; oben, steht gut drei Sekunden und gleitet zurueck. Grau wie die Leiste, Symbol in der Desktop-Farbe.
+ToastShow(num, text, glyph := 0xE73E) {
+    global gToast, gToastDC, gToastHbm, gToastObm, gToastXY, MyGui, BTNS, gLayout
+    if (!MyGui || !gLayout)
+        return
+    ToastHide()
+    item := 0
+    for it in BTNS
+        if (it["num"] = num) {
+            item := it
+            break
+        }
+    col := (num >= 0) ? DesktopColor(num) : CONF["ColActiveBg"]
+    fill := CONF["ColBarBg"], tx := CONF["ColInactiveTx"]
+    GdipStart()
+    font := MakeFont(), sf := MakeFormat()
+    DllCall("gdiplus\GdipSetStringFormatAlign", "Ptr", sf, "Int", 0)
+    mB := 0, mG := 0
+    DllCall("gdiplus\GdipCreateBitmapFromScan0", "Int", 1, "Int", 1, "Int", 0, "Int", 0x26200A, "Ptr", 0, "Ptr*", &mB)
+    DllCall("gdiplus\GdipGetImageGraphicsContext", "Ptr", mB, "Ptr*", &mG)
+    tw := Min(MeasureText(mG, font, sf, text) + px(2), px(420))
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG), DllCall("gdiplus\GdipDisposeImage", "Ptr", mB)
+    padX := px(14), isz := px(16), gap := px(8), h := px(34)
+    w := padX + isz + gap + tw + padX
+    if (item)
+        w := Max(w, item["w"])
+    bx := 0, by := 0
+    try WinGetPos(&bx, &by, , , MyGui.Hwnd)
+    left := item ? bx + item["x"] : bx
+    if (left + w > A_ScreenWidth)
+        left := Max(0, A_ScreenWidth - w)
+    bi := Buffer(40, 0)
+    NumPut("UInt", 40, bi, 0), NumPut("Int", w, bi, 4), NumPut("Int", -h, bi, 8), NumPut("UShort", 1, bi, 12), NumPut("UShort", 32, bi, 14)
+    gToastDC := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr")
+    bits := 0
+    gToastHbm := DllCall("CreateDIBSection", "Ptr", gToastDC, "Ptr", bi, "UInt", 0, "Ptr*", &bits, "Ptr", 0, "UInt", 0, "Ptr")
+    gToastObm := DllCall("SelectObject", "Ptr", gToastDC, "Ptr", gToastHbm, "Ptr")
+    g := 0
+    DllCall("gdiplus\GdipCreateFromHDC", "Ptr", gToastDC, "Ptr*", &g)
+    DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipSetTextRenderingHint", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipSetPixelOffsetMode", "Ptr", g, "Int", 2)
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", 0)
+    r := px(CONF["CornerRadius"]), d := r * 2                ; oben rund, unten eckig (sitzt auf der Leiste)
+    path := 0
+    DllCall("gdiplus\GdipCreatePath", "Int", 0, "Ptr*", &path)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", 0, "Float", 0, "Float", d, "Float", d, "Float", 180, "Float", 90)
+    DllCall("gdiplus\GdipAddPathArc", "Ptr", path, "Float", w - d, "Float", 0, "Float", d, "Float", d, "Float", 270, "Float", 90)
+    DllCall("gdiplus\GdipAddPathLine", "Ptr", path, "Float", w, "Float", r, "Float", w, "Float", h)
+    DllCall("gdiplus\GdipAddPathLine", "Ptr", path, "Float", w, "Float", h, "Float", 0, "Float", h)
+    DllCall("gdiplus\GdipClosePathFigure", "Ptr", path)
+    brush := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(fill), "Ptr*", &brush)
+    DllCall("gdiplus\GdipFillPath", "Ptr", g, "Ptr", brush, "Ptr", path)
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", brush), DllCall("gdiplus\GdipDeletePath", "Ptr", path)
+    fam := 0, fI := 0
+    DllCall("gdiplus\GdipCreateFontFamilyFromName", "Str", CONF["IconFont"], "Ptr", 0, "Ptr*", &fam)
+    if (fam)
+        DllCall("gdiplus\GdipCreateFont", "Ptr", fam, "Float", isz, "Int", 0, "Int", 2, "Ptr*", &fI)
+    sfC := MakeFormat()
+    if (fI)
+        DrawText(g, fI, sfC, Chr(glyph), padX, 0, isz, h, ARGB(col))
+    DrawText(g, font, sf, text, padX + isz + gap, 0, tw, h, ARGB(tx))
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    DllCall("gdiplus\GdipDeleteFont", "Ptr", font), DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf), DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sfC)
+    if (fI)
+        DllCall("gdiplus\GdipDeleteFont", "Ptr", fI)
+    if (fam)
+        DllCall("gdiplus\GdipDeleteFontFamily", "Ptr", fam)
+    gToast := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08080000 -DPIScale")   ; NOACTIVATE | LAYERED
+    gToast.Show(Format("NA x{1} y{2} w1 h1", left, by - 1))
+    try DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", gToast.Hwnd)
+    gToastXY := [left, by, w, h]
+    ToastSlide(true)
+    SetTimer(ToastOut, -3200)
+}
+; Lasche um hh Pixel aus der Leiste geschoben zeigen (oberer Teil des Bildes zuerst)
+ToastAt(hh) {
+    global gToast, gToastDC, gToastXY
+    if (!gToast || !gToastDC)
+        return
+    pt := Buffer(8, 0), sz := Buffer(8, 0), src := Buffer(8, 0)
+    NumPut("Int", gToastXY[1], "Int", gToastXY[2] - hh, pt), NumPut("Int", gToastXY[3], "Int", hh, sz)
+    try DllCall("UpdateLayeredWindow", "Ptr", gToast.Hwnd, "Ptr", 0, "Ptr", pt, "Ptr", sz, "Ptr", gToastDC
+        , "Ptr", src, "UInt", 0, "UInt*", 0x01FF0000, "UInt", 2)
+}
+ToastSlide(out) {
+    global gToast, gToastXY
+    h := gToastXY[4]
+    Loop 8 {
+        if (!gToast)
+            return
+        f8 := A_Index / 8                            ; (nicht "t": T() ist die Uebersetzung)
+        k := out ? 1 - (1 - f8) ** 3 : (1 - f8) ** 3
+        ToastAt(Max(1, Round(h * k)))
+        Sleep(12)
+    }
+}
+ToastOut() {
+    ToastSlide(false)
+    ToastHide()
+}
+ToastHide(*) {
+    global gToast, gToastDC, gToastHbm, gToastObm
+    SetTimer(ToastOut, 0)
+    old := gToast, gToast := 0
+    try old.Destroy()
+    if (gToastDC) {
+        DllCall("SelectObject", "Ptr", gToastDC, "Ptr", gToastObm), DllCall("DeleteObject", "Ptr", gToastHbm), DllCall("DeleteDC", "Ptr", gToastDC)
+        gToastDC := 0
+    }
+}
+NoteSetCursor(wParam, lParam, msg, hwnd) {
+    global gNoteCtrls
+    if (!gNoteCtrls.Has(wParam))
+        return
+    DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", 32649, "Ptr"))   ; IDC_HAND
+    return 1
+}
+; Notiz eines beendeten Timers nachtragen: jede Zeile ab seinem Start, deren activity noch
+; genau "timer:<...>" ist, bekommt " | <Notiz>". Die Monatsdatei wird atomar ersetzt.
+LogSetNote(label, since, note) {
+    old := "," CsvQuote(label), new := "," CsvQuote(label " | " note), from := IsoTime(since)
+    files := [LogFile(since)]
+    if (LogFile(A_Now) != files[1])
+        files.Push(LogFile(A_Now))
+    for file in files {
+        if !FileExist(file)
+            continue
+        try {
+            out := "", n := 0
+            Loop Parse, FileRead(file, "UTF-8"), "`n", "`r" {
+                line := A_LoopField
+                if (line != "" && StrCompare(SubStr(line, 1, 19), from) >= 0 && SubStr(line, -StrLen(old)) == old)
+                    line := SubStr(line, 1, StrLen(line) - StrLen(old)) new, n++
+                out .= line "`n"
+            }
+            if (!n)
+                continue
+            f := FileOpen(file ".tmp", "w", "UTF-8")
+            f.Write(RTrim(out, "`n") "`n"), f.Close()
+            FileMove(file ".tmp", file, 1)
+        }
+    }
 }
 ToggleCallHere(*) {
     global gCall
@@ -974,7 +1361,7 @@ CallPillPaint() {
     fg := ReadableOn(fill)
     FillRoundRect(g, 0, 0, w, h, h / 2, ARGB(fill))
     if (fI)
-        DrawText(g, fI, sf, Chr(0xE717), px(10), 0, px(14), h, ARGB(fg))      ; Hoerer
+        DrawText(g, fI, sf, Chr(0xE916), px(10), 0, px(14), h, ARGB(fg))      ; Stoppuhr
     DrawText(g, fB, sf, txt, px(10) + px(14) + px(5), 0, tw, h, ARGB(fg))
     DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
     DllCall("gdiplus\GdipDeleteFont", "Ptr", fB), DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
@@ -990,8 +1377,8 @@ CallPillPaint() {
 CallPillHide() {
     global gCallGui, gCallDC, gCallHbm, gCallObm, gCallConfirm
     gCallConfirm := 0
-    try gCallGui.Destroy()
-    gCallGui := 0
+    g := gCallGui, gCallGui := 0            ; erst loesen: waehrend Destroy kommen noch Nachrichten (WM_SETCURSOR)
+    try g.Destroy()
     if (gCallDC) {
         DllCall("SelectObject", "Ptr", gCallDC, "Ptr", gCallObm), DllCall("DeleteObject", "Ptr", gCallHbm), DllCall("DeleteDC", "Ptr", gCallDC)
         gCallDC := 0
@@ -999,7 +1386,7 @@ CallPillHide() {
 }
 CallPillUp(wParam, lParam, msg, hwnd) {
     global gCallGui, gCallConfirm
-    if (!gCallGui || hwnd != gCallGui.Hwnd)
+    if (!gCallGui || hwnd != CallPillHwnd())
         return
     if (gCallConfirm)
         StopCall()
@@ -1009,9 +1396,15 @@ CallPillUp(wParam, lParam, msg, hwnd) {
     }
     return 0
 }
+; Fenster-Handle der Pille, 0 wenn sie gerade verschwindet
+CallPillHwnd() {
+    global gCallGui
+    try return gCallGui.Hwnd
+    return 0
+}
 CallPillCursor(wParam, lParam, msg, hwnd) {
     global gCallGui
-    if (!gCallGui || hwnd != gCallGui.Hwnd)
+    if (!gCallGui || hwnd != CallPillHwnd())
         return
     DllCall("SetCursor", "Ptr", DllCall("LoadCursor", "Ptr", 0, "Ptr", 32649, "Ptr"))   ; IDC_HAND
     return 1
@@ -1087,11 +1480,25 @@ global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-B
 ; neben dem Skript ergaenzt oder ueberschreibt Texte, ohne den Code anzufassen.
 global LANG_DE := Map(
     "menu.sub", "Unterprojekt",
-    "menu.call.start", "Gespräch starten (Timer)",
-    "menu.call.stop", "Gespräch beenden ({1})",
+    "menu.call.start", "Timer starten",
+    "menu.call.stop", "Timer beenden ({1})",
     "call.stopq", "Beenden?",
-    "call.ended", "Gespräch beendet: {1}",
-    "sc.d.call", "Gespräch auf diesem Desktop starten oder beenden (Timer über dem Tab, eigene Spalte im Zeit-Log)",
+    "call.ended", "Timer beendet: {1}",
+    "sc.d.call", "Timer für diesen Desktop starten oder beenden (die ganze Zeit zählt hierfür, auch wenn Du wechselst)",
+    "timer.note.title", "DeskTabs: Notiz zum Timer",
+    "timer.note.text", "Wofür lief der Timer für „{1}“ ({2})? Die Notiz ist freiwillig.",
+    "timer.note.recent", "Zuletzt bei diesem Desktop · Klick übernimmt · ✎ umbenennen · × entfernen · Rechtsklick: anheften",
+    "timer.note.renameq", "Neuer Text für „{1}“:",
+    "timer.note.retro", "„{1}“ steht in {2} früheren Einträgen von „{3}“ im Zeit-Log.`n`nAuch dort in „{4}“ ändern?`n`nJa: überall ändern   ·   Nein: nur den Vorschlag`n`nSchon abgeschlossene Tage in anderen Programmen (etwa ManicTime) ändern sich dadurch nicht.",
+    "timer.toast.saved", "Notiz „{1}“ gespeichert · {2}",
+    "timer.toast.nonote", "Timer beendet · {1} · ohne Notiz",
+    "timer.note.hint", "Zum Beispiel „Telefonat mit Christian“. Deine Notizen erscheinen hier beim nächsten Mal als Vorschläge.",
+    "timer.note.save", "Speichern",
+    "timer.note.skip", "Ohne Notiz",
+    "timer.note.pin", "Anheften (bleibt immer vorn)",
+    "timer.note.unpin", "Nicht mehr anheften",
+    "timer.note.edit", "Umbenennen…",
+    "timer.note.remove", "Entfernen",
     "menu.timelog.pause", "Zeit-Log pausieren",
     "menu.report", "Zeit-Auswertung…",
     "report.missing", "Die Vorlage data\report.html fehlt. Bitte DeskTabs neu installieren oder das Paket vollständig entpacken.",
@@ -1336,11 +1743,25 @@ global LANG_DE := Map(
 )
 global LANG_EN := Map(
     "menu.sub", "Sub-project",
-    "menu.call.start", "Start a call (timer)",
-    "menu.call.stop", "End the call ({1})",
-    "call.stopq", "End?",
-    "call.ended", "Call ended: {1}",
-    "sc.d.call", "start or end a call on this desktop (timer above the tab, own column in the time log)",
+    "menu.call.start", "Start timer",
+    "menu.call.stop", "Stop timer ({1})",
+    "call.stopq", "Stop?",
+    "call.ended", "Timer stopped: {1}",
+    "sc.d.call", "start or stop a timer for this desktop (all its time counts here, even when you switch)",
+    "timer.note.title", "DeskTabs: timer note",
+    "timer.note.text", "What was the timer for “{1}” ({2}) about? The note is optional.",
+    "timer.note.recent", "Recent for this desktop · click to use · ✎ rename · × remove · right-click: pin",
+    "timer.note.renameq", "New text for “{1}”:",
+    "timer.note.retro", "“{1}” appears in {2} earlier entries of “{3}” in the time log.`n`nChange it to “{4}” there as well?`n`nYes: change everywhere   ·   No: only the suggestion`n`nDays already closed in other programs (such as ManicTime) do not change.",
+    "timer.toast.saved", "Note “{1}” saved · {2}",
+    "timer.toast.nonote", "Timer stopped · {1} · no note",
+    "timer.note.hint", "For example “Call with Christian”. Your notes show up here as suggestions next time.",
+    "timer.note.save", "Save",
+    "timer.note.skip", "No note",
+    "timer.note.pin", "Pin (always stays first)",
+    "timer.note.unpin", "Unpin",
+    "timer.note.edit", "Rename…",
+    "timer.note.remove", "Remove",
     "menu.timelog.pause", "Pause the time log",
     "menu.report", "Time report…",
     "report.missing", "The template data\report.html is missing. Please reinstall DeskTabs or unpack the full package.",
@@ -2979,7 +3400,7 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.tab.short"), "E8AC")
         callLbl := CallActiveOn(num) ? T("menu.call.stop", CallDuration()) : T("menu.call.start")
         m.Add(callLbl, CallActiveOn(num) ? StopCall : StartCall.Bind(num))
-        MenuGlyph(m, callLbl, "E717")
+        MenuGlyph(m, callLbl, "E916")
         subCur := SubActive(num)
         subLbl := (subCur != "") ? T("menu.sub.current", subCur) : T("menu.sub")
         m.Add(subLbl, SubMenu(num))
@@ -3757,7 +4178,7 @@ DesktopGuid(num) {
 MoveDesktopSettings(oldName, newName) {
     if (oldName = "" || newName = "" || NormName(oldName) = NormName(newName))
         return
-    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject"] {
+    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject", "TimerNotes"] {
         v := IniLookup(sec, oldName)
         if (v = "" || IniLookup(sec, newName) != "")
             continue

@@ -192,38 +192,38 @@ const STR = {
     prevName: {day: "Vortag", week: "Vorwoche", month: "Vormonat", year: "Vorjahr", range: "vorherigem Zeitraum"},
     today: "Heute", to: "bis", kw: "KW",
     groupLbl: "Gruppieren", deskLbl: "Desktops", showAll: "alle zeigen",
-    groups: {desk: "Desktop", sub: "Desktop + Unterprojekt", day: "Tag", wday: "Wochentag", chron: "Ablauf", calls: "Gespräche"},
+    groups: {desk: "Desktop", sub: "Desktop + Unterprojekt", day: "Tag", wday: "Wochentag", chron: "Ablauf", calls: "Timer"},
     k_work: "Arbeitszeit", k_days1: "Arbeitstag", k_days: "Arbeitstage", k_avg: "im Schnitt pro Arbeitstag",
-    k_span: "am Rechner (erste bis letzte Aktivität)", k_switch: "Desktop-Wechsel", k_calls: "Gespräche", k_pause: "Pausen zwischendurch",
+    k_span: "am Rechner (erste bis letzte Aktivität)", k_switch: "Desktop-Wechsel", k_calls: "Timer", k_pause: "Pausen zwischendurch",
     delta: "{1} ggü. {2}", deltaHint: "verglichen bis zum gleichen Zeitpunkt", deltaSame: "wie {1}",
     c_day: "Tagesablauf", c_dayHint: "wann Du auf welchem Desktop warst · Maus auf einen Block zeigt Details",
     c_hours: "Arbeitszeit je Stunde", c_cols: "Arbeitszeit je Tag", c_weeks: "Arbeitszeit je Woche", c_flow: "Tagesabläufe",
     c_colsHint: "farbig nach Desktop · Klick öffnet den Tag", c_flowHint: "jede Zeile ein Tag · Klick öffnet den Tag",
     c_clock: "Arbeitszeit nach Uhrzeit", c_clockHint: "Minuten je Stunde, im Schnitt über {1} Arbeitstage",
     v_cols: "Stunden", v_flow: "Abläufe", v_clock: "Uhrzeiten", flowLong: "Abläufe gibt es für Zeiträume bis 62 Tage",
-    lane_desk: "Desktop", lane_call: "Gespräch", lane_pause: "Pause",
-    t_desk: "Nach Desktop", t_sub: "Nach Desktop und Unterprojekt", t_day: "Nach Tag", t_wday: "Nach Wochentag", t_chron: "Ablauf des Tages", t_calls: "Gespräche",
-    h_desk: "Desktop", h_sub: "Desktop · Unterprojekt", h_day: "Tag", h_wday: "Wochentag", h_time: "Zeit", h_share: "Anteil", h_calls: "Gespräche",
-    h_from: "von – bis", h_dur: "Dauer", h_when: "Wann", h_with: "Gespräch für", h_sum: "Summe",
+    lane_desk: "Desktop", lane_call: "Timer", lane_pause: "Pause",
+    t_desk: "Nach Desktop", t_sub: "Nach Desktop und Unterprojekt", t_day: "Nach Tag", t_wday: "Nach Wochentag", t_chron: "Ablauf des Tages", t_calls: "Timer",
+    h_desk: "Desktop", h_sub: "Desktop · Unterprojekt", h_day: "Tag", h_wday: "Wochentag", h_time: "Zeit", h_share: "Anteil", h_calls: "Timer",
+    h_from: "von – bis", h_dur: "Dauer", h_when: "Wann", h_with: "Timer für", h_note: "Notiz", h_sum: "Summe",
     exp_sum: "⤓ CSV: diese Tabelle", exp_rows: "⤓ CSV: Einzelzeilen", print: "Drucken / PDF",
     d_subs_days: "Unterprojekte und Tage", d_days: "Tage", d_desks: "Desktops an diesem Tag", d_wday: "{1} Arbeitstage, im Schnitt {2} h",
     openDay: "Tag öffnen ›",
-    none: "In diesem Zeitraum gibt es keine erfasste Arbeitszeit.", noCalls: "In diesem Zeitraum gab es keine Gespräche.",
+    none: "In diesem Zeitraum gibt es keine erfasste Arbeitszeit.", noCalls: "In diesem Zeitraum lief kein Timer.",
     nolog: "Noch keine Zeilen im Zeit-Log. Das Zeit-Log zeichnet auf, sobald es eingeschaltet ist (Weitere Einstellungen › Zeit-Log › Aufzeichnen).",
     how: "So wird gezählt",
-    howText: "Gezählt wird nur Zeit, in der Du am Rechner gearbeitet hast. Läuft ein Gespräch, gehört die ganze Gesprächszeit dem Kunden des Gesprächs, auch wenn Du währenddessen auf einem anderen Desktop warst. Ein umbenannter Desktop erscheint unter seinem heutigen Namen. Der Tagesablauf zeigt, wo Du tatsächlich warst; ausgeblendete Desktops sind dort blass. Pausen zählen nur zwischen erster und letzter Aktivität eines Tages, die Nacht also nicht. Die Seite ist ein Stand zum angegebenen Zeitpunkt. Tasten: <kbd>←</kbd> <kbd>→</kbd> blättern, <kbd>H</kbd> heute.",
+    howText: "Gezählt wird nur Zeit, in der Du am Rechner gearbeitet hast. Läuft ein Timer, gehört seine ganze Zeit dem Desktop, für den Du ihn gestartet hast, auch wenn Du währenddessen auf einem anderen Desktop warst. Ein umbenannter Desktop erscheint unter seinem heutigen Namen. Der Tagesablauf zeigt, wo Du tatsächlich warst; ausgeblendete Desktops sind dort blass. Pausen zählen nur zwischen erster und letzter Aktivität eines Tages, die Nacht also nicht. Die Seite ist ein Stand zum angegebenen Zeitpunkt. Tasten: <kbd>←</kbd> <kbd>→</kbd> blättern, <kbd>H</kbd> heute.",
     pauses: "Pausen", pausesHint: "zwischen erster und letzter Aktivität, nicht gezählt",
     st: {idle: "Keine Eingabe", locked: "Gesperrt", suspended: "Ruhezustand", paused: "Zeit-Log pausiert", off: "DeskTabs aus / Rechner aus"},
-    callOf: "Gespräch", now: "jetzt",
+    callOf: "Timer", now: "jetzt",
     asof: "Stand: {1}", asofHint: "Die Seite zeigt den Stand beim Öffnen. Für neue Zahlen die Zeit-Auswertung erneut aus DeskTabs öffnen.",
     foot_files: "{1} Log-Dateien", foot_priv: "Die Daten verlassen Deinen Rechner nicht.",
     demo: "Beispieldaten: Diese Seite wurde direkt geöffnet. Aus DeskTabs heraus (Menü › Zeit-Auswertung) zeigt sie Deine eigenen Zeiten.",
     err: "Die Daten der Auswertung ließen sich nicht lesen. Bitte die Zeit-Auswertung erneut aus DeskTabs öffnen; hilft das nicht, bitte als Fehler melden.",
     hidden: "ausgeblendet: {1}", printGroup: "gruppiert nach {1}",
-    csv: {hm: "Stunden (h:mm)", dec: "Stunden (dezimal)", share: "Anteil %", calls: "davon Gespräche (h:mm)", sum: "Summe",
+    csv: {hm: "Stunden (h:mm)", dec: "Stunden (dezimal)", share: "Anteil %", calls: "davon Timer (h:mm)", sum: "Summe", note: "Notiz",
           desk: "Desktop", sub: "Unterprojekt", date: "Datum", wday: "Wochentag", days: "Arbeitstage", avg: "im Schnitt je Arbeitstag (h:mm)",
-          start: "Beginn", end: "Ende", sec: "Sekunden", state: "Status", call: "Gespräch für", counted: "Gezählt für", src: "Herkunft"},
-    fn: {desk: "desktops", sub: "unterprojekte", day: "tage", wday: "wochentage", chron: "ablauf", calls: "gespraeche", rows: "zeilen"},
+          start: "Beginn", end: "Ende", sec: "Sekunden", state: "Status", call: "Timer für", counted: "Gezählt für", src: "Herkunft"},
+    fn: {desk: "desktops", sub: "unterprojekte", day: "tage", wday: "wochentage", chron: "ablauf", calls: "timer", rows: "zeilen"},
     theme: "Hell/Dunkel", prev: "Zurück (←)", next: "Weiter (→)"
   },
   en: {
@@ -232,38 +232,38 @@ const STR = {
     prevName: {day: "the day before", week: "last week", month: "last month", year: "last year", range: "the previous range"},
     today: "Today", to: "to", kw: "Week",
     groupLbl: "Group by", deskLbl: "Desktops", showAll: "show all",
-    groups: {desk: "Desktop", sub: "Desktop + sub-project", day: "Day", wday: "Weekday", chron: "Timeline", calls: "Calls"},
+    groups: {desk: "Desktop", sub: "Desktop + sub-project", day: "Day", wday: "Weekday", chron: "Timeline", calls: "Timers"},
     k_work: "Working time", k_days1: "working day", k_days: "working days", k_avg: "average per working day",
-    k_span: "at the computer (first to last activity)", k_switch: "desktop switches", k_calls: "calls", k_pause: "breaks in between",
+    k_span: "at the computer (first to last activity)", k_switch: "desktop switches", k_calls: "timers", k_pause: "breaks in between",
     delta: "{1} vs. {2}", deltaHint: "compared up to the same point in time", deltaSame: "same as {1}",
     c_day: "Your day", c_dayHint: "which desktop you were on, and when · hover a block for details",
     c_hours: "Working time per hour", c_cols: "Working time per day", c_weeks: "Working time per week", c_flow: "Days at a glance",
     c_colsHint: "coloured by desktop · click to open the day", c_flowHint: "one row per day · click to open the day",
     c_clock: "Working time by time of day", c_clockHint: "minutes per hour, averaged over {1} working days",
     v_cols: "Hours", v_flow: "Days", v_clock: "Time of day", flowLong: "Days at a glance is available for up to 62 days",
-    lane_desk: "Desktop", lane_call: "Call", lane_pause: "Break",
-    t_desk: "By desktop", t_sub: "By desktop and sub-project", t_day: "By day", t_wday: "By weekday", t_chron: "Timeline of the day", t_calls: "Calls",
-    h_desk: "Desktop", h_sub: "Desktop · sub-project", h_day: "Day", h_wday: "Weekday", h_time: "Time", h_share: "Share", h_calls: "Calls",
-    h_from: "from – to", h_dur: "Duration", h_when: "When", h_with: "Call for", h_sum: "Total",
+    lane_desk: "Desktop", lane_call: "Timer", lane_pause: "Break",
+    t_desk: "By desktop", t_sub: "By desktop and sub-project", t_day: "By day", t_wday: "By weekday", t_chron: "Timeline of the day", t_calls: "Timers",
+    h_desk: "Desktop", h_sub: "Desktop · sub-project", h_day: "Day", h_wday: "Weekday", h_time: "Time", h_share: "Share", h_calls: "Timers",
+    h_from: "from – to", h_dur: "Duration", h_when: "When", h_with: "Timer for", h_note: "Note", h_sum: "Total",
     exp_sum: "⤓ CSV: this table", exp_rows: "⤓ CSV: single rows", print: "Print / PDF",
     d_subs_days: "Sub-projects and days", d_days: "Days", d_desks: "Desktops on this day", d_wday: "{1} working days, {2} h on average",
     openDay: "Open day ›",
-    none: "No working time recorded in this period.", noCalls: "No calls in this period.",
+    none: "No working time recorded in this period.", noCalls: "No timer ran in this period.",
     nolog: "The time log has no rows yet. It records as soon as it is switched on (More settings › Time log › Record).",
     how: "How time is counted",
-    howText: "Only time you spent working at the computer counts. While a call runs, the whole call belongs to the call's client, even if you were on another desktop meanwhile. A renamed desktop appears under its current name. The day view shows where you actually were; hidden desktops appear faded there. Breaks count only between the first and last activity of a day, so nights do not. The page is a snapshot taken when you opened it. Keys: <kbd>←</kbd> <kbd>→</kbd> to browse, <kbd>T</kbd> for today.",
+    howText: "Only time you spent working at the computer counts. While a timer runs, all its time belongs to the desktop you started it for, even if you were on another desktop meanwhile. A renamed desktop appears under its current name. The day view shows where you actually were; hidden desktops appear faded there. Breaks count only between the first and last activity of a day, so nights do not. The page is a snapshot taken when you opened it. Keys: <kbd>←</kbd> <kbd>→</kbd> to browse, <kbd>T</kbd> for today.",
     pauses: "Breaks", pausesHint: "between first and last activity, not counted",
     st: {idle: "No input", locked: "Locked", suspended: "Sleep", paused: "Time log paused", off: "DeskTabs off / computer off"},
-    callOf: "Call", now: "now",
+    callOf: "Timer", now: "now",
     asof: "As of {1}", asofHint: "The page shows the state when it was opened. For new numbers, open the time report from DeskTabs again.",
     foot_files: "{1} log files", foot_priv: "Your data never leaves your computer.",
     demo: "Sample data: this page was opened directly. Opened from DeskTabs (menu › Time report) it shows your own times.",
     err: "The report data could not be read. Please open the time report from DeskTabs again; if that does not help, please report it as a bug.",
     hidden: "hidden: {1}", printGroup: "grouped by {1}",
-    csv: {hm: "Hours (h:mm)", dec: "Hours (decimal)", share: "Share %", calls: "of which calls (h:mm)", sum: "Total",
+    csv: {hm: "Hours (h:mm)", dec: "Hours (decimal)", share: "Share %", calls: "of which timers (h:mm)", sum: "Total", note: "Note",
           desk: "Desktop", sub: "Sub-project", date: "Date", wday: "Weekday", days: "Working days", avg: "Average per working day (h:mm)",
-          start: "Start", end: "End", sec: "Seconds", state: "State", call: "Call for", counted: "Counted for", src: "Source"},
-    fn: {desk: "desktops", sub: "sub-projects", day: "days", wday: "weekdays", chron: "timeline", calls: "calls", rows: "rows"},
+          start: "Start", end: "End", sec: "Seconds", state: "State", call: "Timer for", counted: "Counted for", src: "Source"},
+    fn: {desk: "desktops", sub: "sub-projects", day: "days", wday: "weekdays", chron: "timeline", calls: "timers", rows: "rows"},
     theme: "Light/dark", prev: "Back (←)", next: "Forward (→)"
   }
 };
@@ -352,19 +352,22 @@ function colorOf(n) {
   let h = 0; for (const c of n) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return deskColor[n] = PAL[h % PAL.length];
 }
-// "call:<Desktop>[ / <Unterprojekt>]": bekannte Desktop-Namen zuerst, damit ein " / " im Namen nicht stoert
+// "timer:<Desktop>[ / <Unterprojekt>][ | <Notiz>]" (bis 1.1.17 "call:..."): bekannte Desktop-Namen
+// zuerst, damit ein " / " im Namen nicht stoert; die Notiz ist alles nach dem ersten " | "
 const knownNames = [...new Set(ROWS.map(r => r.name).concat((D.desks || []).map(d => d.name)).filter(Boolean))].sort((a, b) => b.length - a.length);
+const TIMER_RE = /^(timer|call):/;
 function parseCall(a) {
-  const t = a.slice(5);
-  for (const n of knownNames) if (t === n || t.startsWith(n + " / ")) return [n, t.slice(n.length + 3)];
+  let t = a.replace(TIMER_RE, ""), note = "";
+  const p = t.indexOf(" | "); if (p >= 0) { note = t.slice(p + 3); t = t.slice(0, p); }
+  for (const n of knownNames) if (t === n || t.startsWith(n + " / ")) return [n, t.slice(n.length + 3), note];
   const i = t.indexOf(" / ");
-  return i < 0 ? [t, ""] : [t.slice(0, i), t.slice(i + 3)];
+  return i < 0 ? [t, "", note] : [t.slice(0, i), t.slice(i + 3), note];
 }
 for (const r of ROWS) {
   r.own = r.id && idName[r.id] ? idName[r.id] : resolve(r.name);
-  if (r.state === "active" && r.act.startsWith("call:")) {
-    const [n, s] = parseCall(r.act);
-    r.call = true; r.callDesk = resolve(n); r.callSub = s;
+  if (r.state === "active" && TIMER_RE.test(r.act)) {
+    const [n, s, note] = parseCall(r.act);
+    r.call = true; r.callDesk = resolve(n); r.callSub = s; r.note = note;
   }
   r.desk = r.call ? r.callDesk : r.own;
   r.dsub = r.call ? r.callSub : r.sub;
@@ -384,7 +387,7 @@ const CALLS = [];
   for (const r of ROWS) {
     if (!r.call) continue;
     if (cur && cur.act === r.act && r.s - cur.e <= 120000) { cur.e = r.e; cur.sec += r.sec; cur.live = r.live; }
-    else CALLS.push(cur = {act: r.act, desk: r.callDesk, sub: r.callSub, s: r.s, e: r.e, sec: r.sec, day: r.day, live: r.live});
+    else CALLS.push(cur = {act: r.act, desk: r.callDesk, sub: r.callSub, note: r.note, s: r.s, e: r.e, sec: r.sec, day: r.day, live: r.live});
   }
 }
 
@@ -641,7 +644,7 @@ const title = t => `<title>${esc(t)}</title>`;
 function rowTip(r) {
   let t = `${clock(r.s)} – ${r.live && +r.e === +NOW ? S.now : clock(r.e)} (${hm(r.sec)} h)\n`;
   t += r.state === "active" ? r.own + (r.sub ? " · " + r.sub : "") : S.st[r.state] || r.state;
-  if (r.call) t += `\n${S.callOf}: ${r.callDesk}${r.callSub ? " · " + r.callSub : ""}`;
+  if (r.call) t += `\n${S.callOf}: ${r.callDesk}${r.callSub ? " · " + r.callSub : ""}${r.note ? " · " + r.note : ""}`;
   return t;
 }
 // Eine Spur: Bloecke je Zeile (Desktop farbig, Pausen grau, nur innerhalb der Arbeitsspanne)
@@ -779,16 +782,16 @@ function renderTable(day, all, work, total, calls) {
       const p = r.state !== "active", faded = !p && st.off.has(r.own) ? ' style="opacity:.45"' : "";
       const nm = p ? `<span class="dot" style="background:var(--pause)"></span>${esc(S.st[r.state] || r.state)}`
                    : `<span class="dot" style="background:${colorOf(r.own)}"></span>${esc(r.own)}${r.sub ? ` <span class="muted">· ${esc(r.sub)}</span>` : ""}`;
-      return `<tr class="${p ? "pause" : ""}"${faded}><td>${clock(r.s)} – ${r.live && +r.e === +NOW ? esc(S.now) : clock(r.e)}</td><td><div class="name" style="font-weight:${p ? 400 : 500}">${nm}</div></td><td class="r">${hm(r.sec)} h</td><td class="r hide-s call">${r.call ? "☎ " + esc(r.callDesk) + (r.callSub ? " · " + esc(r.callSub) : "") : ""}</td></tr>`;
+      return `<tr class="${p ? "pause" : ""}"${faded}><td>${clock(r.s)} – ${r.live && +r.e === +NOW ? esc(S.now) : clock(r.e)}</td><td><div class="name" style="font-weight:${p ? 400 : 500}">${nm}</div></td><td class="r">${hm(r.sec)} h</td><td class="r hide-s call">${r.call ? "⏱ " + esc(r.callDesk) + (r.callSub ? " · " + esc(r.callSub) : "") + (r.note ? " · " + esc(r.note) : "") : ""}</td></tr>`;
     }).join("") : `<tr><td colspan="4">${emptyMsg()}</td></tr>`;
     return;
   }
   if (st.group === "calls") {
-    H.innerHTML = `<tr><th>${esc(S.h_when)}</th><th>${esc(S.h_with)}</th><th class="r">${esc(S.h_dur)}</th></tr>`;
+    H.innerHTML = `<tr><th>${esc(S.h_when)}</th><th>${esc(S.h_with)}</th><th class="hide-s">${esc(S.h_note)}</th><th class="r">${esc(S.h_dur)}</th></tr>`;
     B.innerHTML = calls.length ? calls.slice().reverse().map(c => `<tr class="row" data-day="${c.day}"><td>${esc(day ? "" : dShort(c.s) + ", ")}${clock(c.s)} – ${c.live && +c.e === +NOW ? esc(S.now) : clock(c.e)}</td>`
-      + `<td><div class="name"><span class="dot" style="background:${colorOf(c.desk)}"></span>${esc(c.desk)}${c.sub ? ` <span class="muted">· ${esc(c.sub)}</span>` : ""}</div></td><td class="r">${hmS(c.sec)} h</td></tr>`).join("")
-      + `<tr class="sumrow"><td>${esc(S.h_sum)}</td><td>${calls.length} ${esc(S.k_calls)}</td><td class="r">${hmS(sum(calls))} h</td></tr>`
-      : `<tr><td colspan="3"><div class="empty">${esc(S.noCalls)}</div></td></tr>`;
+      + `<td><div class="name"><span class="dot" style="background:${colorOf(c.desk)}"></span>${esc(c.desk)}${c.sub ? ` <span class="muted">· ${esc(c.sub)}</span>` : ""}</div></td><td class="hide-s">${esc(c.note || "")}</td><td class="r">${hmS(c.sec)} h</td></tr>`).join("")
+      + `<tr class="sumrow"><td>${esc(S.h_sum)}</td><td>${calls.length} ${esc(S.k_calls)}</td><td class="hide-s"></td><td class="r">${hmS(sum(calls))} h</td></tr>`
+      : `<tr><td colspan="4"><div class="empty">${esc(S.noCalls)}</div></td></tr>`;
     if (!day) B.querySelectorAll("tr.row").forEach(t => t.onclick = () => goDay(fromKey(t.dataset.day)));
     return;
   }
@@ -815,10 +818,10 @@ function renderTable(day, all, work, total, calls) {
       label = `<span class="caret">›</span><span class="dot" style="background:${colorOf(dn)}"></span>${esc(dn)}${sb ? ` <span class="muted" style="font-weight:400">· ${esc(sb)}</span>` : ""}`;
       track = `<i style="width:${it.sec / max * 100}%;background:${colorOf(dn)}"></i>`;
     }
-    html += `<tr class="row${open ? " open" : ""}" data-i="${i}"><td><div class="name">${label}</div></td><td class="hide-s" style="width:36%"><div class="track">${track}</div></td><td class="r"><b>${hm(it.sec)}</b> h</td><td class="r">${total ? Math.round(it.sec / total * 100) : 0} %</td><td class="r hide-s call">${it.csec ? "☎ " + hmS(it.csec) + " h" : ""}</td></tr>`;
+    html += `<tr class="row${open ? " open" : ""}" data-i="${i}"><td><div class="name">${label}</div></td><td class="hide-s" style="width:36%"><div class="track">${track}</div></td><td class="r"><b>${hm(it.sec)}</b> h</td><td class="r">${total ? Math.round(it.sec / total * 100) : 0} %</td><td class="r hide-s call">${it.csec ? "⏱ " + hmS(it.csec) + " h" : ""}</td></tr>`;
     if (open) html += `<tr class="detail"><td colspan="5">${detail(it, day)}</td></tr>`;
   });
-  if (items.length > 1) html += `<tr class="sumrow"><td>${esc(S.h_sum)}</td><td class="hide-s"></td><td class="r">${hm(total)} h</td><td class="r">100 %</td><td class="r hide-s call">${work.some(r => r.call) ? "☎ " + hmS(sum(work.filter(r => r.call))) + " h" : ""}</td></tr>`;
+  if (items.length > 1) html += `<tr class="sumrow"><td>${esc(S.h_sum)}</td><td class="hide-s"></td><td class="r">${hm(total)} h</td><td class="r">100 %</td><td class="r hide-s call">${work.some(r => r.call) ? "⏱ " + hmS(sum(work.filter(r => r.call))) + " h" : ""}</td></tr>`;
   B.innerHTML = items.length ? html : `<tr><td colspan="5">${emptyMsg()}</td></tr>`;
   B.querySelectorAll("tr.row").forEach(t => t.onclick = e => {
     if (e.target.closest("a")) return;
@@ -867,14 +870,14 @@ function download(name, lines) {
 }
 const fname = kind => { const {a, b} = st.cache; return `desktabs-${kind}_${dkey(a)}${+a === +b ? "" : "_" + dkey(b)}.csv`; };
 const C = S.csv;
-const rowHead = [C.start, C.end, C.sec, C.dec, C.desk, C.sub, C.state, C.call, C.counted, C.src];
+const rowHead = [C.start, C.end, C.sec, C.dec, C.desk, C.sub, C.state, C.call, C.note, C.counted, C.src];
 const rowLine = r => [isoL(r.s), isoL(r.e), r.sec, dec(r.sec), r.state === "active" ? r.own : "", r.sub, r.state,
-  r.call ? r.callDesk + (r.callSub ? " / " + r.callSub : "") : "", r.state === "active" ? r.desk + (r.dsub ? " / " + r.dsub : "") : "", r.live ? "live" : r.src];
+  r.call ? r.callDesk + (r.callSub ? " / " + r.callSub : "") : "", r.note || "", r.state === "active" ? r.desk + (r.dsub ? " / " + r.dsub : "") : "", r.live ? "live" : r.src];
 $("expSum").onclick = () => {
   const {items, total, all, calls} = st.cache, g = st.group;
   if (g === "chron") return download(fname(S.fn.chron), [rowHead, ...chronRows(all).map(rowLine)]);
-  if (g === "calls") return download(fname(S.fn.calls), [[C.date, C.start, C.end, C.hm, C.dec, C.desk, C.sub],
-    ...calls.map(c => [dkey(c.s), clock(c.s), clock(c.e), hm(c.sec), dec(c.sec), c.desk, c.sub]), [C.sum, "", "", hm(sum(calls)), dec(sum(calls)), "", ""]]);
+  if (g === "calls") return download(fname(S.fn.calls), [[C.date, C.start, C.end, C.hm, C.dec, C.desk, C.sub, C.note],
+    ...calls.map(c => [dkey(c.s), clock(c.s), clock(c.e), hm(c.sec), dec(c.sec), c.desk, c.sub, c.note || ""]), [C.sum, "", "", hm(sum(calls)), dec(sum(calls)), "", "", ""]]);
   const share = s => total ? Math.round(s / total * 100) : 0;
   let head, line;
   if (g === "sub") { head = [C.desk, C.sub]; line = it => it.k.split("\u0000"); }
@@ -916,7 +919,7 @@ function demoData() {
       if (!lunchDone && t >= lunch) { const e = new Date(+t + ri(28, 48) * 6e4); push(t, e, null, "", "locked", "", ""); t = e; lunchDone = true; continue; }
       if (calls.length && mins >= calls[0]) {
         calls.shift(); const who = desks[ri(1, 4)], ws = who.subs.length ? who.subs[ri(0, who.subs.length - 1)] : "";
-        const act = "call:" + who.name + (ws ? " / " + ws : ""); let left = ri(6, 24) * 6e4, src = "call-start";
+        const act = "timer:" + who.name + (ws ? " / " + ws : "") + ["", " | Call with Anna", " | Proofreading", ""][ri(0, 3)]; let left = ri(6, 24) * 6e4, src = "timer-start";
         for (const p of [who, desks[0], who].slice(0, ri(1, 3))) { const len = Math.min(left, ri(2, 10) * 6e4); if (len <= 0) break; const e = new Date(+t + len); push(t, e, p, p === who ? ws : "", "active", src, act); t = e; left -= len; src = "click"; }
         if (left > 0) { const e = new Date(+t + left); push(t, e, who, ws, "active", "click", act); t = e; }
         continue;

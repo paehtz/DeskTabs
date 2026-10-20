@@ -1,6 +1,9 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.18
+- **Timer instead of call:** “Start a call” becomes **Start timer** (right-click a tab or Ctrl + Win + T). It is for anything that belongs to one client but makes you switch desktops: a phone call while you look something up elsewhere, or work with tools on several desktops. All that time counts for the desktop you started it for. When you stop it, you can add a **note** such as “Call with Christian”; it shows in the time log and the time report. DeskTabs suggests your recent notes per desktop as bubbles: click one to use it, ✎ renames it (in earlier entries too, if you like), × removes it, and a right-click pins regular entries.
+
 ## 1.1.17
 - **Time report:** the menu now has **Time report…**. It shows in your browser how much time you spent on which desktop and sub-project. Browse day by day with the arrow keys, or pick a week, month, year or any range. Each day appears as a coloured timeline, plus hours per day, your typical working hours across the day, weekdays, all calls and the comparison with last week. Hide desktops you don't need, export any table as CSV straight into Excel, and use **Print / PDF** for a timesheet. Everything stays on your computer.
 - **One click shows a window on all desktops:** **Shift + click ≡** shows the active window on every desktop, just that window, not the whole app. **Shift + click a tab** brings it back: from then on it shows only on that desktop, including the one you are on.

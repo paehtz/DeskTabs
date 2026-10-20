@@ -45,6 +45,9 @@ Client sites=Miller & Sons|Site updates
 
 [Subproject]     ; the active one (must be in the list above; delete the key for none)
 Client sites=Miller & Sons
+
+[TimerNotes]     ; note suggestions when a timer stops, separated by |; a leading * pins one
+Acme Bakery=*Site updates|Call with Anna|Flyer proofs
 ```
 
 The glyph codes are listed with names and search words in `data\glyph-names.txt` (`CODE|Name|keywords`).
@@ -76,7 +79,7 @@ The glyph codes are listed with names and search words in `data\glyph-names.txt`
 | `AttentionDot` | `0`, `1` | dot on a tab when an app there wants attention |
 | `TimeLog` | `0`, `1` | write the time log |
 | `TimeLogMinSec` | number of seconds | shorter stays count as transitions |
-| `CallHotkey` | e.g. `^#t`, empty = none | shortcut to start/end a call on the current desktop |
+| `CallHotkey` | e.g. `^#t`, empty = none | shortcut to start/stop a timer on the current desktop |
 | `UpdateCheck` | `0`, `1` | daily update check and update notice |
 
 Unknown keys and invalid values are ignored.
@@ -92,7 +95,7 @@ start,end,seconds,desktop_index,desktop_name,subproject,state,desktop_id,source,
 ```
 
 - One row per stay on a desktop (`state` = `active`). Breaks are rows of their own: `idle`, `locked`, `suspended`, `paused`, `off` (DeskTabs not running). For working time, sum `seconds` of `active` rows per `desktop_name` (and `subproject` on catch-all desktops).
-- `activity` = `call:<desktop>[ / <sub-project>]` while the user had a call running: that time belongs to the call's client, even on rows of other desktops.
+- `activity` = `timer:<desktop>[ / <sub-project>][ | <note>]` while the user had a timer running (`call:` in rows up to 1.1.17): that time belongs to the timer's desktop, even on rows of other desktops. The note (everything after the first ` | `) says what it was for, e.g. a call; the user may rename a note retroactively, so earlier rows can change. Purpose: tasks that belong to one client but make the user switch desktops (a call while looking something up elsewhere, work with tools on several desktops); without the timer that time would be spread over the visited desktops.
 - `desktop_id` is the stable desktop GUID (`desktop_index` changes when desktops are reordered). `source` tells how a row began. Rows are split at midnight.
 - Older rows may have fewer fields (5 before 1.1.12, 6 before 1.1.16). This is personal data: summarise it for the user, do not copy it anywhere they did not ask for.
 
