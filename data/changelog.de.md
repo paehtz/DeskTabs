@@ -3,6 +3,7 @@
 
 ## 1.1.17
 - **Zeit-Auswertung:** Im Menü steht jetzt **Zeit-Auswertung…**. Sie zeigt im Browser, wie viel Zeit Du auf welchem Desktop und Unterprojekt verbracht hast. Du blätterst Tag für Tag mit den Pfeiltasten oder wählst Woche, Monat, Jahr oder einen freien Zeitraum. Jeder Tag erscheint als farbige Zeitleiste, dazu Stunden je Tag, Deine typischen Arbeitszeiten über den Tag, Wochentage, alle Gespräche und der Vergleich zur Vorwoche. Desktops lassen sich ausblenden, jede Tabelle geht als CSV direkt nach Excel, und **Drucken / PDF** macht daraus einen Stundennachweis. Alles bleibt auf Deinem Rechner.
+- **Fenster mit einem Klick auf allen Desktops:** **Umschalt + Klick auf ≡** zeigt das aktive Fenster auf allen Desktops, nur dieses Fenster, nicht die ganze App. **Umschalt + Klick auf einen Tab** holt es zurück: Danach ist es nur noch auf diesem Desktop zu sehen, auch auf dem, auf dem Du gerade bist.
 
 ## 1.1.16
 - **Jeder Desktop behält seine Fenster vorne:** Fenster, die auf allen Desktops liegen, drängen sich nicht mehr überall nach vorne. Kommst Du auf einen Desktop zurück, liegen dort wieder die Fenster vorne, mit denen Du dort zuletzt gearbeitet hast, auf allen Monitoren, und das zuletzt benutzte hat den Fokus. Abschaltbar unter **Weitere Einstellungen**.

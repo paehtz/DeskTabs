@@ -3,6 +3,7 @@
 
 ## 1.1.17
 - **Time report:** the menu now has **Time report…**. It shows in your browser how much time you spent on which desktop and sub-project. Browse day by day with the arrow keys, or pick a week, month, year or any range. Each day appears as a coloured timeline, plus hours per day, your typical working hours across the day, weekdays, all calls and the comparison with last week. Hide desktops you don't need, export any table as CSV straight into Excel, and use **Print / PDF** for a timesheet. Everything stays on your computer.
+- **One click shows a window on all desktops:** **Shift + click ≡** shows the active window on every desktop, just that window, not the whole app. **Shift + click a tab** brings it back: from then on it shows only on that desktop, including the one you are on.
 
 ## 1.1.16
 - **Each desktop keeps its windows in front:** windows shown on all desktops no longer push themselves to the front everywhere. When you return to a desktop, the windows you last worked with there are back in front, on all monitors, and the last one used has the focus. Turn it off under **More settings**.

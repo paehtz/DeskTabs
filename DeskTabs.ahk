@@ -1131,6 +1131,8 @@ global LANG_DE := Map(
     "sc.d.dragwin", "Fenster auf diesen Desktop verschieben",
     "sc.k.dragwingrip", "Fenster an der Titelleiste auf ≡ ziehen",
     "sc.d.dragwingrip", "auf allen Desktops anzeigen (noch einmal: wieder nur hier)",
+    "sc.k.shiftgrip", "{1} + Klick auf ≡",
+    "sc.d.shiftgrip", "aktives Fenster auf allen Desktops anzeigen; {1} + Klick auf einen Tab: wieder nur dort",
     "sc.k.rtab", "Rechtsklick auf einen Tab",
     "sc.d.rtabwin", "„… hierher verschieben“ und „Fenster hierher holen ›“",
     "sc.k.dragtab", "Tab seitlich ziehen",
@@ -1378,6 +1380,8 @@ global LANG_EN := Map(
     "sc.d.dragwin", "move the window to that desktop",
     "sc.k.dragwingrip", "Drag a window by its title bar onto ≡",
     "sc.d.dragwingrip", "show it on all desktops (again: only here)",
+    "sc.k.shiftgrip", "{1} + click ≡",
+    "sc.d.shiftgrip", "show the active window on all desktops; {1} + click a tab: only there again",
     "sc.k.rtab", "Right-click a tab",
     "sc.d.rtabwin", "“Move … here” and “Bring a window here ›”",
     "sc.k.dragtab", "Drag a tab sideways",
@@ -3534,6 +3538,7 @@ ShowShortcuts(*) {
         rows.Push([T("sc.k.dragwin"), T("sc.d.dragwin")])
         rows.Push([T("sc.k.dragwingrip"), T("sc.d.dragwingrip")])
     }
+    rows.Push([T("sc.k.shiftgrip", S), T("sc.d.shiftgrip", S)])
     rows.Push([T("sc.k.rtab"), T("sc.d.rtabwin")])
     rows.Push([T("sc.sec.desktops")])
     if (CanMoveDesktop())
@@ -5866,6 +5871,8 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
         return
     if (BarMouseX() >= gLayout["gripW"])     ; nur der Griff zieht die Leiste; ein Tab wird - wie
         return ReorderDrag()                 ; ein Browser-Tab - beim Ziehen umsortiert, ein Klick bleibt ein Klick
+    if (GetKeyState("Shift"))                ; Umschalt+Klick auf den Griff: Fenster auf allen Desktops (beim Loslassen)
+        return 0
     CoordMode("Mouse", "Screen")
     MouseGetPos(&sx, &sy)
     wx := 0, wy := 0, ww := 0, wh := 0
@@ -6116,20 +6123,25 @@ CanMoveDesktop() {
 }
 
 OnLButtonUp(wParam, lParam, msg, hwnd) {
-    global MyGui, gSkipUpUntil, gReorderFrom
+    global MyGui, gSkipUpUntil, gReorderFrom, gLayout
     if (!MyGui || (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd))
         return
     if (gReorderFrom >= 0 || A_TickCount < gSkipUpUntil) {   ; Ende eines Umsortier-Ziehens, kein Klick
         gSkipUpUntil := 0
         return 0
     }
-    item := ItemAtX(BarMouseX())
+    lx := BarMouseX()
+    item := ItemAtX(lx)
+    if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift")) {
+        TogglePinWindow(WorkWindow())          ; Umschalt+Klick auf den Griff: aktives Fenster auf allen Desktops (noch einmal: nur hier)
+        return 0
+    }
     if (item && GetKeyState("Alt", "P")) {        ; Alt+Klick: Unterprojekt waehlen (physisch: logisch ist Alt nach dem ersten Alt-Menue schon "los")
         Send("{Blind}{vkE8}")                     ; verhindert, dass das Loslassen von Alt die Menueleiste des Vordergrund-Programms oeffnet
         SetTimer(ShowSubMenu.Bind(item["num"]), -1)
         return 0
     }
-    if (item && GetKeyState("Shift") && item["num"] != GetCurrentDesktop()) {
+    if (item && GetKeyState("Shift") && (item["num"] != GetCurrentDesktop() || PinState(WorkWindow()) = 1)) {
         if (GetKeyState("Ctrl")) {
             TakeActiveTo(item["num"])          ; Strg+Umschalt+Klick: Fenster mitnehmen und selbst mitgehen
             return 0
