@@ -6007,6 +6007,7 @@ SwitchToDesktop(target) {
     cnt := GetDesktopCount()
     if (target < 0 || target >= cnt || target = cur)
         return
+    tid := DesktopGuid(target)    ; jetzt, solange der Explorer frei ist: danach wartet jede Rueckfrage 200-400 ms
     if (CONF["RestoreZOrder"]) {
         SetTimer(ZSnapCurrent, 0)
         ZSnapCurrent()            ; Reihenfolge des Desktops festhalten, den wir verlassen
@@ -6030,15 +6031,17 @@ SwitchToDesktop(target) {
         ; das Fenster sofort auf seinen Desktop zurueck.
         fg := DllCall("GetForegroundWindow", "Ptr")
         barHwnd := MyGui ? MyGui.Hwnd : 0
-        fgDesk := (fg && fg != barHwnd) ? VD("GetWindowDesktopNumber", "Ptr", fg, "Int") : -1
+        fgDesk := (fg && fg != barHwnd && PinState(fg) = 0) ? VD("GetWindowDesktopNumber", "Ptr", fg, "Int") : -1
         VD("GoToDesktopNumber", "Int", target)
-        if (fgDesk >= 0 && VD("GetWindowDesktopNumber", "Ptr", fg, "Int") != fgDesk)
+        ; Mitgenommen waere es hier sichtbar; ein zurueckgelassenes ist "cloaked". Erst dann den
+        ; Explorer fragen: direkt nach dem Wechsel kostet jede Rueckfrage dort 150-350 ms.
+        if (fgDesk >= 0 && !ZCloaked(fg) && VD("GetWindowDesktopNumber", "Ptr", fg, "Int") != fgDesk)
             VD("MoveWindowToDesktopNumber", "Ptr", fg, "Int", fgDesk)
-        ArriveDesk()              ; sofort: Reihenfolge des Ziels, bevor man das Fenster sieht, das Windows gewaehlt hat
+        ArriveDesk(tid)           ; sofort: Reihenfolge des Ziels, bevor man das Fenster sieht, das Windows gewaehlt hat
     }
     gSwitching := false
     gSelfTick := A_TickCount
-    UpdateHighlight()                 ; Zeit-Log, Leiste; ArriveDesk lief schon (oben), laeuft dort nochmal leer
+    UpdateHighlight(CONF["SwitchMethod"] = "native" ? -1 : target)   ; Ziel ist bekannt: ohne Rueckfrage beim Explorer
 }
 
 ; Nach einem Wechsel das oberste Fenster des Ziel-Desktops nach vorne holen. Windows laesst
@@ -6077,7 +6080,7 @@ ZOrderCurrent(limit := 24) {
     for hwnd in WinGetList() {
         if !ZCandidate(hwnd)
             continue
-        if (VD("IsWindowOnCurrentVirtualDesktop", "Ptr", hwnd, "Int") != 1)
+        if (ZCloaked(hwnd))           ; auf einem anderen Desktop (schnell, ohne Explorer)
             continue
         out.Push(hwnd)
         if (out.Length >= limit)
@@ -6102,11 +6105,11 @@ ZSnapCurrent() {
 ; oberste. Bewusst schlank (kein Abgleich, keine Fensterabfragen): Windows hat beim Wechsel
 ; schon ein Fenster nach vorne geholt, je schneller das korrigiert ist, desto weniger sieht man.
 ; Unveraenderte Reihenfolge einzusetzen aendert sichtbar nichts.
-ArriveDesk() {
+ArriveDesk(id := "") {
     global gZSnap, gZBlockUntil
     SetWinDelay(-1)                           ; ohne die Pause, die AutoHotkey sonst nach WinActivate einlegt
     t0 := A_TickCount
-    try ArriveDeskRun(t0)
+    try ArriveDeskRun(t0, id)
     gZBlockUntil := A_TickCount + 300         ; danach darf wieder gemerkt werden ...
     SetTimer(ZSnapCurrent, -500)              ; ... und der wiederhergestellte Stand wird das neue Abbild
 }
@@ -6120,16 +6123,22 @@ ZVisibleHere(h) {
     DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cloaked, "UInt", 4)   ; DWMWA_CLOAKED
     return !cloaked
 }
-ArriveDeskRun(t0) {
+ArriveDeskRun(t0, id := "") {
     global gZSnap
     if (!CONF["RestoreZOrder"])
         return FocusTopWindow()
-    id := DesktopGuid(GetCurrentDesktop())
+    if (id = "")
+        id := DesktopGuid(GetCurrentDesktop())
     if (id = "" || !gZSnap.Has(id))
         return FocusTopWindow()
     want := [], pos := Map()
-    for hwnd in gZSnap[id]                    ; was es noch gibt und nicht minimiert ist
-        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd))
+    ; was es noch gibt, nicht minimiert ist und noch auf diesem Desktop liegt: ein Fenster, das
+    ; inzwischen auf einen anderen Desktop gewandert ist, wuerde beim Fokussieren Windows
+    ; dorthin zurueckwechseln lassen (Klick auf Standard sprang so sofort zurueck)
+    ; Schnell per DWM: Fenster anderer Desktops sind "cloaked". Keine Rueckfrage beim Explorer:
+    ; direkt nach einem Wechsel wartet die erste davon 250-650 ms (gemessen 27.10.2026).
+    for hwnd in gZSnap[id]
+        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd) && !ZCloaked(hwnd))
             want.Push(hwnd), pos[hwnd] := want.Length
     if (!want.Length)
         return FocusTopWindow()
@@ -6148,6 +6157,7 @@ ArriveDeskRun(t0) {
             stranger := true                  ; ab hier liegt ein fremdes Fenster ueber gemerkten
         h := DllCall("GetWindow", "Ptr", h, "UInt", 2, "Ptr")   ; GW_HWNDNEXT
     }
+    need := Min(need, 10)                     ; mehr als die obersten zehn sieht man nicht; jedes kostet ~8 ms
     if (need) {
         hdwp := DllCall("BeginDeferWindowPos", "Int", need, "Ptr")
         after := 0                            ; HWND_TOP fuer das oberste, dann jeweils darunter
@@ -6161,9 +6171,14 @@ ArriveDeskRun(t0) {
         if (hdwp)
             DllCall("EndDeferWindowPos", "Ptr", hdwp)
     }
-    if (DllCall("GetForegroundWindow", "Ptr") != want[1])
+    if (DllCall("GetForegroundWindow", "Ptr") != want[1])        ; want[] ist schon auf "nicht cloaked" gefiltert
         if !DllCall("SetForegroundWindow", "Ptr", want[1])
             try WinActivate("ahk_id " want[1])
+}
+ZCloaked(h) {
+    cloaked := 0
+    DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cloaked, "UInt", 4)   ; DWMWA_CLOAKED
+    return cloaked != 0
 }
 
 FocusTopWindow() {
@@ -6575,22 +6590,32 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     return 0
 }
 
-UpdateHighlight() {
+; known >= 0: eigener Wechsel mit bekanntem Ziel. Dann keine Rueckfragen beim Explorer (der direkt
+; nach einem Wechsel 200-400 ms fuer jede braucht), ArriveDesk lief schon, das Zeit-Log folgt kurz danach.
+UpdateHighlight(known := -1) {
     global BTNS, gCurrent
     prev := gCurrent
-    gCurrent := GetCurrentDesktop()
+    gCurrent := (known >= 0) ? known : GetCurrentDesktop()
     if (prev >= 0 && gCurrent >= 0 && gCurrent != prev) {
-        CheckForeignSwitch(prev, gCurrent)
+        if (known >= 0)
+            ClearSwitchAlert()                 ; eigener Wechsel: alter Hinweis erledigt
+        else
+            CheckForeignSwitch(prev, gCurrent)
         global gLastDesk, gDeskSince, gAttention
         if (A_TickCount - gDeskSince >= Max(1, CONF["TimeLogMinSec"]) * 1000)
             gLastDesk := prev                  ; nur echte Aufenthalte, keine Durchfahrten
         gDeskSince := A_TickCount
         if (gAttention.Has(gCurrent))
             gAttention.Delete(gCurrent)        ; angekommen: Punkt erledigt
-        global gZBlockUntil := A_TickCount + 5000   ; bis ArriveDesk fertig ist (setzt es dann kurz)
-        SetTimer(ArriveDesk, -1)               ; sofort: Windows hat beim Wechsel schon ein Fenster nach vorne geholt
+        if (known < 0) {
+            global gZBlockUntil := A_TickCount + 5000   ; bis ArriveDesk fertig ist (setzt es dann kurz)
+            SetTimer(ArriveDesk, -1)           ; sofort: Windows hat beim Wechsel schon ein Fenster nach vorne geholt
+        }
     }
-    LogDesktop(gCurrent)             ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
+    if (known >= 0)
+        SetTimer(LogDesktop.Bind(gCurrent), -300)   ; Zeit-Log, wenn der Explorer wieder frei ist
+    else
+        LogDesktop(gCurrent)         ; Zeit-Log: Segmentwechsel bei Desktop-Wechsel
     RenderBar()
     UpdateStripe()                   ; Register-Kante in der Farbe des neuen Desktops
 }
