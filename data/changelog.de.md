@@ -1,6 +1,9 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.19
+- **Fenster bleiben normal:** Nach einem Desktop-Wechsel konnten Fenster dauerhaft „immer im Vordergrund“ werden, sodass sich andere nicht mehr nach vorne holen ließen. Das passiert nicht mehr. Wer es erlebt hat: Ein Neustart der betroffenen Programme stellt sie wieder normal.
+
 ## 1.1.18
 - **Timer statt Gespräch:** Aus „Gespräch starten“ wird **Timer starten** (Rechtsklick auf einen Tab oder Strg + Win + T). Er ist für alles, was einem Kunden gehört, Dich aber zwischen Desktops wechseln lässt: ein Telefonat, bei dem Du nebenbei woanders nachsiehst, oder Arbeit mit Werkzeugen auf mehreren Desktops. Die ganze Zeit zählt für den Desktop, für den Du ihn gestartet hast. Beim Beenden kannst Du eine **Notiz** eingeben, etwa „Telefonat mit Christian“; sie steht im Zeit-Log und in der Zeit-Auswertung. Deine letzten Notizen schlägt DeskTabs je Desktop als Bubbles vor: ein Klick übernimmt sie, ✎ benennt sie um (auf Wunsch auch in früheren Einträgen), × entfernt sie, und per Rechtsklick heftest Du feste Einträge an.
 - **Schnellerer Desktop-Wechsel:** DeskTabs wartet nach einem Wechsel nicht mehr auf Windows, um Fenster und Leiste herzurichten. Außerdem springt ein Klick auf einen Tab nicht mehr zum vorherigen Desktop zurück, wenn dessen zuletzt vorderstes Fenster inzwischen auf einem anderen Desktop liegt.

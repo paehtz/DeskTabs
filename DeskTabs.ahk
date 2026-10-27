@@ -6080,7 +6080,7 @@ ZOrderCurrent(limit := 24) {
     for hwnd in WinGetList() {
         if !ZCandidate(hwnd)
             continue
-        if (ZCloaked(hwnd))           ; auf einem anderen Desktop (schnell, ohne Explorer)
+        if (ZCloaked(hwnd) || ZTopmost(hwnd))   ; anderer Desktop (schnell, ohne Explorer) bzw. "immer im Vordergrund"
             continue
         out.Push(hwnd)
         if (out.Length >= limit)
@@ -6137,8 +6137,10 @@ ArriveDeskRun(t0, id := "") {
     ; dorthin zurueckwechseln lassen (Klick auf Standard sprang so sofort zurueck)
     ; Schnell per DWM: Fenster anderer Desktops sind "cloaked". Keine Rueckfrage beim Explorer:
     ; direkt nach einem Wechsel wartet die erste davon 250-650 ms (gemessen 27.10.2026).
+    ; Fenster "immer im Vordergrund" nie einsortieren: wer hinter ein solches gelegt wird, wird
+    ; laut Windows selbst "immer im Vordergrund" (so wurden am 27.10.2026 alle Fenster topmost)
     for hwnd in gZSnap[id]
-        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd) && !ZCloaked(hwnd))
+        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd) && !ZCloaked(hwnd) && !ZTopmost(hwnd))
             want.Push(hwnd), pos[hwnd] := want.Length
     if (!want.Length)
         return FocusTopWindow()
@@ -6175,6 +6177,7 @@ ArriveDeskRun(t0, id := "") {
         if !DllCall("SetForegroundWindow", "Ptr", want[1])
             try WinActivate("ahk_id " want[1])
 }
+ZTopmost(h) => (DllCall("GetWindowLongPtr", "Ptr", h, "Int", -20, "Ptr") & 0x8) != 0   ; WS_EX_TOPMOST
 ZCloaked(h) {
     cloaked := 0
     DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cloaked, "UInt", 4)   ; DWMWA_CLOAKED

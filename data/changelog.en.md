@@ -1,6 +1,9 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.19
+- **Windows stay normal:** after a desktop switch, windows could end up permanently “always on top”, so others could no longer be brought to the front. This no longer happens. If it happened to you, restarting the affected programs returns them to normal.
+
 ## 1.1.18
 - **Timer instead of call:** “Start a call” becomes **Start timer** (right-click a tab or Ctrl + Win + T). It is for anything that belongs to one client but makes you switch desktops: a phone call while you look something up elsewhere, or work with tools on several desktops. All that time counts for the desktop you started it for. When you stop it, you can add a **note** such as “Call with Christian”; it shows in the time log and the time report. DeskTabs suggests your recent notes per desktop as bubbles: click one to use it, ✎ renames it (in earlier entries too, if you like), × removes it, and a right-click pins regular entries.
 - **Faster desktop switching:** after a switch DeskTabs no longer waits for Windows before arranging windows and the bar. A click on a tab also no longer jumps back to the previous desktop when that desktop's last front window has meanwhile moved to another desktop.
