@@ -10,9 +10,13 @@ Once a day, at most, DeskTabs asks the GitHub releases API for the version numbe
 GET https://api.github.com/repos/paehtz/DeskTabs/releases/latest
 ```
 
-The request sends nothing but the usual HTTP headers, including a user agent of the form `DeskTabs/1.1.2`. GitHub sees the request the way it sees any visitor, including the IP address; DeskTabs sends no identifier of its own. Only the version number is read from the answer, to tell you that a newer release exists.
+The request sends nothing but the usual HTTP headers, including a user agent of the form `DeskTabs/1.1.18`. GitHub sees the request the way it sees any visitor, including the IP address; DeskTabs sends no identifier of its own. Only the version number is read from the answer, to tell you that a newer release exists.
 
-**How to switch it off:** right-click the bar → *Help* → uncheck *Check for updates daily*, or set `UpdateCheck = 0` in `settings.ini`. With it off, DeskTabs makes no network requests at all.
+**How to switch it off:** right-click the bar → *More settings* → uncheck *Show update notice (checks daily)*, or set `UpdateCheck = 0` in `settings.ini`. With it off, DeskTabs makes no network requests in the background at all.
+
+## When you click "Update" in the update notice
+
+Only then, DeskTabs downloads the setup of the new release and its `SHA256SUMS.txt` from the GitHub release page into `%TEMP%\DeskTabs-update\`, checks the checksum, runs the setup and deletes the download afterwards. Nothing is sent besides the download requests.
 
 ## When you ask for an icon from a website
 
@@ -20,7 +24,7 @@ If you give a desktop an icon by typing a website address, DeskTabs fetches that
 
 ## What is written to disk
 
-Everything stays in the program's own folder:
+Everything stays on your computer, almost all of it in the program's own folder:
 
 | File | What it holds |
 |---|---|
@@ -28,6 +32,7 @@ Everything stays in the program's own folder:
 | `icons\` | Icons that were fetched from websites |
 | `timelog\desktop-log_YYYY-MM.csv` | If the time log is on: which desktop was active when, and for how long |
 | `_error.log` | Only if something went wrong: time, message, line number |
+| `%TEMP%\DeskTabs-report\` | Only when you open the time report: a copy of the report page with your time log, opened in your browser; it runs offline and sends nothing |
 
 The time log is a local file for your own time tracking. It is never uploaded anywhere. Switch it off in the right-click menu or with `TimeLog = 0`.
 
