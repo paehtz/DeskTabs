@@ -1,6 +1,10 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.20
+- **Fensteranordnungen:** Fenster, die zusammengehören, merkt sich DeskTabs je Desktop als Anordnung mit Namen (Menü ≡ › *Fensteranordnung speichern…*). Eine Kachel rechts neben den Tabs holt sie mit einem Klick wieder nach vorne, Umschalt + Klick speichert den aktuellen Stand neu, und per Rechtsklick räumst Du sie bündig nebeneinander auf.
+- **Tab mit einem Klick kompakt:** **Strg + Klick** auf einen Tab zeigt ihn nur noch als Symbol, noch einmal zeigt ihn wieder mit Namen. Praktisch für Projekte, die gerade ruhen.
+
 ## 1.1.19
 - **Fenster bleiben normal:** Nach einem Desktop-Wechsel konnten Fenster dauerhaft „immer im Vordergrund“ werden, sodass sich andere nicht mehr nach vorne holen ließen. Das passiert nicht mehr. Wer es erlebt hat: Ein Neustart der betroffenen Programme stellt sie wieder normal.
 

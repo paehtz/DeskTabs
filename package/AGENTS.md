@@ -48,6 +48,10 @@ Client sites=Miller & Sons
 
 [TimerNotes]     ; note suggestions when a timer stops, separated by |; a leading * pins one
 Acme Bakery=*Site updates|Call with Anna|Flyer proofs
+
+[WindowSets]     ; window arrangements, written by DeskTabs; change them in the bar, not by hand
+; per desktop: arrangements separated by U+241D, name and windows by U+241C,
+; windows by U+241E, fields by U+241F (exe, title, window handle in hex)
 ```
 
 The glyph codes are listed with names and search words in `data\glyph-names.txt` (`CODE|Name|keywords`).

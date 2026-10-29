@@ -1434,6 +1434,7 @@ global gBarDC := 0           ; Speicher-DC mit dem fertig gezeichneten Leistenbi
 global gBarBmp := 0          ; zugehoeriges HBITMAP
 global gRenderSig := ""      ; Zustand des letzten Renderns (nur bei Aenderung neu zeichnen)
 global gGripHover := false   ; Maus ueber dem Ziehgriff?
+global gSetPick := 0, gSetHover := 0, gSetCount := Map(), gSetNames := Map()   ; Kacheln Fensteranordnungen: Platz unter der Maus, Zahl und Namen je Desktop
 global gHotkeys := []        ; aktuell registrierte Tastenkuerzel
 global gIconCache := Map()   ; Pfad -> geladenes GDI+-Bitmap (einmal laden, oft zeichnen)
 global gIconFetch := Map()   ; URLs, die in dieser Sitzung schon geholt wurden
@@ -1511,6 +1512,8 @@ global LANG_DE := Map(
     "prompt.sub.title", "Unterprojekt für „{1}“",
     "prompt.sub.text", "Name des Unterprojekts (z. B. ein Kunde oder „Wartung“). Es wird gleich aktiv:",
     "sc.k.altclick", "{1} + Klick auf einen Tab",
+    "sc.k.ctrlclick", "{1} + Klick auf einen Tab",
+    "sc.d.ctrlclick", "diesen Tab kompakt (nur Symbol) bzw. wieder normal anzeigen",
     "sc.d.altclick", "Unterprojekte: wählen, anlegen, entfernen (stehen im Tab und im Zeit-Log)",
     "sc.k.clickactivesub", "Klick auf den aktiven Tab",
     "sc.d.clickactivesub", "Unterprojekt schnell wählen (wenn der Desktop welche hat)",
@@ -1559,6 +1562,30 @@ global LANG_DE := Map(
     "menu.shape.register", "Register (Tab hängt an der Taskleiste)",
     "menu.hotkeys.shiftdrag", "Tab seitlich ziehen: Desktops umsortieren (wie Browser-Tabs)",
     "menu.newdesk", "Neuer Desktop…",
+    "menu.set.save", "Fensteranordnung speichern…",
+    "menu.set.tidy", "Aufräumen: nebeneinander, volle Höhe",
+    "menu.set.overwrite", "Mit aktueller Anordnung überschreiben",
+    "menu.set.rename", "Umbenennen",
+    "menu.set.delete", "Löschen",
+    "set.title", "DeskTabs: Fensteranordnung",
+    "set.nameq", "Name für die Anordnung der {1} Fenster auf „{2}“:",
+    "set.defname", "Anordnung {1}",
+    "set.none", "Auf diesem Desktop ist gerade kein Fenster zu sehen, das sich merken ließe.",
+    "set.saved", "Anordnung „{1}“ gespeichert · {2} Fenster",
+    "set.partial", "„{1}“ · {2} von {3} Fenstern gefunden",
+    "set.nonefound", "„{1}“ · keins der Fenster ist gerade offen",
+    "set.renameq", "Neuer Name für „{1}“:",
+    "set.deleteq", "Anordnung „{1}“ löschen?",
+    "set.tidied", "„{1}“ aufgeräumt · {2} Fenster auf {3} Bildschirm(en)",
+    "set.updated", "„{1}“ aktualisiert · {2} Fenster",
+    "set.pickname", "Name der Anordnung auf „{1}“:",
+    "set.picklist", "Welche Fenster gehören dazu? (oberstes zuerst)",
+    "set.col.title", "Fenster",
+    "set.col.exe", "Programm",
+    "set.cancel", "Abbrechen",
+    "menu.set.pick", "Fenster auswählen…",
+    "set.tip", "Klick: nach vorne · Umschalt + Klick: aktuellen Stand speichern · Rechtsklick: mehr",
+    "menu.set.front", "„{1}“ nach vorne holen",
     "prompt.newdesk.title", "Neuer Desktop",
     "prompt.newdesk.text", "Name des neuen Desktops (leer lassen: Windows vergibt „Desktop N“):",
     "menu.tab.rename", "Umbenennen…",
@@ -1774,6 +1801,8 @@ global LANG_EN := Map(
     "prompt.sub.title", "Sub-project for “{1}”",
     "prompt.sub.text", "Name of the sub-project (a client, or “maintenance”). It becomes active right away:",
     "sc.k.altclick", "{1} + click a tab",
+    "sc.k.ctrlclick", "{1} + click a tab",
+    "sc.d.ctrlclick", "show this tab compact (icon only) or normal again",
     "sc.d.altclick", "sub-projects: pick, add, remove (shown in the tab and in the time log)",
     "sc.k.clickactivesub", "Click the active tab",
     "sc.d.clickactivesub", "quick sub-project pick (if the desktop has any)",
@@ -1822,6 +1851,30 @@ global LANG_EN := Map(
     "menu.shape.register", "Register (tab hangs from the taskbar)",
     "menu.hotkeys.shiftdrag", "Drag a tab sideways: reorder desktops (like browser tabs)",
     "menu.newdesk", "New desktop…",
+    "menu.set.save", "Save window layout…",
+    "menu.set.tidy", "Tidy up: side by side, full height",
+    "menu.set.overwrite", "Overwrite with current layout",
+    "menu.set.rename", "Rename",
+    "menu.set.delete", "Delete",
+    "set.title", "DeskTabs: window layout",
+    "set.nameq", "Name for the layout of the {1} windows on “{2}”:",
+    "set.defname", "Layout {1}",
+    "set.none", "No window on this desktop could be saved right now.",
+    "set.saved", "Layout “{1}” saved · {2} windows",
+    "set.partial", "“{1}” · found {2} of {3} windows",
+    "set.nonefound", "“{1}” · none of its windows is open",
+    "set.renameq", "New name for “{1}”:",
+    "set.deleteq", "Delete layout “{1}”?",
+    "set.tidied", "“{1}” tidied · {2} windows on {3} screen(s)",
+    "set.updated", "“{1}” updated · {2} windows",
+    "set.pickname", "Name of the layout on “{1}”:",
+    "set.picklist", "Which windows belong to it? (topmost first)",
+    "set.col.title", "Window",
+    "set.col.exe", "Program",
+    "set.cancel", "Cancel",
+    "menu.set.pick", "Choose windows…",
+    "set.tip", "Click: bring to front · Shift + click: save current state · Right-click: more",
+    "menu.set.front", "Bring “{1}” to front",
     "prompt.newdesk.title", "New desktop",
     "prompt.newdesk.text", "Name of the new desktop (leave empty and Windows calls it “Desktop N”):",
     "menu.tab.rename", "Rename…",
@@ -2996,6 +3049,10 @@ OnRButtonUp(wParam, lParam, msg, hwnd) {
         return
     if (hwnd != MyGui.Hwnd && DllCall("GetParent", "Ptr", hwnd, "Ptr") != MyGui.Hwnd)
         return
+    if (si := SetAt(BarMouseX())) {
+        SetTimer(SetMenu.Bind(si), -1)
+        return 0
+    }
     item := ItemAtX(BarMouseX())
     ; Menue nicht hier im Handler oeffnen: m.Show() blockiert, bis das Menue zu ist. Ein
     ; Rechtsklick auf den naechsten Tab kam sonst an, solange dieser Handler noch lief, und
@@ -3419,6 +3476,8 @@ ShowContextMenu(num, *) {
     if (num < 0) {
         m.Add(T("menu.newdesk"), NewDesktop)
         MenuGlyph(m, T("menu.newdesk"), "E710")
+        m.Add(T("menu.set.save"), SetSaveAsk)
+        MenuGlyph(m, T("menu.set.save"), "E8A9")
         m.Add()
     }
     ; Griff bzw. Luecke: gehoert keinem Desktop, also der Ort fuer "auf allen Desktops"
@@ -3968,6 +4027,7 @@ ShowShortcuts(*) {
     rows.Push([T("sc.k.rtab"), T("sc.d.rtabdesk")])
     rows.Push([T("sc.k.clickactivesub"), T("sc.d.clickactivesub")])
     rows.Push([T("sc.k.altclick", T("key.alt")), T("sc.d.altclick")])
+    rows.Push([T("sc.k.ctrlclick", C), T("sc.d.ctrlclick")])
     if (CONF["CallHotkey"] != "")
         rows.Push([CallHotkeyText(), T("sc.d.call")])
     rows.Push([T("sc.sec.bar")])
@@ -4178,7 +4238,7 @@ DesktopGuid(num) {
 MoveDesktopSettings(oldName, newName) {
     if (oldName = "" || newName = "" || NormName(oldName) = NormName(newName))
         return
-    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject", "TimerNotes"] {
+    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject", "TimerNotes", "WindowSets"] {
         v := IniLookup(sec, oldName)
         if (v = "" || IniLookup(sec, newName) != "")
             continue
@@ -4802,13 +4862,26 @@ BuildBarAt() {
     DllCall("gdiplus\GdipDeleteStringFormat", "Ptr", sf)
     DllCall("gdiplus\GdipDeleteGraphics", "Ptr", mG)
     DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
+    global gSetCount := Map(), gSetNames := Map()
+    setX := 0, setW := 0, setN := 0
+    if (SetsAny()) {                           ; Fensteranordnungen: ein Symbol je Anordnung rechts neben den Tabs
+        Loop cnt {
+            names := []
+            for s in SetsLoad(GetDesktopNameRaw(A_Index - 1))
+                names.Push(s["name"])
+            gSetNames[A_Index - 1] := names, gSetCount[A_Index - 1] := names.Length
+            setN := Max(setN, names.Length)
+        }
+        setN := Max(setN, 1)
+        x += gap * 2, setX := x, setW := setN * btnH, x += setW
+    }
     x += gap                                   ; etwas Luft am rechten Rand
 
     GUIW := x
     GUIH := tbH
     gLayout := Map("margin", margin, "btnH", btnH, "gripW", px(CONF["GripW"]), "gap", gap
         , "radius", px(CONF["CornerRadius"]), "accH", px(CONF["AccentBarH"])
-        , "iconSize", iconSize, "iconGap", iconGap)
+        , "iconSize", iconSize, "iconGap", iconGap, "setX", setX, "setW", setW, "setN", setN)
 
     ; Position: aus settings.ini, sonst Standard = unten links auf der Taskleiste.
     defX := tbX + px(CONF["OffsetX"])
@@ -5205,7 +5278,8 @@ RenderBar(force := false) {
     if (gBuilding && force != 2)    ; mitten im Aufbau (halbfertige Tab-Liste): nur BuildBar zeichnet, ganz am Ende
         return
     global gReorderFrom
-    sig := gReorderFrom "|" RegisterOn() "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
+    global gSetHover, gSetCount
+    sig := gSetHover "|" (gSetCount.Has(gCurrent) ? gSetCount[gCurrent] : 0) "|" gReorderFrom "|" RegisterOn() "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
@@ -5374,6 +5448,27 @@ RenderBar(force := false) {
         ; Umsortieren: der gegriffene Tab haengt obenauf an der Maus, mit Rahmen in der Akzentfarbe
         if (item["num"] = gReorderFrom)
             StrokeRoundRect(g, x, y, w, h, r, ARGB(CONF["ColActiveBg"]), Max(2, px(2)))
+    }
+    if (L["setW"]) {                               ; Fensteranordnungen: Kachel mit Kuerzel je Anordnung
+        global gSetNames
+        names := gSetNames.Has(gCurrent) ? gSetNames[gCurrent] : []
+        sby := L["margin"], sbh := L["btnH"], kc := (gCurrent >= 0) ? DesktopColor(gCurrent) : CONF["ColActiveBg"]
+        fM := MakeFont(true, CONF["FontSizePt"] - 1)
+        dvw := Max(1, px(1)), dvh := sbh - 2 * px(6)
+        if (names.Length)                          ; Trennstrich Tabs | Anordnungen, nur wenn hier Kacheln stehen
+            FillRoundRect(g, L["setX"] - L["gap"] - dvw / 2, sby + (sbh - dvh) / 2, dvw, dvh, 0, ARGB(CONF["ColGripTx"]))
+        Loop L["setN"] {
+            sbx := L["setX"] + (A_Index - 1) * sbh
+            if (gSetHover = A_Index)
+                FillRoundRect(g, sbx + px(2), sby, sbh - px(4), sbh, L["radius"], ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])))
+            if (A_Index > names.Length)
+                continue
+            ks := Round(sbh * 0.56), kx := sbx + (sbh - ks) / 2, ky := sby + (sbh - ks) / 2
+            FillRoundRect(g, kx, ky, ks, ks, px(5), ARGB(kc))
+            DrawText(g, fM, sf, SetInitials(names[A_Index]), kx, ky, ks, ks, ARGB(ReadableOn(kc)))
+            FillRoundRect(g, kx + ks * 0.25, ky + ks + px(3), ks * 0.5, Max(2, px(2)), px(1), ARGB(CONF["ColGripTx"]))   ; Strich wie unter Taskleisten-Programmen
+        }
+        DllCall("gdiplus\GdipDeleteFont", "Ptr", fM)
     }
     if (reg)                                       ; die Kante laeuft auch ueber die Leiste
         FillRoundRect(g, 0, 0, GUIW, StripeH(), 0, ARGB(ActiveEdgeColor()))
@@ -6214,6 +6309,418 @@ FocusTopWindow() {
     }
 }
 
+; ---- Fensteranordnungen: benannte Schnappschuesse der Fenster eines Desktops ----
+; [WindowSets] <Desktop>=<Name>{GS}<exe>{US}<Titel>{US}<hwnd>{RS}<...>{SEP}<Name>{GS}...
+; (Trennzeichen U+241D/U+241C/U+241E/U+241F, die in Titeln nicht vorkommen). Der Knopf rechts
+; neben den Tabs holt die Fenster einer Anordnung in der gemerkten Reihenfolge nach vorne;
+; Position und Groesse bleiben, wie sie sind. "Aufraeumen" setzt sie je Bildschirm buendig
+; nebeneinander, gleich breit, volle Hoehe. Fenster erkennt DeskTabs an der Kennung, sonst
+; an Programm und Titel (Claude-Chatfenster tragen den Chatnamen).
+SetSep(k) => Chr([0x241D, 0x241C, 0x241E, 0x241F][k])
+SetClean(s) => RegExReplace(s, "[\x{241C}-\x{241F}\r\n]", " ")
+SetsLoad(desk) {
+    out := []
+    for , s in StrSplit(IniLookup("WindowSets", desk), SetSep(1)) {
+        p := InStr(s, SetSep(2))
+        if (!p)
+            continue
+        wins := []
+        for , w in StrSplit(SubStr(s, p + 1), SetSep(3)) {
+            f := StrSplit(w, SetSep(4))
+            if (f.Length < 2)
+                continue
+            h := 0
+            try h := (f.Length >= 3 && f[3] != "") ? Integer("0x" f[3]) : 0
+            wins.Push(Map("exe", f[1], "title", f[2], "hwnd", h))
+        }
+        out.Push(Map("name", SubStr(s, 1, p - 1), "wins", wins))
+    }
+    return out
+}
+SetsSave(desk, sets) {
+    parts := []
+    for s in sets {
+        ws := ""
+        for w in s["wins"]
+            ws .= (ws = "" ? "" : SetSep(3)) w["exe"] SetSep(4) w["title"] SetSep(4) Format("{:X}", w["hwnd"])
+        parts.Push(s["name"] SetSep(2) ws)
+    }
+    v := ""
+    for p in parts
+        v .= (v = "" ? "" : SetSep(1)) p
+    if (v = "")
+        IniDelLoose("WindowSets", desk)
+    else
+        IniSet("WindowSets", desk, v)
+}
+SetsAny() {
+    for k, v in ReadIniSection("WindowSets")
+        if (v != "")
+            return true
+    return false
+}
+; Platz (1..n) der Anordnungs-Kachel unter lx, sonst 0
+SetAt(lx) {
+    global gLayout
+    if (!gLayout || !gLayout.Has("setW") || !gLayout["setW"] || lx < gLayout["setX"] || lx >= gLayout["setX"] + gLayout["setW"])
+        return 0
+    return (lx - gLayout["setX"]) // gLayout["btnH"] + 1
+}
+SetNameAt(i) {                                   ; aus dem Stand beim Aufbau der Leiste (ohne Rueckfrage beim Explorer)
+    global gSetNames, gCurrent
+    names := gSetNames.Has(gCurrent) ? gSetNames[gCurrent] : []
+    return (i >= 1 && i <= names.Length) ? names[i] : ""
+}
+; zwei Zeichen fuer die Kachel: Anfangsbuchstaben der ersten zwei Woerter, sonst die ersten zwei
+SetInitials(name) {
+    w := StrSplit(Trim(RegExReplace(name, "[^\p{L}\p{N} ]", " ")), " ", " ")
+    out := ""
+    for x in w
+        if (x != "" && StrLen(out) < 2)
+            out .= SubStr(x, 1, 1)
+    if (StrLen(out) < 2 && w.Length)
+        out := SubStr(w[1], 1, 2)
+    return StrUpper(out)
+}
+SetHoverTip(i) {
+    ToolTip(, , , 5)
+    name := i ? SetNameAt(i) : ""
+    if (name != "")
+        ToolTip(name "`n" T("set.tip"), , , 5), SetTimer(() => ToolTip(, , , 5), -3000)
+}
+; sichtbare Fenster dieses Desktops in Stapelreihenfolge, oberstes zuerst: ohne minimierte, ohne
+; "immer im Vordergrund" und ohne Fenster, die kaum zu sehen sind (weniger als die Haelfte UND
+; weniger als ein Fuenftel ihres Bildschirms: ein Streifen eines Mailprogramms hinter den Chats). Sichtbar = sein
+; Rahmen minus die Rahmen aller hoeheren Fenster (GDI-Regionen, echte Pixel je Monitor).
+SetCapture() {
+    wins := []
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")
+    above := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
+    rest := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
+    for hwnd in ZOrderCurrent(24) {
+        fr := SetFrame(hwnd)
+        rg := DllCall("CreateRectRgn", "Int", fr[1], "Int", fr[2], "Int", fr[3], "Int", fr[4], "Ptr")
+        vis := DllCall("CombineRgn", "Ptr", rest, "Ptr", rg, "Ptr", above, "Int", 4) > 1   ; RGN_DIFF: mehr als NULLREGION
+        full := (fr[3] - fr[1]) * (fr[4] - fr[2])
+        if (vis && full > 0) {
+            seen := RgnArea(rest)
+            ; mitgenommen wird, was zur Haelfte zu sehen ist ODER sichtbar ein Fuenftel seines
+            ; Bildschirms fuellt (ein Vollbild-Notion hinter zwei Chats: ein Drittel zu sehen, gehoert dazu)
+            if (seen * 2 < full && seen * 5 < MonArea(hwnd))
+                vis := false
+        }
+        DllCall("CombineRgn", "Ptr", above, "Ptr", above, "Ptr", rg, "Int", 2)           ; RGN_OR
+        DllCall("DeleteObject", "Ptr", rg)
+        if (!vis)
+            continue
+        exe := "", title := ""
+        try exe := WinGetProcessName("ahk_id " hwnd), title := WinGetTitle("ahk_id " hwnd)
+        if (exe != "")
+            wins.Push(Map("exe", exe, "title", SetClean(title), "hwnd", hwnd))
+    }
+    DllCall("DeleteObject", "Ptr", above), DllCall("DeleteObject", "Ptr", rest)
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    return wins
+}
+SetFind(w, used) {
+    h := w["hwnd"]
+    if (h && !used.Has(h) && DllCall("IsWindow", "Ptr", h) && !ZCloaked(h)) {
+        exe := ""
+        try exe := WinGetProcessName("ahk_id " h)
+        if (exe = w["exe"])
+            return h
+    }
+    try for h2 in WinGetList("ahk_exe " w["exe"]) {
+        if (used.Has(h2) || ZCloaked(h2))
+            continue
+        t := ""
+        try t := WinGetTitle("ahk_id " h2)
+        if (SetClean(t) = w["title"])
+            return h2
+    }
+    return 0
+}
+SetGet(name, &desk := "", &num := 0) {
+    num := GetCurrentDesktop(), desk := GetDesktopNameRaw(num)
+    for s in SetsLoad(desk)
+        if (s["name"] = name)
+            return s
+    return 0
+}
+SetFound(set) {
+    found := [], used := Map()
+    for w in set["wins"]
+        if (h := SetFind(w, used))
+            found.Push(h), used[h] := true
+    return found
+}
+; Klick auf eine Kachel: nach vorne holen; Umschalt + Klick: aktuellen Stand als neue Anordnung
+; dieser Kachel speichern. Leerer Platz: Menue zum Speichern.
+SetClick(i, shift := false) {
+    name := SetNameAt(i)
+    if (name = "")
+        return SetMenu(i)
+    if (shift)
+        return SetOverwrite(name)
+    SetRestore(name)
+}
+; Rechtsklick: Menue der Kachel (bzw. nur "speichern" auf einem leeren Platz)
+SetMenu(i := 0) {
+    name := SetNameAt(i)
+    m := Menu()
+    if (name != "") {
+        m.Add(T("menu.set.front", name), SetRestore.Bind(name))
+        MenuGlyph(m, T("menu.set.front", name), "E8A9")
+        m.Default := T("menu.set.front", name)
+        m.Add(T("menu.set.overwrite"), SetOverwrite.Bind(name))
+        MenuGlyph(m, T("menu.set.overwrite"), "E72C")
+        m.Add(T("menu.set.pick"), SetPickDialog.Bind(name))
+        MenuGlyph(m, T("menu.set.pick"), "E762")
+        m.Add(T("menu.set.tidy"), SetTidy.Bind(name))
+        MenuGlyph(m, T("menu.set.tidy"), "E8A1")
+        m.Add(T("menu.set.rename"), SetRenameAsk.Bind(name))
+        MenuGlyph(m, T("menu.set.rename"), "E70F")
+        m.Add(T("menu.set.delete"), SetDeleteAsk.Bind(name))
+        MenuGlyph(m, T("menu.set.delete"), "E74D")
+        m.Add()
+    }
+    m.Add(T("menu.set.save"), SetSaveAsk)
+    MenuGlyph(m, T("menu.set.save"), "E710")
+    m.Show()
+}
+; Neue Anordnung: Schnappschuss aller gerade sichtbaren Fenster, nur der Name wird gefragt
+; (ausschliessen laesst sich spaeter ueber "Fenster auswaehlen...")
+SetSaveAsk(*) {
+    num := GetCurrentDesktop(), desk := GetDesktopNameRaw(num)
+    wins := SetCapture()
+    if (!wins.Length)
+        return MsgBox(T("set.none"), "DeskTabs", "Iconi")
+    sets := SetsLoad(desk)
+    ib := InputBox(T("set.nameq", wins.Length, desk), T("set.title"), "w440 h140", T("set.defname", sets.Length + 1))
+    name := SetClean(Trim(ib.Value))
+    if (ib.Result != "OK" || name = "")
+        return
+    done := false
+    for i, s in sets
+        if (s["name"] = name)
+            sets[i] := Map("name", name, "wins", wins), done := true
+    if (!done)
+        sets.Push(Map("name", name, "wins", wins))
+    SetsSave(desk, sets)
+    RebuildAll()
+    ToastShow(num, T("set.saved", name, wins.Length), 0xE8A9)
+}
+; Auswahl, welche sichtbaren Fenster zur Anordnung gehoeren: Name oben, darunter alle
+; sichtbaren Fenster dieses Desktops zum Anhaken (oberstes zuerst). name = "" -> neue Anordnung.
+SetPickDialog(name := "", *) {
+    global gSetPick
+    num := GetCurrentDesktop(), desk := GetDesktopNameRaw(num)
+    wins := SetCapture()
+    if (!wins.Length)
+        return MsgBox(T("set.none"), "DeskTabs", "Iconi")
+    sets := SetsLoad(desk), cur := 0
+    for s in sets
+        if (s["name"] = name)
+            cur := s
+    ; vorausgewaehlt: bei einer bestehenden Anordnung ihre Fenster, sonst die Fenster
+    ; desselben Programms wie das oberste (meist genau die, die man gerade angeordnet hat)
+    pre := Map()
+    if (cur) {
+        used := Map()
+        for w in cur["wins"]
+            if (h := SetFind(w, used))
+                used[h] := true, pre[h] := true
+    } else
+        for w in wins
+            if (w["exe"] = wins[1]["exe"])
+                pre[w["hwnd"]] := true
+    try gSetPick.Destroy()
+    g := Gui("+AlwaysOnTop -MinimizeBox -MaximizeBox", T("set.title"))
+    gSetPick := g
+    g.SetFont("s10", "Segoe UI")
+    g.MarginX := 20, g.MarginY := 16
+    g.Add("Text", "xm w560", T("set.pickname", desk))
+    ed := g.Add("Edit", "xm y+6 w560 r1", cur ? name : T("set.defname", sets.Length + 1))
+    g.Add("Text", "xm y+14 w560", T("set.picklist"))
+    lv := g.Add("ListView", "xm y+6 w560 r12 Checked -Multi NoSortHdr", [T("set.col.title"), T("set.col.exe")])
+    for w in wins
+        lv.Add(pre.Has(w["hwnd"]) ? "Check" : "", w["title"], RegExReplace(w["exe"], "i)\.exe$"))
+    lv.ModifyCol(1, 400), lv.ModifyCol(2, 130)
+    ok := g.Add("Button", "xm y+16 w130 Default", T("timer.note.save"))
+    no := g.Add("Button", "x+10 yp w130", T("set.cancel"))
+    ok.OnEvent("Click", Save)
+    no.OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    SetGuiIcon(g)
+    g.Show("AutoSize Center")
+    ed.Focus()
+
+    Save(*) {
+        nn := SetClean(Trim(ed.Value))
+        if (nn = "")
+            return
+        picked := [], row := 0
+        while (row := lv.GetNext(row, "Checked"))
+            picked.Push(wins[row])
+        if (!picked.Length)
+            return
+        g.Destroy()
+        out := [], placed := false
+        for s in SetsLoad(desk) {
+            if (s["name"] = name && name != "") {           ; bestehende Anordnung (evtl. umbenannt)
+                out.Push(Map("name", nn, "wins", picked)), placed := true
+            } else if (s["name"] = nn) {                     ; gleicher Name: ersetzen
+                if (!placed)
+                    out.Push(Map("name", nn, "wins", picked)), placed := true
+            } else
+                out.Push(s)
+        }
+        if (!placed)
+            out.Push(Map("name", nn, "wins", picked))
+        SetsSave(desk, out)
+        RebuildAll()
+        ToastShow(num, T("set.saved", nn, picked.Length), 0xE8A9)
+    }
+}
+
+; Umschalt + Klick: Schnappschuss neu, alles, was jetzt sichtbar ist, in seiner Stapelreihenfolge
+SetOverwrite(name, *) {
+    num := GetCurrentDesktop(), desk := GetDesktopNameRaw(num)
+    wins := SetCapture()
+    if (!wins.Length)
+        return MsgBox(T("set.none"), "DeskTabs", "Iconi")
+    sets := SetsLoad(desk)
+    for i, s in sets
+        if (s["name"] = name)
+            sets[i]["wins"] := wins
+    SetsSave(desk, sets)
+    ToastShow(num, T("set.updated", name, wins.Length), 0xE72C)
+}
+SetRenameAsk(name, *) {
+    desk := GetDesktopNameRaw(GetCurrentDesktop())
+    ib := InputBox(T("set.renameq", name), T("set.title"), "w420 h130", name)
+    nn := SetClean(Trim(ib.Value))
+    if (ib.Result != "OK" || nn = "" || nn == name)
+        return
+    sets := SetsLoad(desk), out := []
+    for s in sets
+        if (s["name"] = name)
+            s["name"] := nn, out.Push(s)
+        else if (s["name"] != nn)
+            out.Push(s)
+    SetsSave(desk, out)
+    RebuildAll()
+}
+SetDeleteAsk(name, *) {
+    desk := GetDesktopNameRaw(GetCurrentDesktop())
+    if (MsgBox(T("set.deleteq", name), "DeskTabs", "YesNo Icon? Default2") != "Yes")
+        return
+    out := []
+    for s in SetsLoad(desk)
+        if (s["name"] != name)
+            out.Push(s)
+    SetsSave(desk, out)
+    RebuildAll()
+}
+; Fenster der Anordnung nach vorne: von unten nach oben jeweils ganz nach oben, minimierte
+; ohne Aktivieren zurueck, zuletzt das oberste in den Vordergrund. HWND_TOP macht nichts
+; "immer im Vordergrund" (anders als ein Einsortieren hinter ein solches Fenster).
+SetRestore(name, *) {
+    set := SetGet(name, &desk, &num)
+    if (!set)
+        return
+    found := SetFound(set)
+    if (!found.Length)
+        return ToastShow(num, T("set.nonefound", name), 0xE8A9)
+    ; Die Leiste ist nie im Vordergrund (sie soll dem Arbeitsfenster den Fokus nicht nehmen),
+    ; deshalb ignoriert Windows ein blosses Nach-oben-Schieben anderer Fenster gern. WinActivate
+    ; setzt sich ueber diese Sperre hinweg: jedes Fenster von unten nach oben einmal aktivieren.
+    SetWinDelay(-1)
+    i := found.Length
+    while (i >= 1) {
+        try WinActivate("ahk_id " found[i])
+        i--
+    }
+    if (found.Length < set["wins"].Length)
+        ToastShow(num, T("set.partial", name, found.Length, set["wins"].Length), 0xE8A9)
+}
+; Aufraeumen: je Bildschirm die Fenster der Anordnung von links nach rechts gleich breit,
+; ueber die volle Hoehe des Arbeitsbereichs, buendig. Gerechnet wird mit dem sichtbaren
+; Rahmen (DWMWA_EXTENDED_FRAME_BOUNDS), die unsichtbaren Raender von Windows 11 werden
+; ausgeglichen. Pro Bildschirm in echten Pixeln (DPI je Monitor).
+SetTidy(name, *) {
+    set := SetGet(name, &desk, &num)
+    if (!set)
+        return
+    found := SetFound(set)
+    if (!found.Length)
+        return ToastShow(num, T("set.nonefound", name), 0xE8A9)
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
+    try {
+        mons := Map(), order := []
+        for h in found {
+            if (DllCall("IsIconic", "Ptr", h) || DllCall("IsZoomed", "Ptr", h))
+                DllCall("ShowWindow", "Ptr", h, "Int", 4)              ; erst normal, sonst laesst es sich nicht setzen
+            mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
+            if (!mons.Has(mon))
+                mons[mon] := [], order.Push(mon)
+            fr := SetFrame(h)
+            mons[mon].Push(Map("h", h, "l", fr[1]))
+        }
+        for mon in order {
+            list := mons[mon]
+            Loop list.Length - 1 {                                  ; nach linker Kante sortieren
+                j := A_Index + 1
+                while (j > 1 && list[j]["l"] < list[j - 1]["l"])
+                    t0 := list[j], list[j] := list[j - 1], list[j - 1] := t0, j--
+            }
+            mi := Buffer(40, 0), NumPut("UInt", 40, mi)
+            DllCall("GetMonitorInfo", "Ptr", mon, "Ptr", mi)
+            wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
+            n := list.Length
+            for i, it in list {
+                x0 := wl + Round((wr - wl) * (i - 1) / n), x1 := wl + Round((wr - wl) * i / n)
+                h := it["h"], fr := SetFrame(h), wrc := Buffer(16, 0)
+                DllCall("GetWindowRect", "Ptr", h, "Ptr", wrc)
+                dl := fr[1] - NumGet(wrc, 0, "Int"), dt := fr[2] - NumGet(wrc, 4, "Int")
+                dr := NumGet(wrc, 8, "Int") - fr[3], db := NumGet(wrc, 12, "Int") - fr[4]
+                DllCall("SetWindowPos", "Ptr", h, "Ptr", 0, "Int", x0 - dl, "Int", wt - dt
+                    , "Int", (x1 - x0) + dl + dr, "Int", (wb - wt) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
+            }
+        }
+    }
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    SetRestore(name)
+    ToastShow(num, T("set.tidied", name, found.Length, mons.Count), 0xE8A1)
+}
+; Flaeche des Arbeitsbereichs des Bildschirms, auf dem das Fenster liegt
+MonArea(h) {
+    mi := Buffer(40, 0), NumPut("UInt", 40, mi)
+    DllCall("GetMonitorInfo", "Ptr", DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr"), "Ptr", mi)
+    return (NumGet(mi, 28, "Int") - NumGet(mi, 20, "Int")) * (NumGet(mi, 32, "Int") - NumGet(mi, 24, "Int"))
+}
+; Flaeche einer GDI-Region in Pixeln (Summe ihrer Rechtecke)
+RgnArea(rgn) {
+    n := DllCall("GetRegionData", "Ptr", rgn, "UInt", 0, "Ptr", 0, "UInt")
+    if (!n)
+        return 0
+    buf := Buffer(n, 0)
+    DllCall("GetRegionData", "Ptr", rgn, "UInt", n, "Ptr", buf, "UInt")
+    cnt := NumGet(buf, 8, "UInt"), a := 0
+    Loop cnt {
+        o := 32 + (A_Index - 1) * 16
+        a += (NumGet(buf, o + 8, "Int") - NumGet(buf, o, "Int")) * (NumGet(buf, o + 12, "Int") - NumGet(buf, o + 4, "Int"))
+    }
+    return a
+}
+; sichtbarer Rahmen eines Fensters [l, t, r, b] (ohne die unsichtbaren Raender)
+SetFrame(h) {
+    rc := Buffer(16, 0)
+    if (DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 9, "Ptr", rc, "UInt", 16) != 0)
+        DllCall("GetWindowRect", "Ptr", h, "Ptr", rc)
+    return [NumGet(rc, 0, "Int"), NumGet(rc, 4, "Int"), NumGet(rc, 8, "Int"), NumGet(rc, 12, "Int")]
+}
+
 BtnClick(num, *) {
     ; Klick auf den bereits aktiven Desktop: hat er Unterprojekte, die schlanke Auswahl
     ; (Alt + Klick bleibt das volle Menue mit Anlegen/Entfernen); sonst auf Wunsch die Taskansicht
@@ -6571,6 +7078,10 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     }
     lx := BarMouseX()
     item := ItemAtX(lx)
+    if (!item && (si := SetAt(lx))) {
+        SetTimer(SetClick.Bind(si, GetKeyState("Shift")), -1)   ; nach vorne holen; mit Umschalt: aktuellen Stand speichern
+        return 0
+    }
     if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift")) {
         TogglePinWindow(WorkWindow())          ; Umschalt+Klick auf den Griff: aktives Fenster auf allen Desktops (noch einmal: nur hier)
         return 0
@@ -6578,6 +7089,10 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     if (item && GetKeyState("Alt", "P")) {        ; Alt+Klick: Unterprojekt waehlen (physisch: logisch ist Alt nach dem ersten Alt-Menue schon "los")
         Send("{Blind}{vkE8}")                     ; verhindert, dass das Loslassen von Alt die Menueleiste des Vordergrund-Programms oeffnet
         SetTimer(ShowSubMenu.Bind(item["num"]), -1)
+        return 0
+    }
+    if (item && GetKeyState("Ctrl") && !GetKeyState("Shift")) {
+        ToggleCompact(item["num"])             ; Strg+Klick: dieser Tab kompakt (nur Symbol) bzw. wieder normal
         return 0
     }
     if (item && GetKeyState("Shift") && (item["num"] != GetCurrentDesktop() || PinState(WorkWindow()) = 1)) {
@@ -6638,6 +7153,12 @@ HoverTick() {
     grip := (lx >= 0 && lx < gLayout["gripW"])
     changed := (grip != gGripHover)
     gGripHover := grip
+    global gSetHover
+    sh := SetAt(lx)
+    if (sh != gSetHover) {
+        gSetHover := sh, changed := true
+        SetHoverTip(sh)
+    }
     for item in BTNS {
         h := (over && item["num"] = over["num"])
         if (h != item["hover"]) {
