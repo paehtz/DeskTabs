@@ -2,7 +2,7 @@
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
 ## 1.1.20
-- **Window layouts:** DeskTabs remembers windows that belong together as a named layout per desktop (≡ menu › *Save window layout…*). A tile next to the tabs brings them back to the front with one click, Shift + click saves the current state anew, and a right-click tidies them flush side by side.
+- **Window layouts:** DeskTabs remembers windows that belong together as a named layout per desktop (≡ menu › *Save window layout…*). A tile next to the tabs brings them back to the front with one click, Shift + click saves the current state anew, Ctrl + click aligns windows you dragged roughly side by side flush to the pixel.
 - **One click makes a tab compact:** **Ctrl + click** a tab to show it as an icon only, again to bring its name back. Handy for projects that rest for a while.
 
 ## 1.1.19

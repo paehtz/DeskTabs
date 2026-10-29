@@ -1514,6 +1514,13 @@ global LANG_DE := Map(
     "sc.k.altclick", "{1} + Klick auf einen Tab",
     "sc.k.ctrlclick", "{1} + Klick auf einen Tab",
     "sc.d.ctrlclick", "diesen Tab kompakt (nur Symbol) bzw. wieder normal anzeigen",
+    "sc.k.setclick", "Klick auf eine Anordnungs-Kachel",
+    "sc.d.setclick", "ihre Fenster nach vorne holen (Rechtsklick: alle Möglichkeiten)",
+    "sc.k.setshift", "{1} + Klick auf eine Kachel",
+    "sc.d.setshift", "alles, was gerade sichtbar ist, als neuen Stand der Anordnung speichern",
+    "sc.k.setctrl", "{1} + Klick auf eine Kachel",
+    "sc.d.setctrl", "bündig ausrichten: Kanten aneinander und an den Bildschirmrand (nur kleine Korrekturen)",
+    "set.tidynone", "„{1}“: nichts nachzurichten, alles liegt schon bündig",
     "sc.d.altclick", "Unterprojekte: wählen, anlegen, entfernen (stehen im Tab und im Zeit-Log)",
     "sc.k.clickactivesub", "Klick auf den aktiven Tab",
     "sc.d.clickactivesub", "Unterprojekt schnell wählen (wenn der Desktop welche hat)",
@@ -1563,7 +1570,7 @@ global LANG_DE := Map(
     "menu.hotkeys.shiftdrag", "Tab seitlich ziehen: Desktops umsortieren (wie Browser-Tabs)",
     "menu.newdesk", "Neuer Desktop…",
     "menu.set.save", "Fensteranordnung speichern…",
-    "menu.set.tidy", "Aufräumen: nebeneinander, volle Höhe",
+    "menu.set.tidy", "Fenster bündig ausrichten",
     "menu.set.overwrite", "Mit aktueller Anordnung überschreiben",
     "menu.set.rename", "Umbenennen",
     "menu.set.delete", "Löschen",
@@ -1576,7 +1583,7 @@ global LANG_DE := Map(
     "set.nonefound", "„{1}“ · keins der Fenster ist gerade offen",
     "set.renameq", "Neuer Name für „{1}“:",
     "set.deleteq", "Anordnung „{1}“ löschen?",
-    "set.tidied", "„{1}“ aufgeräumt · {2} Fenster auf {3} Bildschirm(en)",
+    "set.tidied", "„{1}“ bündig ausgerichtet · {2} Fenster auf {3} Bildschirm(en)",
     "set.updated", "„{1}“ aktualisiert · {2} Fenster",
     "set.pickname", "Name der Anordnung auf „{1}“:",
     "set.picklist", "Welche Fenster gehören dazu? (oberstes zuerst)",
@@ -1803,6 +1810,13 @@ global LANG_EN := Map(
     "sc.k.altclick", "{1} + click a tab",
     "sc.k.ctrlclick", "{1} + click a tab",
     "sc.d.ctrlclick", "show this tab compact (icon only) or normal again",
+    "sc.k.setclick", "Click a layout tile",
+    "sc.d.setclick", "bring its windows to the front (right-click: all options)",
+    "sc.k.setshift", "{1} + click a tile",
+    "sc.d.setshift", "save everything visible right now as the layout's new state",
+    "sc.k.setctrl", "{1} + click a tile",
+    "sc.d.setctrl", "align flush: edges to each other and to the screen edge (small corrections only)",
+    "set.tidynone", "“{1}”: nothing to align, everything is flush already",
     "sc.d.altclick", "sub-projects: pick, add, remove (shown in the tab and in the time log)",
     "sc.k.clickactivesub", "Click the active tab",
     "sc.d.clickactivesub", "quick sub-project pick (if the desktop has any)",
@@ -1852,7 +1866,7 @@ global LANG_EN := Map(
     "menu.hotkeys.shiftdrag", "Drag a tab sideways: reorder desktops (like browser tabs)",
     "menu.newdesk", "New desktop…",
     "menu.set.save", "Save window layout…",
-    "menu.set.tidy", "Tidy up: side by side, full height",
+    "menu.set.tidy", "Align windows flush",
     "menu.set.overwrite", "Overwrite with current layout",
     "menu.set.rename", "Rename",
     "menu.set.delete", "Delete",
@@ -1865,7 +1879,7 @@ global LANG_EN := Map(
     "set.nonefound", "“{1}” · none of its windows is open",
     "set.renameq", "New name for “{1}”:",
     "set.deleteq", "Delete layout “{1}”?",
-    "set.tidied", "“{1}” tidied · {2} windows on {3} screen(s)",
+    "set.tidied", "“{1}” aligned · {2} windows on {3} screen(s)",
     "set.updated", "“{1}” updated · {2} windows",
     "set.pickname", "Name of the layout on “{1}”:",
     "set.picklist", "Which windows belong to it? (topmost first)",
@@ -4028,6 +4042,9 @@ ShowShortcuts(*) {
     rows.Push([T("sc.k.clickactivesub"), T("sc.d.clickactivesub")])
     rows.Push([T("sc.k.altclick", T("key.alt")), T("sc.d.altclick")])
     rows.Push([T("sc.k.ctrlclick", C), T("sc.d.ctrlclick")])
+    rows.Push([T("sc.k.setclick"), T("sc.d.setclick")])
+    rows.Push([T("sc.k.setshift", S), T("sc.d.setshift")])
+    rows.Push([T("sc.k.setctrl", C), T("sc.d.setctrl")])
     if (CONF["CallHotkey"] != "")
         rows.Push([CallHotkeyText(), T("sc.d.call")])
     rows.Push([T("sc.sec.bar")])
@@ -6456,12 +6473,14 @@ SetFound(set) {
 }
 ; Klick auf eine Kachel: nach vorne holen; Umschalt + Klick: aktuellen Stand als neue Anordnung
 ; dieser Kachel speichern. Leerer Platz: Menue zum Speichern.
-SetClick(i, shift := false) {
+SetClick(i, shift := false, ctrl := false) {
     name := SetNameAt(i)
     if (name = "")
         return SetMenu(i)
     if (shift)
         return SetOverwrite(name)
+    if (ctrl)
+        return SetTidy(name)
     SetRestore(name)
 }
 ; Rechtsklick: Menue der Kachel (bzw. nur "speichern" auf einem leeren Platz)
@@ -6644,11 +6663,16 @@ SetRestore(name, *) {
     if (found.Length < set["wins"].Length)
         ToastShow(num, T("set.partial", name, found.Length, set["wins"].Length), 0xE8A9)
 }
-; Aufraeumen: je Bildschirm die Fenster der Anordnung von links nach rechts gleich breit,
-; ueber die volle Hoehe des Arbeitsbereichs, buendig. Gerechnet wird mit dem sichtbaren
-; Rahmen (DWMWA_EXTENDED_FRAME_BOUNDS), die unsichtbaren Raender von Windows 11 werden
-; ausgeglichen. Pro Bildschirm in echten Pixeln (DPI je Monitor).
+; Buendig ausrichten: nur die letzten Pixel Handarbeit. Die Fenster liegen schon grob, wo sie
+; hin sollen; jede Kante rueckt hoechstens um TIDY_TOL der Bildschirmbreite bzw. -hoehe:
+; an den Rand des Arbeitsbereichs, wenn sie so nah dran ist, und an die gegenueberliegende
+; Kante eines Nachbarfensters (Spalt oder Ueberlappung, beide treffen sich in der Mitte).
+; Alles, was weiter weg ist, bleibt, wie es ist. Maximierte, minimierte und zu mehr als der
+; Haelfte von anderen Fenstern der Anordnung verdeckte Fenster (etwa ein breites Fenster im
+; Hintergrund) fasst es nicht an. Gerechnet wird mit dem sichtbaren Rahmen
+; (DWMWA_EXTENDED_FRAME_BOUNDS), in echten Pixeln je Bildschirm.
 SetTidy(name, *) {
+    static TIDY_TOL := 0.05
     set := SetGet(name, &desk, &num)
     if (!set)
         return
@@ -6656,42 +6680,71 @@ SetTidy(name, *) {
     if (!found.Length)
         return ToastShow(num, T("set.nonefound", name), 0xE8A9)
     old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
+    cnt := 0, mons := Map()
     try {
-        mons := Map(), order := []
-        for h in found {
-            if (DllCall("IsIconic", "Ptr", h) || DllCall("IsZoomed", "Ptr", h))
-                DllCall("ShowWindow", "Ptr", h, "Int", 4)              ; erst normal, sonst laesst es sich nicht setzen
-            mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
-            if (!mons.Has(mon))
-                mons[mon] := [], order.Push(mon)
+        items := [], above := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
+        for h in found {                                            ; found[1] liegt oben
             fr := SetFrame(h)
-            mons[mon].Push(Map("h", h, "l", fr[1]))
-        }
-        for mon in order {
-            list := mons[mon]
-            Loop list.Length - 1 {                                  ; nach linker Kante sortieren
-                j := A_Index + 1
-                while (j > 1 && list[j]["l"] < list[j - 1]["l"])
-                    t0 := list[j], list[j] := list[j - 1], list[j - 1] := t0, j--
-            }
+            rg := DllCall("CreateRectRgn", "Int", fr[1], "Int", fr[2], "Int", fr[3], "Int", fr[4], "Ptr")
+            vis := DllCall("CreateRectRgn", "Int", 0, "Int", 0, "Int", 0, "Int", 0, "Ptr")
+            DllCall("CombineRgn", "Ptr", vis, "Ptr", rg, "Ptr", above, "Int", 4)      ; RGN_DIFF
+            va := RgnArea(vis), fa := (fr[3] - fr[1]) * (fr[4] - fr[2])
+            DllCall("CombineRgn", "Ptr", above, "Ptr", above, "Ptr", rg, "Int", 2)    ; RGN_OR
+            DllCall("DeleteObject", "Ptr", rg), DllCall("DeleteObject", "Ptr", vis)
+            if (DllCall("IsZoomed", "Ptr", h) || DllCall("IsIconic", "Ptr", h) || fa <= 0 || va < fa / 2)
+                continue
+            mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
             mi := Buffer(40, 0), NumPut("UInt", 40, mi)
             DllCall("GetMonitorInfo", "Ptr", mon, "Ptr", mi)
             wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
-            n := list.Length
-            for i, it in list {
-                x0 := wl + Round((wr - wl) * (i - 1) / n), x1 := wl + Round((wr - wl) * i / n)
-                h := it["h"], fr := SetFrame(h), wrc := Buffer(16, 0)
-                DllCall("GetWindowRect", "Ptr", h, "Ptr", wrc)
-                dl := fr[1] - NumGet(wrc, 0, "Int"), dt := fr[2] - NumGet(wrc, 4, "Int")
-                dr := NumGet(wrc, 8, "Int") - fr[3], db := NumGet(wrc, 12, "Int") - fr[4]
-                DllCall("SetWindowPos", "Ptr", h, "Ptr", 0, "Int", x0 - dl, "Int", wt - dt
-                    , "Int", (x1 - x0) + dl + dr, "Int", (wb - wt) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
+            items.Push({h: h, mon: mon, l: fr[1], t: fr[2], r: fr[3], b: fr[4]
+                , nl: fr[1], nt: fr[2], nr: fr[3], nb: fr[4]
+                , wl: wl, wt: wt, wr: wr, wb: wb, tx: (wr - wl) * TIDY_TOL, ty: (wb - wt) * TIDY_TOL})
+        }
+        DllCall("DeleteObject", "Ptr", above)
+        for a in items {                                            ; an den Rand des Arbeitsbereichs
+            if (Abs(a.l - a.wl) <= a.tx)
+                a.nl := a.wl
+            if (Abs(a.r - a.wr) <= a.tx)
+                a.nr := a.wr
+            if (Abs(a.t - a.wt) <= a.ty)
+                a.nt := a.wt
+            if (Abs(a.b - a.wb) <= a.ty)
+                a.nb := a.wb
+        }
+        usedL := Map(), usedT := Map()
+        for a in items {                                            ; rechte an linke, untere an obere Kante
+            bx := 0, dx := a.tx + 1, by := 0, dy := a.ty + 1
+            for b in items {
+                if (b = a || b.mon != a.mon)
+                    continue
+                if (!usedL.Has(b.h) && Abs(a.r - b.l) < dx && Min(a.b, b.b) - Max(a.t, b.t) > Min(a.b - a.t, b.b - b.t) / 2)
+                    bx := b, dx := Abs(a.r - b.l)
+                if (!usedT.Has(b.h) && Abs(a.b - b.t) < dy && Min(a.r, b.r) - Max(a.l, b.l) > Min(a.r - a.l, b.r - b.l) / 2)
+                    by := b, dy := Abs(a.b - b.t)
             }
+            if (bx)
+                m := Round((a.r + bx.l) / 2), a.nr := m, bx.nl := m, usedL[bx.h] := true
+            if (by)
+                m := Round((a.b + by.t) / 2), a.nb := m, by.nt := m, usedT[by.h] := true
+        }
+        for a in items {
+            if (a.nl = a.l && a.nt = a.t && a.nr = a.r && a.nb = a.b)
+                continue
+            wrc := Buffer(16, 0)
+            DllCall("GetWindowRect", "Ptr", a.h, "Ptr", wrc)
+            dl := a.l - NumGet(wrc, 0, "Int"), dt := a.t - NumGet(wrc, 4, "Int")
+            dr := NumGet(wrc, 8, "Int") - a.r, db := NumGet(wrc, 12, "Int") - a.b
+            DllCall("SetWindowPos", "Ptr", a.h, "Ptr", 0, "Int", a.nl - dl, "Int", a.nt - dt
+                , "Int", (a.nr - a.nl) + dl + dr, "Int", (a.nb - a.nt) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
+            cnt++, mons[a.mon] := true
         }
     }
     DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
     SetRestore(name)
-    ToastShow(num, T("set.tidied", name, found.Length, mons.Count), 0xE8A1)
+    if (!cnt)
+        return ToastShow(num, T("set.tidynone", name), 0xE8A1)
+    ToastShow(num, T("set.tidied", name, cnt, mons.Count), 0xE8A1)
 }
 ; Flaeche des Arbeitsbereichs des Bildschirms, auf dem das Fenster liegt
 MonArea(h) {
@@ -7079,7 +7132,7 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     lx := BarMouseX()
     item := ItemAtX(lx)
     if (!item && (si := SetAt(lx))) {
-        SetTimer(SetClick.Bind(si, GetKeyState("Shift")), -1)   ; nach vorne holen; mit Umschalt: aktuellen Stand speichern
+        SetTimer(SetClick.Bind(si, GetKeyState("Shift"), GetKeyState("Ctrl")), -1)   ; nach vorne; Umschalt: neu aufnehmen; Strg: aufraeumen
         return 0
     }
     if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift")) {
