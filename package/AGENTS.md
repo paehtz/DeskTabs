@@ -52,6 +52,9 @@ Acme Bakery=*Site updates|Call with Anna|Flyer proofs
 [WindowSets]     ; window arrangements, written by DeskTabs; change them in the bar, not by hand
 ; per desktop: arrangements separated by U+241D, name and windows by U+241C,
 ; windows by U+241E, fields by U+241F (exe, title, window handle in hex)
+
+[ClaudeTags]     ; only with ClaudeCode=1: project tag of a desktop's Claude chats (title "[Tag] ...")
+Acme Bakery=ACME ; without an entry: the most common tag in its layouts, else the desktop name
 ```
 
 The glyph codes are listed with names and search words in `data\glyph-names.txt` (`CODE|Name|keywords`).
@@ -78,6 +81,7 @@ The glyph codes are listed with names and search words in `data\glyph-names.txt`
 | `SwitchMethod` | `dll`, `native` | jump straight to a desktop, or step like Ctrl+Win+Arrow |
 | `SnapToTaskbar` | `0`, `1` | snap onto the taskbar when dragged |
 | `DragToTab` | `0`, `1` | drag a window onto a tab to move it there |
+| `ClaudeCode` | `0`, `1` | Claude Code features (chat windows by project tag, distribute evenly, `/cmd` interface; see below) |
 | `RestoreZOrder` | `0`, `1` | each desktop keeps the windows that were in front there (a desktop-only window right behind a global one may flash up for a moment on arrival: Windows picks it before DeskTabs restores the order; minimising it avoids that) |
 | `SwitchAlert` | `0`, `1` | flag desktop switches caused by other apps |
 | `AttentionDot` | `0`, `1` | dot on a tab when an app there wants attention |
@@ -127,3 +131,20 @@ Only with the user's explicit okay:
 - or give the user a prefilled link to click: `https://github.com/paehtz/DeskTabs/issues/new?title=<url-encoded title>&body=<url-encoded text>`
 
 Keep it short: what the user wanted, what happened or what is missing, Windows version, DeskTabs version (Help › About). Never include personal data such as desktop names of clients or time log contents unless the user explicitly wants that. Never send anything silently.
+
+## Commands from a script or another AI chat: `/cmd`
+
+With `ClaudeCode=1`, a second start passes a command to the running bar and returns when it is done. The answer is in `%TEMP%\DeskTabs-cmd.txt`: first line `ok…` or `error: …`, then details.
+
+```powershell
+Start-Process DeskTabs.exe -ArgumentList '/cmd arrange ACME' -Wait   # from source: AutoHotkey64.exe DeskTabs.ahk /cmd ...
+Get-Content $env:TEMP\DeskTabs-cmd.txt
+```
+
+| Command | Effect |
+|---|---|
+| `arrange <Tag>` | all Claude chats with `[Tag]` in the title onto that project's desktop, distributed evenly, to the front if it is the current desktop |
+| `list [Tag]` | Claude chats with a tag: desktop number, desktop name, title (tab-separated) |
+| `front <Layout>` | bring a window layout of the current desktop to the front |
+| `even <Layout>` | distribute that layout's Claude windows evenly |
+| `align <Layout>` | align that layout's windows flush (small corrections) |

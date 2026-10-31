@@ -1,5 +1,5 @@
 #Requires AutoHotkey v2.0
-#SingleInstance Force
+#SingleInstance Off      ; selbst geregelt: /cmd reicht Befehle weiter, sonst ersetzt ein Start die laufende Leiste
 ;@Ahk2Exe-SetMainIcon DeskTabs.ico
 ;@Ahk2Exe-SetName DeskTabs
 ;@Ahk2Exe-SetDescription DeskTabs - clickable taskbar buttons for Windows 11 virtual desktops
@@ -104,6 +104,7 @@ global CONF := Map(
     "RestoreZOrder",  1,       ; 1 = je Desktop merken, welche Fenster vorne lagen, und das beim Zurueckkommen wiederherstellen
     "AttentionDot",   1,       ; 1 = Punkt am Tab, wenn ein Programm auf einem anderen Desktop blinkt
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
+    "ClaudeCode",     0,       ; 1 = Claude-Code-Funktionen (Chat-Fenster am Projektkuerzel, gleich breit verteilen, /cmd)
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
 )
 
@@ -1571,6 +1572,15 @@ global LANG_DE := Map(
     "menu.newdesk", "Neuer Desktop…",
     "menu.set.save", "Fensteranordnung speichern…",
     "menu.set.tidy", "Fenster bündig ausrichten",
+    "menu.claudecode", "Claude-Code-Funktionen",
+    "menu.set.even", "Gleich breit verteilen",
+    "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
+    "menu.claude.gather", "Claude-Fenster [{1}] hierher holen",
+    "menu.claude.tag", "Claude-Kürzel…",
+    "claude.tagtitle", "Claude-Kürzel für „{1}“",
+    "claude.tagq", "Kürzel, das die Claude-Chats dieses Desktops in eckigen Klammern im Titel tragen (ohne Klammern). Leer lassen = automatisch:",
+    "claude.gathered", "{1} Claude-Fenster [{2}] verteilt · {3} von anderen Desktops geholt",
+    "claude.none", "Keine Claude-Fenster mit [{1}] gefunden",
     "menu.set.overwrite", "Mit aktueller Anordnung überschreiben",
     "menu.set.rename", "Umbenennen",
     "menu.set.delete", "Löschen",
@@ -1867,6 +1877,15 @@ global LANG_EN := Map(
     "menu.newdesk", "New desktop…",
     "menu.set.save", "Save window layout…",
     "menu.set.tidy", "Align windows flush",
+    "menu.claudecode", "Claude Code features",
+    "menu.set.even", "Distribute evenly",
+    "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
+    "menu.claude.gather", "Bring Claude windows [{1}] here",
+    "menu.claude.tag", "Claude tag…",
+    "claude.tagtitle", "Claude tag for “{1}”",
+    "claude.tagq", "Tag that this desktop's Claude chats carry in square brackets in their title (without brackets). Leave empty = automatic:",
+    "claude.gathered", "{1} Claude windows [{2}] distributed · {3} brought from other desktops",
+    "claude.none", "No Claude windows with [{1}] found",
     "menu.set.overwrite", "Overwrite with current layout",
     "menu.set.rename", "Rename",
     "menu.set.delete", "Delete",
@@ -2112,11 +2131,15 @@ T(key, args*) {
 }
 
 ; ------------------------------- Start --------------------------------------
+if (A_Args.Length && A_Args[1] = "/cmd")
+    CmdForward()
 Main()
 
 Main() {
     global VDA, MyGui
     OnError(LogErr)
+    ReplaceOtherInstance()
+    OnMessage(0x4A, OnCopyData)             ; WM_COPYDATA: Befehle von DeskTabs.exe /cmd ...
     NormalizeIniEncoding()
     InitLanguage()
     if !FileExist(CONF["DllPath"]) {
@@ -2209,7 +2232,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -3224,7 +3247,10 @@ OdDraw(lParam, rec) {
         DllCall("RoundRect", "Ptr", hdc, "Int", sx, "Int", sy, "Int", sx + sz + 1, "Int", sy + sz + 1, "Int", Round(4 * s), "Int", Round(4 * s))
         DllCall("SelectObject", "Ptr", hdc, "Ptr", oB), DllCall("SelectObject", "Ptr", hdc, "Ptr", oP)
         DllCall("DeleteObject", "Ptr", br)
-    } else if (chk || rec["glyph"] != "") {
+    } else if (!chk && SubStr(rec["glyph"], 1, 4) = "ico:" && (hi := OdExeIcon(SubStr(rec["glyph"], 5), Round(16 * s)))) {
+        sz := Round(16 * s)                              ; Programm-Icon statt Symbolschrift
+        DllCall("DrawIconEx", "Ptr", hdc, "Int", gx + (gw - sz) // 2, "Int", t + (b - t - sz) // 2, "Ptr", hi, "Int", sz, "Int", sz, "UInt", 0, "Ptr", 0, "UInt", 3)
+    } else if (chk || (rec["glyph"] != "" && SubStr(rec["glyph"], 1, 4) != "ico:")) {
         old := DllCall("SelectObject", "Ptr", hdc, "Ptr", OdIconFont(Round(16 * s)), "Ptr")
         NumPut("Int", gx, "Int", t, "Int", gx + gw, "Int", b, rt)
         DllCall("DrawTextW", "Ptr", hdc, "Str", Chr(chk ? 0xE73E : Integer("0x" rec["glyph"])), "Int", 1, "Ptr", rt, "UInt", 0x25)   ; CENTER|VCENTER|SINGLELINE
@@ -3472,6 +3498,13 @@ ShowContextMenu(num, *) {
         callLbl := CallActiveOn(num) ? T("menu.call.stop", CallDuration()) : T("menu.call.start")
         m.Add(callLbl, CallActiveOn(num) ? StopCall : StartCall.Bind(num))
         MenuGlyph(m, callLbl, "E916")
+        if (CONF["ClaudeCode"]) {
+            ctag := ClaudeTag(raw)
+            m.Add(T("menu.claude.gather", ctag), ClaudeGather.Bind(num))
+            MenuGlyph(m, T("menu.claude.gather", ctag), ClaudeGlyph())
+            m.Add(T("menu.claude.tag"), ClaudeTagAsk.Bind(num))
+            MenuGlyph(m, T("menu.claude.tag"), ClaudeGlyph())
+        }
         subCur := SubActive(num)
         subLbl := (subCur != "") ? T("menu.sub.current", subCur) : T("menu.sub")
         m.Add(subLbl, SubMenu(num))
@@ -3667,6 +3700,9 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.update.auto"), ToggleView.Bind("UpdateCheck"))
     if (CONF["UpdateCheck"])
         xm.Check(T("menu.update.auto"))
+    xm.Add(T("menu.claudecode"), ToggleView.Bind("ClaudeCode"))
+    if (CONF["ClaudeCode"])
+        xm.Check(T("menu.claudecode"))
     lgm := Menu()
     lgm.Add(T("menu.report"), OpenTimeReport)
     MenuGlyph(lgm, T("menu.report"), "E9D2")
@@ -4255,7 +4291,7 @@ DesktopGuid(num) {
 MoveDesktopSettings(oldName, newName) {
     if (oldName = "" || newName = "" || NormName(oldName) = NormName(newName))
         return
-    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject", "TimerNotes", "WindowSets"] {
+    for , sec in ["Colors", "Icons", "Short", "Compact", "Subprojects", "Subproject", "TimerNotes", "WindowSets", "ClaudeTags"] {
         v := IniLookup(sec, oldName)
         if (v = "" || IniLookup(sec, newName) != "")
             continue
@@ -6469,6 +6505,18 @@ SetFound(set) {
     for w in set["wins"]
         if (h := SetFind(w, used))
             found.Push(h), used[h] := true
+    ; Claude-Code-Funktionen: dazu alle Claude-Chats dieses Desktops mit demselben Kuerzel
+    ; (umbenannte und neue Chats gehoeren so automatisch zur Anordnung)
+    if (CONF["ClaudeCode"]) {
+        tags := Map()
+        for w in set["wins"]
+            if (w["exe"] = "claude.exe" && RegExMatch(w["title"], "\[([^\]]+)\]", &m))
+                tags[m[1]] := true
+        for tg in tags
+            for h in ClaudeWins(tg)
+                if (!used.Has(h) && !ZCloaked(h))
+                    found.Push(h), used[h] := true
+    }
     return found
 }
 ; Klick auf eine Kachel: nach vorne holen; Umschalt + Klick: aktuellen Stand als neue Anordnung
@@ -6497,6 +6545,10 @@ SetMenu(i := 0) {
         MenuGlyph(m, T("menu.set.pick"), "E762")
         m.Add(T("menu.set.tidy"), SetTidy.Bind(name))
         MenuGlyph(m, T("menu.set.tidy"), "E8A1")
+        if (CONF["ClaudeCode"]) {
+            m.Add(T("menu.set.even"), SetEven.Bind(name))
+            MenuGlyph(m, T("menu.set.even"), ClaudeGlyph())
+        }
         m.Add(T("menu.set.rename"), SetRenameAsk.Bind(name))
         MenuGlyph(m, T("menu.set.rename"), "E70F")
         m.Add(T("menu.set.delete"), SetDeleteAsk.Bind(name))
@@ -6745,6 +6797,354 @@ SetTidy(name, *) {
     if (!cnt)
         return ToastShow(num, T("set.tidynone", name), 0xE8A1)
     ToastShow(num, T("set.tidied", name, cnt, mons.Count), 0xE8A1)
+}
+; Gleich breit verteilen (nur mit Claude-Code-Funktionen): die Claude-Fenster der Anordnung grob in
+; die gewuenschte Reihenfolge ziehen (uebereinander = halbe Hoehe), TileEven macht den Rest.
+; Andere Programme, Vollbild-Fenster (maximiert oder fast bildschirmgross) und minimierte
+; bleiben, wie sie sind.
+SetEven(name, *) {
+    set := SetGet(name, &desk, &num)
+    if (!set)
+        return
+    found := SetFound(set)
+    if (!found.Length)
+        return ToastShow(num, T("set.nonefound", name), 0xE8A9)
+    cl := []                                                    ; nur die Claude-Fenster
+    for h in found
+        try if (WinGetProcessName("ahk_id " h) = "claude.exe")
+            cl.Push(h)
+    cnt := TileEven(SetNotFull(cl), false, &mc)
+    SetRestore(name)
+    ToastShow(num, T("set.evened", name, cnt, mc), 0xECA5)
+}
+; die Fenster aus der Liste, die weder minimiert noch maximiert sind und nicht mindestens
+; 90 % von Breite und Hoehe des Arbeitsbereichs ihres Bildschirms bedecken
+SetNotFull(list) {
+    out := []
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")
+    for h in list {
+        if (DllCall("IsZoomed", "Ptr", h) || DllCall("IsIconic", "Ptr", h))
+            continue
+        mi := Buffer(40, 0), NumPut("UInt", 40, mi)
+        DllCall("GetMonitorInfo", "Ptr", DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr"), "Ptr", mi)
+        fr := SetFrame(h)
+        if (fr[3] - fr[1] >= (NumGet(mi, 28, "Int") - NumGet(mi, 20, "Int")) * 0.9
+            && fr[4] - fr[2] >= (NumGet(mi, 32, "Int") - NumGet(mi, 24, "Int")) * 0.9)
+            continue
+        out.Push(h)
+    }
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    return out
+}
+; Gleich verteilen, je Bildschirm dort, wo die Fenster gerade liegen: Fenster, die sich
+; waagerecht zur Haelfte decken, bilden eine Spalte und liegen uebereinander (gleich hoch),
+; die Spalten bekommen von links nach rechts gleich viel Breite, volle Hoehe, buendig.
+; Je Bildschirm passen hoechstens so viele Spalten, wie TILE_MINW (Pixel bei 100 %) breit
+; sind (3440 -> 5, 2560 -> 3, 1920 -> 2); sind es mehr, werden die beiden schmalsten
+; Nachbarspalten (von rechts) zusammengelegt, ihre Fenster also uebereinander gestapelt.
+; force: maximierte/minimierte Fenster erst normal machen statt sie auszulassen.
+; Rueckgabe: Zahl der verteilten Fenster, &mc: Zahl der Bildschirme
+TileEven(list, force, &mc := 0) {
+    static TILE_MINW := 660
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
+    mons := Map(), order := [], cnt := 0
+    try {
+        for h in list {
+            if (DllCall("IsIconic", "Ptr", h) || DllCall("IsZoomed", "Ptr", h)) {
+                if (!force)
+                    continue
+                DllCall("ShowWindow", "Ptr", h, "Int", 4)          ; SW_SHOWNOACTIVATE: erst normal
+            }
+            mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
+            if (!mons.Has(mon))
+                mons[mon] := [], order.Push(mon)
+            fr := SetFrame(h)
+            mons[mon].Push({h: h, l: fr[1], t: fr[2], r: fr[3], b: fr[4]})
+        }
+        for mon in order {
+            items := mons[mon]
+            Loop items.Length - 1 {                                 ; nach linker Kante sortieren
+                j := A_Index + 1
+                while (j > 1 && items[j].l < items[j - 1].l)
+                    t0 := items[j], items[j] := items[j - 1], items[j - 1] := t0, j--
+            }
+            cols := []                                              ; Spalten: {l, r, wins}
+            for it in items {
+                hit := 0
+                for c in cols
+                    if (Min(c.r, it.r) - Max(c.l, it.l) >= Min(c.r - c.l, it.r - it.l) / 2) {
+                        hit := c
+                        break
+                    }
+                if (hit)
+                    hit.wins.Push(it)
+                else
+                    cols.Push({l: it.l, r: it.r, wins: [it]})
+            }
+            for c in cols {                                         ; in der Spalte von oben nach unten
+                w := c.wins
+                Loop w.Length - 1 {
+                    j := A_Index + 1
+                    while (j > 1 && w[j].t < w[j - 1].t)
+                        t0 := w[j], w[j] := w[j - 1], w[j - 1] := t0, j--
+                }
+            }
+            mi := Buffer(40, 0), NumPut("UInt", 40, mi)
+            DllCall("GetMonitorInfo", "Ptr", mon, "Ptr", mi)
+            wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
+            dpi := 96, dpy := 96
+            try DllCall("shcore\GetDpiForMonitor", "Ptr", mon, "Int", 0, "UInt*", &dpi, "UInt*", &dpy)
+            maxc := Max(1, Floor((wr - wl) * 96 / dpi / TILE_MINW))
+            while (cols.Length > maxc) {                            ; zu viele: Nachbarn stapeln
+                bi := 0, bn := 0
+                Loop cols.Length - 1 {
+                    i := cols.Length - A_Index                      ; von rechts
+                    n := cols[i].wins.Length + cols[i + 1].wins.Length
+                    if (!bi || n < bn)
+                        bi := i, bn := n
+                }
+                for it in cols[bi + 1].wins
+                    cols[bi].wins.Push(it)
+                cols[bi].r := cols[bi + 1].r
+                cols.RemoveAt(bi + 1)
+            }
+            nc := cols.Length
+            for ci, c in cols {
+                x0 := wl + Round((wr - wl) * (ci - 1) / nc), x1 := wl + Round((wr - wl) * ci / nc)
+                nr := c.wins.Length
+                for ri, it in c.wins {
+                    y0 := wt + Round((wb - wt) * (ri - 1) / nr), y1 := wt + Round((wb - wt) * ri / nr)
+                    fr := SetFrame(it.h), wrc := Buffer(16, 0)
+                    DllCall("GetWindowRect", "Ptr", it.h, "Ptr", wrc)
+                    dl := fr[1] - NumGet(wrc, 0, "Int"), dt := fr[2] - NumGet(wrc, 4, "Int")
+                    dr := NumGet(wrc, 8, "Int") - fr[3], db := NumGet(wrc, 12, "Int") - fr[4]
+                    DllCall("SetWindowPos", "Ptr", it.h, "Ptr", 0, "Int", x0 - dl, "Int", y0 - dt
+                        , "Int", (x1 - x0) + dl + dr, "Int", (y1 - y0) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
+                    cnt++
+                }
+            }
+        }
+    }
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    mc := mons.Count
+    return cnt
+}
+
+; ---------------------------- Claude-Code-Funktionen ----------------------------
+; Abschaltbar (Weitere Einstellungen, Standard aus). Die Chat-Fenster der Claude-App tragen
+; den Projektkuerzel in eckigen Klammern im Titel, z. B. "🧭 [ACME] 1. Website"; daran
+; erkennt DeskTabs sie, auch nach dem Umbenennen und bei neuen Chats.
+; Kuerzel eines Desktops: [ClaudeTags] in settings.ini, sonst das haeufigste Kuerzel der
+; Claude-Fenster in seinen Anordnungen, sonst der Desktop-Name
+; Menue-Symbol der Claude-Funktionen: das Icon der Claude-App (Pfad aus einem laufenden
+; Claude-Fenster), sonst ein Symbol aus der Schrift
+ClaudeGlyph() {
+    static path := ""
+    if (path = "") {
+        dhw := A_DetectHiddenWindows
+        DetectHiddenWindows(true)
+        try for h in WinGetList("ahk_exe claude.exe")
+            if (path := ProcessGetPath(WinGetPID(h)))
+                break
+        DetectHiddenWindows(dhw)
+    }
+    return path != "" ? "ico:" path : "ECA5"
+}
+; Icon einer Programmdatei in Groesse sz (je Pfad und Groesse einmal geladen); 0 = keins
+OdExeIcon(path, sz) {
+    static cache := Map()
+    k := path "|" sz
+    if (!cache.Has(k)) {
+        hi := 0
+        try hi := LoadPicture(path, "w" sz " h" sz " Icon1", &ty)
+        cache[k] := hi
+    }
+    return cache[k]
+}
+ClaudeTag(desk) {
+    v := IniLookup("ClaudeTags", desk)
+    if (v != "")
+        return v
+    cnt := Map(), best := "", bn := 0
+    for s in SetsLoad(desk)
+        for w in s["wins"]
+            if (w["exe"] = "claude.exe" && RegExMatch(w["title"], "\[([^\]]+)\]", &m))
+                cnt[m[1]] := (cnt.Has(m[1]) ? cnt[m[1]] : 0) + 1
+    for k, n in cnt
+        if (n > bn)
+            best := k, bn := n
+    return best != "" ? best : desk
+}
+; alle Chat-Fenster der Claude-App mit [tag] im Titel, auf allen Desktops
+ClaudeWins(tag) {
+    out := [], dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)
+    try for h in WinGetList("ahk_exe claude.exe") {
+        if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
+            continue                                                ; unsichtbar oder Unterfenster
+        if (InStr(WinGetTitle(h), "[" tag "]"))
+            out.Push(h)
+    }
+    DetectHiddenWindows(dhw)
+    return out
+}
+; Desktop zu einem Kuerzel (oder Desktop-Namen); -1 = keiner
+ClaudeDeskFor(tag) {
+    Loop GetDesktopCount() {
+        nm := GetDesktopNameRaw(A_Index - 1)
+        if (nm = tag || ClaudeTag(nm) = tag)
+            return A_Index - 1
+    }
+    return -1
+}
+; Alle Claude-Fenster des Projekts auf Desktop num holen, gleich breit verteilen und, wenn
+; es der aktuelle Desktop ist, nach vorne holen. Rueckgabe: Bericht fuer die Schnittstelle
+ClaudeGather(num, *) {
+    desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk)
+    wins := ClaudeWins(tag)
+    if (!wins.Length) {
+        ToastShow(num, T("claude.none", tag), 0xE8A9)
+        return "error: no Claude windows with [" tag "]"
+    }
+    moved := 0
+    for h in wins
+        if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") != num)
+            VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
+    TileEven(wins, true, &mc)
+    if (num = GetCurrentDesktop()) {
+        SetWinDelay(-1)
+        for h in wins
+            try WinActivate("ahk_id " h)
+    }
+    ToastShow(num, T("claude.gathered", wins.Length, tag, moved), 0xECA5)
+    rep := "ok: " wins.Length " windows [" tag "] on desktop " (num + 1) " (" desk "), " moved " moved here`n"
+    for h in wins
+        rep .= WinGetTitle("ahk_id " h) "`n"
+    return rep
+}
+ClaudeTagAsk(num, *) {
+    desk := GetDesktopNameRaw(num)
+    ib := InputBox(T("claude.tagq"), T("claude.tagtitle", desk), "w440 h150", IniLookup("ClaudeTags", desk))
+    if (ib.Result != "OK")
+        return
+    v := Trim(ib.Value, " []")
+    if (v = "")
+        IniDelLoose("ClaudeTags", desk)
+    else
+        IniSet("ClaudeTags", desk, v)
+}
+
+; Schnittstelle fuer Claude-Chats (und Skripte): ein zweiter Start mit /cmd reicht den Befehl
+; per WM_COPYDATA an die laufende Leiste weiter, wartet auf das Ergebnis und endet.
+;   DeskTabs.exe /cmd arrange ACME        Claude-Fenster [ACME] auf ihren Desktop holen, verteilen
+;   DeskTabs.exe /cmd list [Kuerzel]      Claude-Fenster mit Kuerzel und Desktop auflisten
+;   DeskTabs.exe /cmd front|even|align <Anordnung>   auf dem aktuellen Desktop
+; Ergebnis: %TEMP%\DeskTabs-cmd.txt, erste Zeile "ok: ..." oder "error: ...".
+CmdResultPath() => A_Temp "\DeskTabs-cmd.txt"
+; die laufende Leiste (ihr verstecktes Hauptfenster), nicht diese Instanz
+OtherInstance() {
+    dhw := A_DetectHiddenWindows, me := DllCall("GetCurrentProcessId", "UInt"), hit := 0
+    DetectHiddenWindows(true)
+    try for h in WinGetList("ahk_class AutoHotkey")
+        if (WinGetPID(h) != me && InStr(WinGetTitle(h), A_ScriptFullPath) = 1) {
+            hit := h
+            break
+        }
+    DetectHiddenWindows(dhw)
+    return hit
+}
+CmdForward() {
+    args := ""
+    for i, a in A_Args
+        if (i > 1)
+            args .= (args = "" ? "" : " ") a
+    res := CmdResultPath()
+    try FileDelete(res)
+    h := OtherInstance()
+    if (!h) {
+        try FileAppend("error: DeskTabs is not running`n", res, "UTF-8")
+        ExitApp(2)
+    }
+    buf := Buffer(StrPut(args, "UTF-16"), 0)
+    StrPut(args, buf, "UTF-16")
+    cds := Buffer(A_PtrSize * 3, 0)
+    NumPut("UPtr", 0x444B4344, cds, 0)                             ; Kennung "DCKD"
+    NumPut("UInt", buf.Size, cds, A_PtrSize)
+    NumPut("Ptr", buf.Ptr, cds, A_PtrSize * 2)
+    DetectHiddenWindows(true)
+    try SendMessage(0x4A, A_ScriptHwnd, cds.Ptr, , "ahk_id " h, , , , 5000)
+    t0 := A_TickCount
+    while (!FileExist(res) && A_TickCount - t0 < 20000)
+        Sleep(50)
+    ExitApp(FileExist(res) ? 0 : 3)
+}
+; Beim normalen Start eine schon laufende Leiste beenden (wie #SingleInstance Force, das
+; wegen /cmd nicht mehr geht)
+ReplaceOtherInstance() {
+    dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)                                       ; das Hauptfenster ist versteckt
+    Loop 3 {
+        if (!h := OtherInstance())
+            break
+        pid := 0
+        try pid := WinGetPID("ahk_id " h)
+        try WinClose("ahk_id " h)
+        if (pid && ProcessWaitClose(pid, 3))                        ; laeuft nach 3 s noch
+            try ProcessClose(pid)
+    }
+    DetectHiddenWindows(dhw)
+}
+OnCopyData(wParam, lParam, msg, hwnd) {
+    if (NumGet(lParam, 0, "UPtr") != 0x444B4344)
+        return 0
+    s := StrGet(NumGet(lParam, A_PtrSize * 2, "Ptr"), "UTF-16")
+    SetTimer(CmdRun.Bind(s), -1)
+    return 1
+}
+CmdRun(s) {
+    s := Trim(s), p := InStr(s, " ")
+    verb := p ? SubStr(s, 1, p - 1) : s, arg := p ? Trim(SubStr(s, p + 1), " `"") : ""
+    if (!CONF["ClaudeCode"])
+        return CmdResult("error: Claude Code features are off (DeskTabs menu > More settings)")
+    try {
+        switch verb, false {
+            case "arrange":
+                num := ClaudeDeskFor(arg)
+                return CmdResult(num < 0 ? "error: no desktop for [" arg "]" : ClaudeGather(num))
+            case "list":
+                return CmdResult(ClaudeListText(arg))
+            case "front", "even", "align":
+                if (!SetGet(arg))
+                    return CmdResult("error: no layout `"" arg "`" on the current desktop")
+                (verb = "front") ? SetRestore(arg) : (verb = "even") ? SetEven(arg) : SetTidy(arg)
+                return CmdResult("ok: " verb " " arg)
+        }
+        CmdResult("error: unknown command `"" verb "`" (arrange, list, front, even, align)")
+    } catch as e
+        CmdResult("error: " e.Message)
+}
+; alle Claude-Chat-Fenster (oder nur eines Kuerzels): Desktop-Nummer, Desktop, Titel
+ClaudeListText(tag := "") {
+    out := "ok`n", dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)
+    try for h in WinGetList("ahk_exe claude.exe") {
+        if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
+            continue
+        ti := WinGetTitle(h)
+        if (!RegExMatch(ti, "\[[^\]]+\]") || (tag != "" && !InStr(ti, "[" tag "]")))
+            continue
+        d := VD("GetWindowDesktopNumber", "Ptr", h, "Int")
+        out .= (d + 1) "`t" (d >= 0 ? GetDesktopNameRaw(d) : "?") "`t" ti "`n"
+    }
+    DetectHiddenWindows(dhw)
+    return out
+}
+CmdResult(txt) {
+    res := CmdResultPath()
+    try {
+        FileOpen(res ".tmp", "w", "UTF-8").Write(RTrim(txt, "`n") "`n")
+        FileMove(res ".tmp", res, 1)
+    }
 }
 ; Flaeche des Arbeitsbereichs des Bildschirms, auf dem das Fenster liegt
 MonArea(h) {
@@ -7457,10 +7857,18 @@ BurstTick() {
 
 Refresh() {
     ; Desktop-Anzahl oder Namen koennten sich geaendert haben -> ggf. neu bauen
-    global BTNS, gTheme, gBuilding, gSwitching
+    global BTNS, gTheme, gBuilding, gSwitching, gCurrent, gSegDesk, gSegStart, gLogPaused
     LogIdleTick()                  ; Zeit-Log: Inaktivitaet erkennen (braucht keine GUI)
     if (gBuilding || gSwitching)   ; nicht mitten in Aufbau/Wechsel neu bauen (Geometrie-Race)
         return
+    ; Abgleich mit dem tatsaechlich aktiven Desktop: Eine verpasste oder zu frueh beantwortete
+    ; Wechsel-Meldung (etwa direkt nach dem Aufwachen) liess Leiste und Zeit-Log sonst auf dem
+    ; alten Desktop stehen, bis zum naechsten Wechsel (Fall 30.10.2026, 7 min falsch gebucht).
+    cur := GetCurrentDesktop()
+    if (cur >= 0 && cur != gCurrent)
+        UpdateHighlight()
+    else if (cur >= 0 && CONF["TimeLog"] && !gLogPaused && gSegStart != "" && cur != gSegDesk)
+        LogDesktop(cur)
     ; Windows-Theme gewechselt? -> Farbsatz neu anwenden und Leiste neu bauen
     if (ResolveTheme() != gTheme) {
         ApplyTheme()

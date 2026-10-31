@@ -1,6 +1,10 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.21
+- **Claude-Code-Funktionen (abschaltbar):** Wer viele Chats der Claude-App nutzt, schaltet sie unter *Weitere Einstellungen* ein. DeskTabs erkennt die Chats am Projektkürzel im Titel, verteilt sie per Rechtsklick auf eine Kachel gleich breit (übereinander liegende mit halber Höhe) und holt auf Wunsch alle Chats eines Projekts auf seinen Desktop. Ein Claude-Chat kann das über `DeskTabs.exe /cmd` selbst auslösen.
+- **Zeit-Log bleibt beim richtigen Desktop:** Meldete Windows einen Desktop-Wechsel verspätet oder falsch, etwa direkt nach dem Aufwachen, buchte das Zeit-Log bis zum nächsten Wechsel auf den alten Desktop. DeskTabs gleicht das jetzt jede Sekunde ab.
+
 ## 1.1.20
 - **Fensteranordnungen:** Fenster, die zusammengehören, merkt sich DeskTabs je Desktop als Anordnung mit Namen (Menü ≡ › *Fensteranordnung speichern…*). Eine Kachel rechts neben den Tabs holt sie mit einem Klick wieder nach vorne, Umschalt + Klick speichert den aktuellen Stand neu, Strg + Klick richtet grob nebeneinander gezogene Fenster auf den Pixel bündig aus.
 - **Tab mit einem Klick kompakt:** **Strg + Klick** auf einen Tab zeigt ihn nur noch als Symbol, noch einmal zeigt ihn wieder mit Namen. Praktisch für Projekte, die gerade ruhen.
