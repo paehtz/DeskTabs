@@ -4,6 +4,7 @@
 ## 1.1.21
 - **Claude-Code-Funktionen (abschaltbar):** Wer viele Chats der Claude-App nutzt, schaltet sie unter *Weitere Einstellungen* ein. DeskTabs erkennt die Chats am Projektkürzel im Titel, verteilt sie per Rechtsklick auf eine Kachel gleich breit (übereinander liegende mit halber Höhe) und holt auf Wunsch alle Chats eines Projekts auf seinen Desktop. Alt + Klick auf eine Kachel verteilt sofort; nach Nummer im Titel verteilt DeskTabs die Chats auch über alle Bildschirme. Ein Claude-Chat kann das über `DeskTabs.exe /cmd` selbst auslösen.
 - **Zeit-Log bleibt beim richtigen Desktop:** Meldete Windows einen Desktop-Wechsel verspätet oder falsch, etwa direkt nach dem Aufwachen, buchte das Zeit-Log bis zum nächsten Wechsel auf den alten Desktop. DeskTabs gleicht das jetzt jede Sekunde ab.
+- **Kürzel im Menü:** Die Menüs zeigen blass am Rand, welcher Klick dasselbe kann (etwa Strg + Klick, Alt + Klick). Strg + Klick auf einen Tab schaltet jetzt zwischen nur Symbol, Kürzel und Name um, im Tab-Menü gebündelt unter *Darstellung*.
 - **Kacheln nach dem Umsortieren:** Nach dem Verschieben eines Desktops zeigte seine Kachel die Anordnung eines anderen Desktops, und ihr Menü tat nichts. Behoben; das Kachel-Menü zeigt jetzt auch seine Symbole.
 
 ## 1.1.20

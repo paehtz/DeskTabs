@@ -353,6 +353,8 @@ InitDragWatch() {
 }
 DragEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
     global gDragHwnd, gDragPlace, gDragPin, MyGui
+    if (!IsSet(CONF) || !IsSet(gOd))                            ; beim Beenden sind die globalen Variablen schon frei
+        return
     if (idObject != 0 || !CONF["DragToTab"])
         return
     if (event = 0x000A) {
@@ -1475,7 +1477,7 @@ global gAttention := Map(), gShellMsg := 0  ; Desktops mit blinkendem Programm (
 global gMenuCaption := "", gMenuAction := "", gMenuActionCol := 0
 global gConfirmNum := -1, gConfirmPhase := 0   ; Bestaetigungsblinken nach dem Verschieben
 global gReorderFrom := -1, gSkipUpUntil := 0   ; Desktops umsortieren; Klicks bis zu diesem Zeitpunkt gehoeren zum Ziehen
-global gOd := Map(), gOdNext := 0x10000, gMenuGlyphs := Map(), gMenuSwatches := Map()   ; selbst gezeichnete Menues
+global gOd := Map(), gOdNext := 0x10000, gMenuGlyphs := Map(), gMenuSwatches := Map(), gMenuHints := Map()   ; selbst gezeichnete Menues
 global gCard := 0, gNoticeDismissed := "", gWasWelcomed := ""   ; Hinweis-Karten (Update, Neu in dieser Version)
 global gZBlockUntil := 0         ; bis dahin kein Abbild (Wechsel laeuft, Wiederherstellung steht aus)
 global gZSnap := Map()          ; Desktop-GUID -> Fenster in Z-Reihenfolge (oberstes zuerst), siehe ZSnapCurrent
@@ -1593,14 +1595,10 @@ global LANG_DE := Map(
     "menu.claudecode", "Claude-Code-Funktionen",
     "menu.set.even", "Gleich breit verteilen",
     "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
-    "menu.claude.gather", "Claude-Fenster [{1}] hierher holen",
-    "menu.claude.spread", "Claude-Fenster [{1}] nach Nummer auf die Bildschirme verteilen",
+    "menu.claude.spread", "Auf Bildschirme verteilen",
     "claude.spread", "{1} Claude-Fenster [{2}] auf {3} Bildschirm(e) verteilt",
     "sc.k.setalt", "{1} + Klick auf eine Kachel",
     "sc.d.setalt", "ihre Claude-Fenster gleich breit verteilen (übereinander liegende mit halber Höhe)",
-    "menu.claude.tag", "Claude-Kürzel…",
-    "claude.tagtitle", "Claude-Kürzel für „{1}“",
-    "claude.tagq", "Kürzel, das die Claude-Chats dieses Desktops in eckigen Klammern im Titel tragen (ohne Klammern). Leer lassen = automatisch:",
     "claude.gathered", "{1} Claude-Fenster [{2}] verteilt · {3} von anderen Desktops geholt",
     "claude.none", "Keine Claude-Fenster mit [{1}] gefunden",
     "menu.set.overwrite", "Mit aktueller Anordnung überschreiben",
@@ -1634,6 +1632,11 @@ global LANG_DE := Map(
     "ask.remove.windows", "Desktop „{1}“ entfernen?`n`nWindows schließt dabei keine Fenster: Die {2} Fenster darauf wandern nach „{3}“.`n`nFarbe, Symbol und Kürzel bleiben gespeichert und sind wieder da, wenn Du erneut einen Desktop „{1}“ anlegst.",
     "ask.remove.empty", "Desktop „{1}“ entfernen? Es liegen keine Fenster darauf.`n`nFarbe, Symbol und Kürzel bleiben gespeichert und sind wieder da, wenn Du erneut einen Desktop „{1}“ anlegst.",
     "menu.tab.compact", "Kompakt anzeigen (nur Symbol)",
+    "menu.tab.look", "Darstellung",
+    "menu.tab.look.normal", "Wie alle Tabs (Ansicht)",
+    "menu.tab.look.short", "Kürzel „{1}“",
+    "menu.tab.look.shortask", "Kürzel…",
+    "menu.tab.look.icon", "Nur Symbol",
     "menu.pin.untick", "Haken entfernen: nur noch auf „{1}“ anzeigen",
     "tip.appunpinnedto", "„{1}“ nicht mehr auf allen Desktops, dieses Fenster jetzt auf „{2}“",
     "tip.apppinned", "„{1}“ wird auf allen Desktops angezeigt (Einstellung der ganzen App, ändern per Rechtsklick auf ≡)",
@@ -1752,6 +1755,7 @@ global LANG_DE := Map(
     "key.win",         "Windows",
     "key.alt",         "Alt",
     "key.shift",       "Umschalt",
+    "key.click",       "Klick",
     "err.hotkeys",     "Die Tastenkürzel konnten nicht registriert werden. Vermutlich belegt sie ein anderes Programm. Bitte einen anderen Modifikator wählen.",
     "menu.directjump", "Direkt springen statt durchblättern",
     "menu.snap",       "Beim Verschieben an der Taskleiste einrasten",
@@ -1903,14 +1907,10 @@ global LANG_EN := Map(
     "menu.claudecode", "Claude Code features",
     "menu.set.even", "Distribute evenly",
     "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
-    "menu.claude.gather", "Bring Claude windows [{1}] here",
-    "menu.claude.spread", "Spread Claude windows [{1}] across the screens by number",
+    "menu.claude.spread", "Spread across screens",
     "claude.spread", "{1} Claude windows [{2}] spread over {3} screen(s)",
     "sc.k.setalt", "{1} + click a tile",
     "sc.d.setalt", "distribute its Claude windows evenly (stacked ones at half height)",
-    "menu.claude.tag", "Claude tag…",
-    "claude.tagtitle", "Claude tag for “{1}”",
-    "claude.tagq", "Tag that this desktop's Claude chats carry in square brackets in their title (without brackets). Leave empty = automatic:",
     "claude.gathered", "{1} Claude windows [{2}] distributed · {3} brought from other desktops",
     "claude.none", "No Claude windows with [{1}] found",
     "menu.set.overwrite", "Overwrite with current layout",
@@ -1944,6 +1944,11 @@ global LANG_EN := Map(
     "ask.remove.windows", "Remove the desktop “{1}”?`n`nWindows closes no windows when doing so: its {2} windows move to “{3}”.`n`nColour, icon and abbreviation stay saved and come back if you create a desktop called “{1}” again.",
     "ask.remove.empty", "Remove the desktop “{1}”? There are no windows on it.`n`nColour, icon and abbreviation stay saved and come back if you create a desktop called “{1}” again.",
     "menu.tab.compact", "Compact (icon only)",
+    "menu.tab.look", "Appearance",
+    "menu.tab.look.normal", "Like all tabs (View)",
+    "menu.tab.look.short", "Abbreviation “{1}”",
+    "menu.tab.look.shortask", "Abbreviation…",
+    "menu.tab.look.icon", "Icon only",
     "menu.pin.untick", "Untick to show it only on “{1}”",
     "tip.appunpinnedto", "“{1}” no longer on all desktops, this window is now on “{2}”",
     "tip.apppinned", "“{1}” is shown on all desktops (setting of the whole app, change it with a right-click on ≡)",
@@ -2062,6 +2067,7 @@ global LANG_EN := Map(
     "key.win",         "Windows",
     "key.alt",         "Alt",
     "key.shift",       "Shift",
+    "key.click",       "click",
     "err.hotkeys",     "The shortcuts could not be registered. Another program probably uses them. Please pick a different modifier.",
     "menu.directjump", "Jump directly instead of stepping through",
     "menu.snap",       "Snap to the taskbar when moving",
@@ -2403,6 +2409,12 @@ MenuGlyph(menu, item, code) {
     global gMenuGlyphs
     gMenuGlyphs[menu.Handle "|" item] := code          ; gezeichnet wird in OdDraw aus der Symbolschrift
 }
+; Kuerzel-Hinweis rechts im Eintrag, blass (z. B. "Strg + Klick"), damit man die Klicks im Alltag sieht
+MenuHint(menu, item, hint) {
+    global gMenuHints
+    gMenuHints[menu.Handle "|" item] := hint
+}
+ClickHint(mod := "") => (mod = "" ? "" : mod " + ") T("key.click")
 
 ; Auswahlfenster: Suchfeld, Schnellfilter und ein rollbares Raster ueber die
 ; gesamte Bibliothek. Eine Seite ist EIN gezeichnetes Bild (wie die Leiste), nicht
@@ -3175,7 +3187,7 @@ HeadFonts() {
 OD_BG() => 0xF9F9F9                    ; Menue-Grund (GDI, BGR = RGB bei Grau)
 OD_HOVER() => 0xEAEAEA
 OwnerDrawAll(hMenu) {
-    global gOd, gOdNext, gMenuGlyphs, gMenuSwatches
+    global gOd, gOdNext, gMenuGlyphs, gMenuSwatches, gMenuHints
     static bgBrush := 0
     if (!bgBrush)
         bgBrush := DllCall("CreateSolidBrush", "UInt", OD_BG(), "Ptr")
@@ -3204,7 +3216,8 @@ OwnerDrawAll(hMenu) {
         key := hMenu "|" text
         id := gOdNext++
         gOd[id] := Map("text", text, "sep", (ftype & 0x800) ? 1 : 0, "sub", sub ? 1 : 0
-            , "glyph", gMenuGlyphs.Has(key) ? gMenuGlyphs[key] : "", "swatch", gMenuSwatches.Has(key) ? gMenuSwatches[key] : -1)
+            , "glyph", gMenuGlyphs.Has(key) ? gMenuGlyphs[key] : "", "swatch", gMenuSwatches.Has(key) ? gMenuSwatches[key] : -1
+            , "hint", gMenuHints.Has(key) ? gMenuHints[key] : "")
         set := Buffer(80, 0)
         NumPut("UInt", 80, set, 0), NumPut("UInt", 0x100 | 0x20, set, 4)     ; FTYPE|DATA
         NumPut("UInt", ftype | 0x100, set, 8)                                ; MFT_OWNERDRAW dazu
@@ -3228,6 +3241,8 @@ OdMeasure(lParam, rec) {
     f := HeadFonts()
     hdc := DllCall("GetDC", "Ptr", 0, "Ptr")
     w := HeadTextW(hdc, f[1], rec["text"])                ; fett messen: Standard-Eintraege sind fett
+    if (rec["hint"] != "")                                ; Hinweis statt Pfeilspalte (ausser bei Untermenues)
+        w += HeadTextW(hdc, f[3], rec["hint"]) + Round((rec["sub"] ? 16 : 2) * s)
     DllCall("ReleaseDC", "Ptr", 0, "Ptr", hdc)
     NumPut("UInt", w + Round(70 * s), lParam, 12)         ; Symbolspalte + Text + Pfeilspalte
     NumPut("UInt", Round(30 * s), lParam, 16)
@@ -3285,8 +3300,18 @@ OdDraw(lParam, rec) {
         DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
     }
     f := HeadFonts()
+    hr := r - Round((rec["sub"] || rec["hint"] = "" ? 28 : 14) * s)   ; rechter Rand (Pfeilspalte nur bei Untermenue)
+    if (rec["hint"] != "") {                             ; Kuerzel-Hinweis rechtsbuendig, blass
+        old := DllCall("SelectObject", "Ptr", hdc, "Ptr", f[3], "Ptr")
+        DllCall("SetTextColor", "Ptr", hdc, "UInt", dis ? 0xC8C8C8 : 0x8A8A8A)
+        NumPut("Int", l, "Int", t, "Int", hr, "Int", b, rt)
+        DllCall("DrawTextW", "Ptr", hdc, "Str", rec["hint"], "Int", -1, "Ptr", rt, "UInt", 0x26)  ; RIGHT|VCENTER|SINGLELINE
+        hr -= HeadTextW(hdc, f[3], rec["hint"]) + Round(16 * s)
+        DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
+        DllCall("SetTextColor", "Ptr", hdc, "UInt", fg)
+    }
     old := DllCall("SelectObject", "Ptr", hdc, "Ptr", def ? f[1] : f[3], "Ptr")
-    NumPut("Int", l + Round(40 * s), "Int", t, "Int", r - Round(28 * s), "Int", b, rt)
+    NumPut("Int", l + Round(40 * s), "Int", t, "Int", hr, "Int", b, rt)
     DllCall("DrawTextW", "Ptr", hdc, "Str", rec["text"], "Int", -1, "Ptr", rt, "UInt", 0x8024)   ; VCENTER|SINGLELINE|END_ELLIPSIS
     DllCall("SelectObject", "Ptr", hdc, "Ptr", old)
     if (rec["sub"]) {                                    ; eigener Pfeil, den von Windows wegschneiden
@@ -3309,6 +3334,8 @@ HeadTextW(hdc, font, s) {
 
 HeadMeasure(wParam, lParam, msg, hwnd) {
     global gMenuCaption, gMenuAction, gOd
+    if (!IsSet(CONF) || !IsSet(gOd))                            ; beim Beenden sind die globalen Variablen schon frei
+        return
     kind := NumGet(lParam, 24, "UPtr")
     if (NumGet(lParam, 0, "UInt") = 1 && gOd.Has(kind))
         return OdMeasure(lParam, gOd[kind])
@@ -3341,6 +3368,8 @@ HeadMeasure(wParam, lParam, msg, hwnd) {
 
 HeadDraw(wParam, lParam, msg, hwnd) {
     global gMenuCaption, gMenuAction, gMenuActionCol, gOd
+    if (!IsSet(CONF) || !IsSet(gOd))                            ; beim Beenden sind die globalen Variablen schon frei
+        return
     kind := NumGet(lParam, 56, "UPtr")
     if (NumGet(lParam, 0, "UInt") = 1 && gOd.Has(kind))
         return OdDraw(lParam, gOd[kind])
@@ -3521,27 +3550,33 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.tab.icon"), "E91B")
         m.Add(T("menu.tab.color"), cm)
         MenuGlyph(m, T("menu.tab.color"), "E790")
-        m.Add(T("menu.tab.short"), PromptShort.Bind(num))
-        MenuGlyph(m, T("menu.tab.short"), "E8AC")
         callLbl := CallActiveOn(num) ? T("menu.call.stop", CallDuration()) : T("menu.call.start")
         m.Add(callLbl, CallActiveOn(num) ? StopCall : StartCall.Bind(num))
         MenuGlyph(m, callLbl, "E916")
+        if (CONF["CallHotkey"] != "")
+            MenuHint(m, callLbl, CallHotkeyText())
         if (CONF["ClaudeCode"]) {
-            ctag := ClaudeTag(raw)
-            m.Add(T("menu.claude.gather", ctag), ClaudeGather.Bind(num))
-            MenuGlyph(m, T("menu.claude.gather", ctag), ClaudeGlyph())
-            m.Add(T("menu.claude.spread", ctag), ClaudeSpread.Bind(num))
-            MenuGlyph(m, T("menu.claude.spread", ctag), ClaudeGlyph())
-            m.Add(T("menu.claude.tag"), ClaudeTagAsk.Bind(num))
-            MenuGlyph(m, T("menu.claude.tag"), ClaudeGlyph())
+            m.Add(T("menu.claude.spread"), ClaudeSpread.Bind(num))
+            MenuGlyph(m, T("menu.claude.spread"), ClaudeGlyph())
         }
         subCur := SubActive(num)
         subLbl := (subCur != "") ? T("menu.sub.current", subCur) : T("menu.sub")
         m.Add(subLbl, SubMenu(num))
         MenuGlyph(m, subLbl, "E8EC")
-        m.Add(T("menu.tab.compact"), ToggleCompact.Bind(num))
-        if (IsCompactDesk(num))
-            m.Check(T("menu.tab.compact"))
+        MenuHint(m, subLbl, ClickHint(T("key.alt")))
+        lm := Menu(), mode := TabMode(num), sn := ShortNameFor(num)    ; Darstellung nur dieses Tabs
+        lm.Add(T("menu.tab.look.normal"), SetTabMode.Bind(num, ""))
+        lbl := (sn != "") ? T("menu.tab.look.short", sn) : T("menu.tab.look.shortask")
+        lm.Add(lbl, (sn != "") ? SetTabMode.Bind(num, "short") : PromptShort.Bind(num, true))
+        lm.Add(T("menu.tab.look.icon"), SetTabMode.Bind(num, "icon"))
+        lm.Check((mode = "icon") ? T("menu.tab.look.icon") : (mode = "short") ? lbl : T("menu.tab.look.normal"))
+        lm.Add()
+        slbl := T("menu.tab.short") (sn != "" ? " (" sn ")" : "")      ; aktuelles Kuerzel gleich sichtbar
+        lm.Add(slbl, PromptShort.Bind(num, false))
+        MenuGlyph(lm, slbl, "E8AC")
+        m.Add(T("menu.tab.look"), lm)
+        MenuGlyph(m, T("menu.tab.look"), "E890")
+        MenuHint(m, T("menu.tab.look"), ClickHint(T("key.ctrl")))
         m.Add(T("menu.tab.rename"), PromptRename.Bind(num))
         MenuGlyph(m, T("menu.tab.rename"), "E70F")
         m.Add(T("menu.tab.remove"), RemoveDesktopAsk.Bind(num))
@@ -3563,6 +3598,7 @@ ShowContextMenu(num, *) {
         fpin := PinState(fgw)
         pw := T("menu.pin.window", prog), pa := T("menu.pin.app", prog)
         m.Add(pw, TogglePinWindow.Bind(fgw))
+        MenuHint(m, pw, ClickHint(T("key.shift")))
         m.Add(pa, TogglePinApp.Bind(fgw))
         if (fpin >= 1)
             m.Check(pw)
@@ -3884,13 +3920,17 @@ HelpMenu() {
     return hm
 }
 
-PromptShort(num, *) {
+PromptShort(num, useIt := false, *) {
     raw := GetDesktopNameRaw(num)
     ib := InputBox(T("prompt.short.text"), T("prompt.short.title", raw), "w380 h130", ShortNameFor(num))
     if (ib.Result != "OK")
         return
     v := Trim(ib.Value)
     v = "" ? IniDel("Short", raw) : IniSet("Short", raw, v)
+    if (v = "" && TabMode(num) = "short")
+        IniDelLoose("Compact", raw)              ; ohne Kuerzel keine Kuerzel-Darstellung
+    else if (useIt && v != "")
+        IniSet("Compact", raw, "short")
     RebuildAll()
 }
 
@@ -4310,6 +4350,11 @@ LabelFor(num) {
 ; Desktop kompakt anzeigen (Tab-Menue, settings.ini [Compact] Desktopname=1): fuer
 ; ruhende Projekte, die offen bleiben, aber wenig Platz brauchen sollen
 IsCompactDesk(num) => (IniLookup("Compact", GetDesktopNameRaw(num)) = "1")
+; Darstellung nur dieses Tabs ([Compact]): "icon" (1), "short" (Kuerzel) oder "" (wie alle Tabs)
+TabMode(num) {
+    v := IniLookup("Compact", GetDesktopNameRaw(num))
+    return (v = "1") ? "icon" : (v = "short" && ShortNameFor(num) != "") ? "short" : ""
+}
 ; ------------- Desktops anlegen, umbenennen, entfernen (wie die Taskansicht) -------------
 ; Einstellungen haengen lesbar am Desktop-Namen. Damit sie ein Umbenennen ueberleben -
 ; auch eins in der Windows-Taskansicht -, merkt sich [Ids] je Desktop-GUID den zuletzt
@@ -4769,12 +4814,18 @@ SubPanelClose(*) {
     }
     RenderBar(true)                                 ; Tab wieder rund
 }
-TabSource(num) => LabelFor(num) "|" IsCompactDesk(num) "|" SubActive(num)
+TabSource(num) => LabelFor(num) "|" TabMode(num) "|" SubActive(num)
+; Strg + Klick: nur Symbol -> Kuerzel (falls festgelegt) -> wie alle Tabs -> nur Symbol ...
 ToggleCompact(num, *) {
-    if (IsCompactDesk(num))
-        IniDelLoose("Compact", GetDesktopNameRaw(num))
+    mode := TabMode(num)
+    SetTabMode(num, (mode = "") ? "icon" : (mode = "icon" && ShortNameFor(num) != "") ? "short" : "")
+}
+SetTabMode(num, mode, *) {
+    raw := GetDesktopNameRaw(num)
+    if (mode = "")
+        IniDelLoose("Compact", raw)
     else
-        IniSet("Compact", GetDesktopNameRaw(num), 1)
+        IniSet("Compact", raw, mode = "icon" ? 1 : "short")
     RebuildAll()
 }
 
@@ -4930,6 +4981,8 @@ BuildBarAt() {
             label := ""                          ; kleinste Stufe: nur das Symbol, klein
         if (IsCompactDesk(num))                  ; ruhendes Projekt: nur Symbol, sonst Kuerzel/Nummer
             label := (icon != "") ? "" : ((ShortNameFor(num) != "") ? ShortNameFor(num) : String(num + 1))
+        else if (TabMode(num) = "short")         ; nur dieser Tab mit Kuerzel
+            label := ShortNameFor(num)
         iw := (icon != "") ? (big ? bigSize : iconSize) : 0
         tw := (label != "") ? MeasureText(mG, font, sf, label) : 0
         sub := (label != "") ? SubActive(num) : ""              ; nur in Stufen mit Text (Symbol-Tabs: Kurzinfo)
@@ -6577,16 +6630,20 @@ SetMenu(i := 0) {
     if (name != "") {
         m.Add(T("menu.set.front", name), SetRestore.Bind(name))
         MenuGlyph(m, T("menu.set.front", name), "E8A9")
+        MenuHint(m, T("menu.set.front", name), ClickHint())
         m.Default := T("menu.set.front", name)
         m.Add(T("menu.set.overwrite"), SetOverwrite.Bind(name))
         MenuGlyph(m, T("menu.set.overwrite"), "E72C")
+        MenuHint(m, T("menu.set.overwrite"), ClickHint(T("key.shift")))
         m.Add(T("menu.set.pick"), SetPickDialog.Bind(name))
         MenuGlyph(m, T("menu.set.pick"), "E762")
         m.Add(T("menu.set.tidy"), SetTidy.Bind(name))
         MenuGlyph(m, T("menu.set.tidy"), "E8A1")
+        MenuHint(m, T("menu.set.tidy"), ClickHint(T("key.ctrl")))
         if (CONF["ClaudeCode"]) {
             m.Add(T("menu.set.even"), SetEven.Bind(name))
             MenuGlyph(m, T("menu.set.even"), ClaudeGlyph())
+            MenuHint(m, T("menu.set.even"), ClickHint(T("key.alt")))
         }
         m.Add(T("menu.set.rename"), SetRenameAsk.Bind(name))
         MenuGlyph(m, T("menu.set.rename"), "E70F")
@@ -6857,7 +6914,7 @@ SetEven(name, *) {
     for h in ClaudeDeskChats(num)                               ; dazu alle uebrigen Chats des Desktops
         if (!seen.Has(h))
             cl.Push(h), seen[h] := true
-    tag := ClaudeTag(desk), rank := Map()                       ; Projekt-Chats zuerst, fremde dahinter
+    tag := ClaudeTag(desk, num), rank := Map()                  ; Projekt-Chats zuerst, fremde dahinter
     for h in cl
         try rank[h] := InStr(WinGetTitle("ahk_id " h), "[" tag "]") ? 0 : 1
     cnt := TileEven(SetNotFull(cl), false, &mc, rank)
@@ -6887,7 +6944,7 @@ SetNotFull(list) {
 ; nach rechts gleich breit, volle Hoehe, buendig. Uebereinander (halbe Hoehe) liegen nur
 ; Fenster, die wirklich uebereinander stehen (waagerecht zur Haelfte deckungsgleich, in der
 ; Hoehe aber kaum), oder im Notfall: Je Bildschirm passen hoechstens so viele Spalten, wie
-; TileMinW() (Pixel bei 100 %) erlaubt (3440 -> 5, 2560 -> 3, 1920 -> 2); sind es mehr, werden
+; TileMinW(true) (Pixel bei 100 %) erlaubt (3440 -> 5, 2560 -> 4, 1920 -> 3); sind es mehr, werden
 ; die beiden schmalsten Nachbarspalten (von rechts) zusammengelegt.
 ; Ein Bildschirm, den ein maximiertes Claude-Fenster ausserhalb der Liste belegt (das
 ; Hauptfenster mit geteilter Ansicht), gilt als voll: Seine Fenster wandern auf den naechsten
@@ -6912,33 +6969,14 @@ TileEven(list, force, &mc := 0, rank := 0) {
             mons[mon].own.Push({h: h, l: fr[1], t: fr[2], r: fr[3], b: fr[4]})
         }
         busy := ClaudeBusyMonitors(list), order := SpreadMonitors()
-        for mo in order                                         ; besetzte Bildschirme raeumen
-            if (busy.Has(mo.hm) && mons.Has(mo.hm) && mons[mo.hm].own.Length) {
-                dest := 0
-                for mo2 in order {
-                    if (busy.Has(mo2.hm))
-                        continue
-                    have := mons.Has(mo2.hm) ? mons[mo2.hm].own.Length + mons[mo2.hm].moved.Length : 0
-                    if (!dest)
-                        dest := mo2                             ; notfalls der erste freie
-                    if (have < mo2.cap) {
-                        dest := mo2
-                        break
-                    }
-                }
-                if (!dest)
-                    continue                                    ; alle besetzt: bleibt, wo es ist
-                if (!mons.Has(dest.hm))
-                    mons[dest.hm] := {own: [], moved: []}
-                SortBy(mons[mo.hm].own, (a1, a2) => (RankOf(rank, a1.h) - RankOf(rank, a2.h)) || (a1.l - a2.l))
-                for it in mons[mo.hm].own
-                    mons[dest.hm].moved.Push(it)
-                mons.Delete(mo.hm)
-            }
+        TileRehome(mons, busy, order, rank)                     ; besetzte Bildschirme raeumen
         for mon, grp in mons {
             items := grp.own
             SortBy(items, (a1, a2) => a1.l - a2.l)
             cols := []                                          ; Spalten: {l, r, wins}
+            if (grp.HasOwnProp("seq"))                          ; feste Reihenfolge (Projekt-Chats nach Nummer)
+                for it in grp.seq
+                    cols.Push({l: 0, r: 0, wins: [it]})
             for it in items {
                 hit := 0
                 for c in cols {
@@ -6958,7 +6996,8 @@ TileEven(list, force, &mc := 0, rank := 0) {
                 else
                     cols.Push({l: it.l, r: it.r, wins: [it]})
             }
-            SortBy(cols, (c1, c2) => c1.l - c2.l)
+            if (!grp.HasOwnProp("seq"))
+                SortBy(cols, (c1, c2) => c1.l - c2.l)
             for it in grp.moved                                 ; Zugezogene rechts anreihen
                 cols.Push({l: 0, r: 0, wins: [it]})
             for c in cols                                       ; in der Spalte von oben nach unten
@@ -6968,7 +7007,8 @@ TileEven(list, force, &mc := 0, rank := 0) {
             wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
             dpi := 96, dpy := 96
             try DllCall("shcore\GetDpiForMonitor", "Ptr", mon, "Int", 0, "UInt*", &dpi, "UInt*", &dpy)
-            maxc := Max(1, Floor((wr - wl) * 96 / dpi / TileMinW()))
+            maxc := Max(1, Floor((wr - wl) * 96 / dpi / TileMinW(true)))   ; hier von Hand hingezogen: enger erlaubt
+            capA := Max(1, Floor((wr - wl) * 96 / dpi / TileMinW()))      ; Breite fuer ein einzelnes Fenster
             while (cols.Length > maxc) {                        ; Notfall: Nachbarn stapeln
                 bi := 0, bn := 0
                 Loop cols.Length - 1 {
@@ -6984,6 +7024,8 @@ TileEven(list, force, &mc := 0, rank := 0) {
             nc := cols.Length
             for ci, c in cols {
                 x0 := wl + Round((wr - wl) * (ci - 1) / nc), x1 := wl + Round((wr - wl) * ci / nc)
+                if (nc = 1 && c.wins.Length = 1)
+                    SingleSlot(wl, wr, capA, &x0, &x1)
                 nr := c.wins.Length
                 for ri, it in c.wins {
                     y0 := wt + Round((wb - wt) * (ri - 1) / nr), y1 := wt + Round((wb - wt) * ri / nr)
@@ -6995,6 +7037,105 @@ TileEven(list, force, &mc := 0, rank := 0) {
     DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
     mc := mons.Count
     return cnt
+}
+; Ein einzelnes Fenster auf einem Bildschirm bekommt nur eine Spaltenbreite statt der ganzen
+; Breite, an der Innenseite zum Hauptbildschirm: rechts von ihm am linken Rand, links von ihm
+; am rechten Rand; auf dem Hauptbildschirm (und darueber/darunter) mittig.
+; wl/wr: Arbeitsbereich, maxc: Spalten
+SingleSlot(wl, wr, maxc, &x0, &x1) {
+    w := Round((wr - wl) / Max(1, maxc))
+    MonitorGetWorkArea(MonitorGetPrimary(), &pl, &pt, &pr, &pb)
+    if (wl >= pr)
+        x0 := wl, x1 := wl + w
+    else if (wr <= pl)
+        x0 := wr - w, x1 := wr
+    else
+        x0 := wl + (wr - wl - w) // 2, x1 := x0 + w
+}
+; Chats von besetzten Bildschirmen (hinter dem maximierten Claude-Hauptfenster) ein neues
+; Zuhause geben. Projekt-Chats (Rang 0) kommen auf den Bildschirm mit den meisten
+; Projekt-Chats und reihen sich dort nach ihrer Nummer ein; fremde Chats, die dort stehen,
+; weichen auf einen freien Bildschirm ohne Projekt-Chats aus (Innenseite, wenn allein).
+; Kamen nur fremde Chats an, gehen sie dorthin, sonst auf den ersten Bildschirm mit Platz.
+TileRehome(mons, busy, order, rank) {
+    free := []
+    for mo in order
+        if (!busy.Has(mo.hm))
+            free.Push(mo)
+    if (!free.Length)
+        return                                                  ; alles besetzt: bleibt, wo es ist
+    pend := []
+    for mo in order
+        if (busy.Has(mo.hm) && mons.Has(mo.hm)) {
+            for it in mons[mo.hm].own
+                pend.Push(it)
+            mons.Delete(mo.hm)
+        }
+    if (!pend.Length)
+        return
+    projCount(mo) {
+        c := 0
+        if (mons.Has(mo.hm))
+            for it in mons[mo.hm].own
+                if (RankOf(rank, it.h) = 0)
+                    c++
+        return c
+    }
+    grp(mo) {
+        if (!mons.Has(mo.hm))
+            mons[mo.hm] := {own: [], moved: []}
+        return mons[mo.hm]
+    }
+    pm := 0, pc := 0                                            ; Projekt-Bildschirm
+    for mo in free
+        if ((c := projCount(mo)) > pc)
+            pm := mo, pc := c
+    if (!pm)
+        for mo in free {                                        ; sonst der erste mit Platz
+            have := mons.Has(mo.hm) ? mons[mo.hm].own.Length : 0
+            if (!pm)
+                pm := mo
+            if (have < mo.capS) {
+                pm := mo
+                break
+            }
+        }
+    fm := 0                                                     ; Bildschirm fuer fremde Chats
+    for mo in free {
+        if (mo = pm || projCount(mo))
+            continue
+        if (!fm)
+            fm := mo
+        if (mons.Has(mo.hm) && mons[mo.hm].own.Length) {        ; lieber zu anderen fremden
+            fm := mo
+            break
+        }
+    }
+    newProj := false
+    for it in pend
+        if (RankOf(rank, it.h) = 0)
+            newProj := true
+    if (!newProj) {                                             ; nur fremde: dazustellen
+        for it in pend
+            grp(fm ? fm : pm).moved.Push(it)
+        return
+    }
+    g := grp(pm), projs := [], foreign := []
+    for it in g.own
+        (RankOf(rank, it.h) = 0 ? projs : foreign).Push(it)
+    for it in pend
+        (RankOf(rank, it.h) = 0 ? projs : foreign).Push(it)
+    SortBy(projs, (a1, a2) => StrCompare(ChatKey(WinGetTitle("ahk_id " a1.h)), ChatKey(WinGetTitle("ahk_id " a2.h))))
+    g.own := [], g.seq := projs
+    for it in foreign
+        fm ? grp(fm).moved.Push(it) : g.seq.Push(it)
+}
+; Sortierschluessel eines Chats nach der Nummer im Titel ("[Kuerzel] 3. ...", auch 26.1);
+; ohne Nummer ans Ende
+ChatKey(ti) {
+    if (RegExMatch(ti, "\]\s*(\d+)(?:\.(\d+))?", &m))
+        return Format("{:06}.{:06} ", m[1], m[2] = "" ? 0 : m[2]) ti
+    return "~" ti
 }
 RankOf(rank, h) => (IsObject(rank) && rank.Has(h)) ? rank[h] : 0
 ; Bildschirme, die ein maximiertes, sichtbares Claude-Fenster des aktuellen Desktops belegt,
@@ -7013,8 +7154,9 @@ ClaudeBusyMonitors(list) {
 ; Abschaltbar (Weitere Einstellungen, Standard aus). Die Chat-Fenster der Claude-App tragen
 ; den Projektkuerzel in eckigen Klammern im Titel, z. B. "🧭 [ACME] 1. Website"; daran
 ; erkennt DeskTabs sie, auch nach dem Umbenennen und bei neuen Chats.
-; Kuerzel eines Desktops: [ClaudeTags] in settings.ini, sonst das haeufigste Kuerzel der
-; Claude-Fenster in seinen Anordnungen, sonst der Desktop-Name
+; Kuerzel eines Desktops: [ClaudeTags] in settings.ini, sonst (mit num) das haeufigste Kuerzel
+; der Chats, die gerade dort liegen, sonst das haeufigste in seinen Anordnungen, sonst der
+; Desktop-Name. Ohne num (Desktop zu einem Kuerzel suchen) zaehlen nur Einstellung und Anordnungen.
 ; Menue-Symbol der Claude-Funktionen: das Icon der Claude-App (Pfad aus einem laufenden
 ; Claude-Fenster), sonst ein Symbol aus der Schrift
 ClaudeGlyph() {
@@ -7040,11 +7182,21 @@ OdExeIcon(path, sz) {
     }
     return cache[k]
 }
-ClaudeTag(desk) {
+ClaudeTag(desk, num := -1) {
     v := IniLookup("ClaudeTags", desk)
     if (v != "")
         return v
     cnt := Map(), best := "", bn := 0
+    if (num >= 0) {                                             ; zuerst die Chats, die gerade dort liegen
+        for h in ClaudeDeskChats(num)
+            if (RegExMatch(WinGetTitle("ahk_id " h), "\[([^\]]+)\]", &m))
+                cnt[m[1]] := (cnt.Has(m[1]) ? cnt[m[1]] : 0) + 1
+        for k, n in cnt
+            if (n > bn)
+                best := k, bn := n
+        if (best != "")
+            return best
+    }
     for s in SetsLoad(desk)
         for w in s["wins"]
             if (w["exe"] = "claude.exe" && RegExMatch(w["title"], "\[([^\]]+)\]", &m))
@@ -7120,7 +7272,7 @@ ClaudeGather(num, *) {
 ; viele Spalten, wie TileMinW() erlaubt; reicht der Platz nicht, kommen zweite Reihen dazu,
 ; wieder zuerst auf dem Hauptbildschirm. Rueckgabe: Bericht fuer die Schnittstelle
 ClaudeSpread(num, *) {
-    desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk)
+    desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk, num)
     wins := ClaudeDeskChats(num)                                ; alle Chats des Desktops, Projekt zuerst
     if (!wins.Length) {
         ToastShow(num, T("claude.none", tag), 0xE8A9)
@@ -7138,7 +7290,9 @@ ClaudeSpread(num, *) {
         rep .= WinGetTitle("ahk_id " h) "`n"
     return rep
 }
-TileMinW() => 660                                  ; kleinste Spaltenbreite in Pixeln bei 100 %
+; kleinste Spaltenbreite in Pixeln bei 100 %: automatisch verteilt 660 (seitlich 3 Spalten),
+; auf dem eigenen Bildschirm angeordnet (stay) 640 (seitlich 4 Spalten)
+TileMinW(stay := false) => stay ? 640 : 660
 ; Fenster nach ihrer Nummer sortiert auf die Bildschirme legen (siehe ClaudeSpread).
 ; Rueckgabe: die Fenster in Reihenfolge, &mc: Zahl der benutzten Bildschirme
 SpreadWins(wins, &mc := 0, tag := "") {
@@ -7187,6 +7341,8 @@ SpreadWins(wins, &mc := 0, tag := "") {
             Loop c {                                            ; Stapel von rechts her
                 ci := A_Index, nr := base + (ci > c - ext ? 1 : 0)
                 x0 := mo.l + Round((mo.r - mo.l) * (ci - 1) / c), x1 := mo.l + Round((mo.r - mo.l) * ci / c)
+                if (mo.n = 1)
+                    SingleSlot(mo.l, mo.r, mo.cap, &x0, &x1)
                 Loop nr {
                     y0 := mo.t + Round((mo.b - mo.t) * (A_Index - 1) / nr), y1 := mo.t + Round((mo.b - mo.t) * A_Index / nr)
                     PlaceFrame(items[idx].h, x0, y0, x1, y1), idx++
@@ -7209,7 +7365,8 @@ SpreadMonitors() {
         hm := DllCall("MonitorFromPoint", "Int64", ((wt + wb) // 2) << 32 | (((wl + wr) // 2) & 0xFFFFFFFF), "UInt", 2, "Ptr")
         dpi := 96, dpy := 96
         try DllCall("shcore\GetDpiForMonitor", "Ptr", hm, "Int", 0, "UInt*", &dpi, "UInt*", &dpy)
-        all.Push({hm: hm, l: wl, t: wt, r: wr, b: wb, cap: Max(1, Floor((wr - wl) * 96 / dpi / TileMinW())), n: 0, prim: A_Index = MonitorGetPrimary()})
+        all.Push({hm: hm, l: wl, t: wt, r: wr, b: wb, cap: Max(1, Floor((wr - wl) * 96 / dpi / TileMinW()))
+            , capS: Max(1, Floor((wr - wl) * 96 / dpi / TileMinW(true))), n: 0, prim: A_Index = MonitorGetPrimary()})
     }
     p := 0
     for mo in all
@@ -7247,17 +7404,6 @@ PlaceFrame(h, x0, y0, x1, y1) {
     dr := NumGet(wrc, 8, "Int") - fr[3], db := NumGet(wrc, 12, "Int") - fr[4]
     DllCall("SetWindowPos", "Ptr", h, "Ptr", 0, "Int", x0 - dl, "Int", y0 - dt
         , "Int", (x1 - x0) + dl + dr, "Int", (y1 - y0) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
-}
-ClaudeTagAsk(num, *) {
-    desk := GetDesktopNameRaw(num)
-    ib := InputBox(T("claude.tagq"), T("claude.tagtitle", desk), "w440 h150", IniLookup("ClaudeTags", desk))
-    if (ib.Result != "OK")
-        return
-    v := Trim(ib.Value, " []")
-    if (v = "")
-        IniDelLoose("ClaudeTags", desk)
-    else
-        IniSet("ClaudeTags", desk, v)
 }
 
 ; Schnittstelle fuer Claude-Chats (und Skripte): ein zweiter Start mit /cmd reicht den Befehl
@@ -8067,6 +8213,8 @@ StripeBelowBar() {
 ; Wird bei jedem Vordergrund-Wechsel aufgerufen -> Leiste sofort wieder nach oben
 WinEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
     global gHidden
+    if (!IsSet(CONF) || !IsSet(gOd))                            ; beim Beenden sind die globalen Variablen schon frei
+        return
     if (CONF["RestoreZOrder"])
         SetTimer(ZSnapCurrent, -300)    ; Fensterreihenfolge dieses Desktops merken (entprellt)
     FullscreenTick()            ; ggf. aus-/einblenden bei Vollbild

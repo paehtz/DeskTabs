@@ -4,6 +4,7 @@
 ## 1.1.21
 - **Claude Code features (optional):** if you use many chats of the Claude app, turn them on under *More settings*. DeskTabs recognises the chats by the project tag in their title, distributes them evenly with a right-click on a tile (stacked ones at half height) and can fetch all chats of a project to its desktop. Alt + click on a tile distributes right away; by the number in their title DeskTabs also spreads the chats across all screens. A Claude chat can trigger this itself via `DeskTabs.exe /cmd`.
 - **Time log stays on the right desktop:** when Windows reported a desktop switch late or wrongly, for instance right after waking up, the time log kept booking the old desktop until the next switch. DeskTabs now checks every second.
+- **Shortcuts in the menus:** menus show, faintly at the edge, which click does the same (such as Ctrl + click, Alt + click). Ctrl + click on a tab now cycles between icon only, abbreviation and name, bundled in the tab menu under *Appearance*.
 - **Tiles after reordering:** after moving a desktop, its tile showed another desktop's layout and its menu did nothing. Fixed; the tile menu now shows its icons too.
 
 ## 1.1.20
