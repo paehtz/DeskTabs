@@ -2,8 +2,9 @@
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
 ## 1.1.21
-- **Claude Code features (optional):** if you use many chats of the Claude app, turn them on under *More settings*. DeskTabs recognises the chats by the project tag in their title, distributes them evenly with a right-click on a tile (stacked ones at half height) and can fetch all chats of a project to its desktop. A Claude chat can trigger this itself via `DeskTabs.exe /cmd`.
+- **Claude Code features (optional):** if you use many chats of the Claude app, turn them on under *More settings*. DeskTabs recognises the chats by the project tag in their title, distributes them evenly with a right-click on a tile (stacked ones at half height) and can fetch all chats of a project to its desktop. Alt + click on a tile distributes right away; by the number in their title DeskTabs also spreads the chats across all screens. A Claude chat can trigger this itself via `DeskTabs.exe /cmd`.
 - **Time log stays on the right desktop:** when Windows reported a desktop switch late or wrongly, for instance right after waking up, the time log kept booking the old desktop until the next switch. DeskTabs now checks every second.
+- **Tiles after reordering:** after moving a desktop, its tile showed another desktop's layout and its menu did nothing. Fixed; the tile menu now shows its icons too.
 
 ## 1.1.20
 - **Window layouts:** DeskTabs remembers windows that belong together as a named layout per desktop (≡ menu › *Save window layout…*). A tile next to the tabs brings them back to the front with one click, Shift + click saves the current state anew, Ctrl + click aligns windows you dragged roughly side by side flush to the pixel.

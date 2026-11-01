@@ -143,8 +143,9 @@ Get-Content $env:TEMP\DeskTabs-cmd.txt
 
 | Command | Effect |
 |---|---|
-| `arrange <Tag>` | all Claude chats with `[Tag]` in the title onto that project's desktop, distributed evenly, to the front if it is the current desktop |
+| `arrange <Tag>` | all Claude chats with `[Tag]` in the title onto that project's desktop, then all chats there spread by number (main screen, right, left), to the front if it is the current desktop |
+| `spread [Tag]` | the chats of that project's desktop (or the current one) spread by number across the screens, without fetching from other desktops |
 | `list [Tag]` | Claude chats with a tag: desktop number, desktop name, title (tab-separated) |
 | `front <Layout>` | bring a window layout of the current desktop to the front |
-| `even <Layout>` | distribute that layout's Claude windows evenly |
+| `even <Layout>` | distribute the Claude chats of the current desktop evenly (that layout's plus all others) |
 | `align <Layout>` | align that layout's windows flush (small corrections) |

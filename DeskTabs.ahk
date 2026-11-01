@@ -1594,6 +1594,10 @@ global LANG_DE := Map(
     "menu.set.even", "Gleich breit verteilen",
     "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
     "menu.claude.gather", "Claude-Fenster [{1}] hierher holen",
+    "menu.claude.spread", "Claude-Fenster [{1}] nach Nummer auf die Bildschirme verteilen",
+    "claude.spread", "{1} Claude-Fenster [{2}] auf {3} Bildschirm(e) verteilt",
+    "sc.k.setalt", "{1} + Klick auf eine Kachel",
+    "sc.d.setalt", "ihre Claude-Fenster gleich breit verteilen (übereinander liegende mit halber Höhe)",
     "menu.claude.tag", "Claude-Kürzel…",
     "claude.tagtitle", "Claude-Kürzel für „{1}“",
     "claude.tagq", "Kürzel, das die Claude-Chats dieses Desktops in eckigen Klammern im Titel tragen (ohne Klammern). Leer lassen = automatisch:",
@@ -1900,6 +1904,10 @@ global LANG_EN := Map(
     "menu.set.even", "Distribute evenly",
     "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
     "menu.claude.gather", "Bring Claude windows [{1}] here",
+    "menu.claude.spread", "Spread Claude windows [{1}] across the screens by number",
+    "claude.spread", "{1} Claude windows [{2}] spread over {3} screen(s)",
+    "sc.k.setalt", "{1} + click a tile",
+    "sc.d.setalt", "distribute its Claude windows evenly (stacked ones at half height)",
     "menu.claude.tag", "Claude tag…",
     "claude.tagtitle", "Claude tag for “{1}”",
     "claude.tagq", "Tag that this desktop's Claude chats carry in square brackets in their title (without brackets). Leave empty = automatic:",
@@ -3522,6 +3530,8 @@ ShowContextMenu(num, *) {
             ctag := ClaudeTag(raw)
             m.Add(T("menu.claude.gather", ctag), ClaudeGather.Bind(num))
             MenuGlyph(m, T("menu.claude.gather", ctag), ClaudeGlyph())
+            m.Add(T("menu.claude.spread", ctag), ClaudeSpread.Bind(num))
+            MenuGlyph(m, T("menu.claude.spread", ctag), ClaudeGlyph())
             m.Add(T("menu.claude.tag"), ClaudeTagAsk.Bind(num))
             MenuGlyph(m, T("menu.claude.tag"), ClaudeGlyph())
         }
@@ -4106,6 +4116,8 @@ ShowShortcuts(*) {
     rows.Push([T("sc.k.setclick"), T("sc.d.setclick")])
     rows.Push([T("sc.k.setshift", S), T("sc.d.setshift")])
     rows.Push([T("sc.k.setctrl", C), T("sc.d.setctrl")])
+    if (CONF["ClaudeCode"])
+        rows.Push([T("sc.k.setalt", T("key.alt")), T("sc.d.setalt")])
     if (CONF["CallHotkey"] != "")
         rows.Push([CallHotkeyText(), T("sc.d.call")])
     rows.Push([T("sc.sec.bar")])
@@ -6546,7 +6558,7 @@ SetFound(set) {
 }
 ; Klick auf eine Kachel: nach vorne holen; Umschalt + Klick: aktuellen Stand als neue Anordnung
 ; dieser Kachel speichern. Leerer Platz: Menue zum Speichern.
-SetClick(i, shift := false, ctrl := false) {
+SetClick(i, shift := false, ctrl := false, alt := false) {
     name := SetNameAt(i)
     if (name = "")
         return SetMenu(i)
@@ -6554,6 +6566,8 @@ SetClick(i, shift := false, ctrl := false) {
         return SetOverwrite(name)
     if (ctrl)
         return SetTidy(name)
+    if (alt && CONF["ClaudeCode"])
+        return SetEven(name)
     SetRestore(name)
 }
 ; Rechtsklick: Menue der Kachel (bzw. nur "speichern" auf einem leeren Platz)
@@ -6582,6 +6596,7 @@ SetMenu(i := 0) {
     }
     m.Add(T("menu.set.save"), SetSaveAsk)
     MenuGlyph(m, T("menu.set.save"), "E710")
+    OwnerDrawAll(m.Handle)                          ; selbst zeichnen, sonst fehlen die Symbole
     m.Show()
 }
 ; Neue Anordnung: Schnappschuss aller gerade sichtbaren Fenster, nur der Name wird gefragt
@@ -6823,7 +6838,8 @@ SetTidy(name, *) {
         return ToastShow(num, T("set.tidynone", name), 0xE8A1)
     ToastShow(num, T("set.tidied", name, cnt, mons.Count), 0xE8A1)
 }
-; Gleich breit verteilen (nur mit Claude-Code-Funktionen): die Claude-Fenster der Anordnung grob in
+; Gleich breit verteilen (nur mit Claude-Code-Funktionen): die Claude-Fenster der Anordnung und
+; alle uebrigen Claude-Chats des Desktops (damit alle gleichzeitig sichtbar sind) grob in
 ; die gewuenschte Reihenfolge ziehen (uebereinander = halbe Hoehe), TileEven macht den Rest.
 ; Andere Programme, Vollbild-Fenster (maximiert oder fast bildschirmgross) und minimierte
 ; bleiben, wie sie sind.
@@ -6834,11 +6850,17 @@ SetEven(name, *) {
     found := SetFound(set)
     if (!found.Length)
         return ToastShow(num, T("set.nonefound", name), 0xE8A9)
-    cl := []                                                    ; nur die Claude-Fenster
+    cl := [], seen := Map()                                     ; nur die Claude-Fenster
     for h in found
         try if (WinGetProcessName("ahk_id " h) = "claude.exe")
-            cl.Push(h)
-    cnt := TileEven(SetNotFull(cl), false, &mc)
+            cl.Push(h), seen[h] := true
+    for h in ClaudeDeskChats(num)                               ; dazu alle uebrigen Chats des Desktops
+        if (!seen.Has(h))
+            cl.Push(h), seen[h] := true
+    tag := ClaudeTag(desk), rank := Map()                       ; Projekt-Chats zuerst, fremde dahinter
+    for h in cl
+        try rank[h] := InStr(WinGetTitle("ahk_id " h), "[" tag "]") ? 0 : 1
+    cnt := TileEven(SetNotFull(cl), false, &mc, rank)
     SetRestore(name)
     ToastShow(num, T("set.evened", name, cnt, mc), 0xECA5)
 }
@@ -6861,18 +6883,21 @@ SetNotFull(list) {
     DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
     return out
 }
-; Gleich verteilen, je Bildschirm dort, wo die Fenster gerade liegen: Fenster, die sich
-; waagerecht zur Haelfte decken, bilden eine Spalte und liegen uebereinander (gleich hoch),
-; die Spalten bekommen von links nach rechts gleich viel Breite, volle Hoehe, buendig.
-; Je Bildschirm passen hoechstens so viele Spalten, wie TILE_MINW (Pixel bei 100 %) breit
-; sind (3440 -> 5, 2560 -> 3, 1920 -> 2); sind es mehr, werden die beiden schmalsten
-; Nachbarspalten (von rechts) zusammengelegt, ihre Fenster also uebereinander gestapelt.
+; Gleich verteilen, je Bildschirm dort, wo die Fenster gerade liegen: nebeneinander, von links
+; nach rechts gleich breit, volle Hoehe, buendig. Uebereinander (halbe Hoehe) liegen nur
+; Fenster, die wirklich uebereinander stehen (waagerecht zur Haelfte deckungsgleich, in der
+; Hoehe aber kaum), oder im Notfall: Je Bildschirm passen hoechstens so viele Spalten, wie
+; TileMinW() (Pixel bei 100 %) erlaubt (3440 -> 5, 2560 -> 3, 1920 -> 2); sind es mehr, werden
+; die beiden schmalsten Nachbarspalten (von rechts) zusammengelegt.
+; Ein Bildschirm, den ein maximiertes Claude-Fenster ausserhalb der Liste belegt (das
+; Hauptfenster mit geteilter Ansicht), gilt als voll: Seine Fenster wandern auf den naechsten
+; freien Bildschirm (Hauptbildschirm, rechts daneben, links daneben) und reihen sich dort rechts an.
 ; force: maximierte/minimierte Fenster erst normal machen statt sie auszulassen.
+; rank (Map hwnd -> Zahl): Zugezogene mit kleinerem Rang kommen zuerst (Projekt-Chats vor fremden).
 ; Rueckgabe: Zahl der verteilten Fenster, &mc: Zahl der Bildschirme
-TileEven(list, force, &mc := 0) {
-    static TILE_MINW := 660
+TileEven(list, force, &mc := 0, rank := 0) {
     old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
-    mons := Map(), order := [], cnt := 0
+    mons := Map(), cnt := 0
     try {
         for h in list {
             if (DllCall("IsIconic", "Ptr", h) || DllCall("IsZoomed", "Ptr", h)) {
@@ -6882,55 +6907,78 @@ TileEven(list, force, &mc := 0) {
             }
             mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
             if (!mons.Has(mon))
-                mons[mon] := [], order.Push(mon)
+                mons[mon] := {own: [], moved: []}
             fr := SetFrame(h)
-            mons[mon].Push({h: h, l: fr[1], t: fr[2], r: fr[3], b: fr[4]})
+            mons[mon].own.Push({h: h, l: fr[1], t: fr[2], r: fr[3], b: fr[4]})
         }
-        for mon in order {
-            items := mons[mon]
-            Loop items.Length - 1 {                                 ; nach linker Kante sortieren
-                j := A_Index + 1
-                while (j > 1 && items[j].l < items[j - 1].l)
-                    t0 := items[j], items[j] := items[j - 1], items[j - 1] := t0, j--
+        busy := ClaudeBusyMonitors(list), order := SpreadMonitors()
+        for mo in order                                         ; besetzte Bildschirme raeumen
+            if (busy.Has(mo.hm) && mons.Has(mo.hm) && mons[mo.hm].own.Length) {
+                dest := 0
+                for mo2 in order {
+                    if (busy.Has(mo2.hm))
+                        continue
+                    have := mons.Has(mo2.hm) ? mons[mo2.hm].own.Length + mons[mo2.hm].moved.Length : 0
+                    if (!dest)
+                        dest := mo2                             ; notfalls der erste freie
+                    if (have < mo2.cap) {
+                        dest := mo2
+                        break
+                    }
+                }
+                if (!dest)
+                    continue                                    ; alle besetzt: bleibt, wo es ist
+                if (!mons.Has(dest.hm))
+                    mons[dest.hm] := {own: [], moved: []}
+                SortBy(mons[mo.hm].own, (a1, a2) => (RankOf(rank, a1.h) - RankOf(rank, a2.h)) || (a1.l - a2.l))
+                for it in mons[mo.hm].own
+                    mons[dest.hm].moved.Push(it)
+                mons.Delete(mo.hm)
             }
-            cols := []                                              ; Spalten: {l, r, wins}
+        for mon, grp in mons {
+            items := grp.own
+            SortBy(items, (a1, a2) => a1.l - a2.l)
+            cols := []                                          ; Spalten: {l, r, wins}
             for it in items {
                 hit := 0
-                for c in cols
-                    if (Min(c.r, it.r) - Max(c.l, it.l) >= Min(c.r - c.l, it.r - it.l) / 2) {
+                for c in cols {
+                    if (Min(c.r, it.r) - Max(c.l, it.l) < Min(c.r - c.l, it.r - it.l) / 2)
+                        continue                                ; waagerecht nicht deckungsgleich
+                    stacked := true
+                    for w in c.wins                             ; uebereinander heisst: in der Hoehe kaum ueberdeckt
+                        if (Min(w.b, it.b) - Max(w.t, it.t) > Min(w.b - w.t, it.b - it.t) / 4)
+                            stacked := false
+                    if (stacked) {
                         hit := c
                         break
                     }
+                }
                 if (hit)
                     hit.wins.Push(it)
                 else
                     cols.Push({l: it.l, r: it.r, wins: [it]})
             }
-            for c in cols {                                         ; in der Spalte von oben nach unten
-                w := c.wins
-                Loop w.Length - 1 {
-                    j := A_Index + 1
-                    while (j > 1 && w[j].t < w[j - 1].t)
-                        t0 := w[j], w[j] := w[j - 1], w[j - 1] := t0, j--
-                }
-            }
+            SortBy(cols, (c1, c2) => c1.l - c2.l)
+            for it in grp.moved                                 ; Zugezogene rechts anreihen
+                cols.Push({l: 0, r: 0, wins: [it]})
+            for c in cols                                       ; in der Spalte von oben nach unten
+                SortBy(c.wins, (a1, a2) => a1.t - a2.t)
             mi := Buffer(40, 0), NumPut("UInt", 40, mi)
             DllCall("GetMonitorInfo", "Ptr", mon, "Ptr", mi)
             wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
             dpi := 96, dpy := 96
             try DllCall("shcore\GetDpiForMonitor", "Ptr", mon, "Int", 0, "UInt*", &dpi, "UInt*", &dpy)
-            maxc := Max(1, Floor((wr - wl) * 96 / dpi / TILE_MINW))
-            while (cols.Length > maxc) {                            ; zu viele: Nachbarn stapeln
+            maxc := Max(1, Floor((wr - wl) * 96 / dpi / TileMinW()))
+            while (cols.Length > maxc) {                        ; Notfall: Nachbarn stapeln
                 bi := 0, bn := 0
                 Loop cols.Length - 1 {
-                    i := cols.Length - A_Index                      ; von rechts
+                    i := cols.Length - A_Index                  ; von rechts
                     n := cols[i].wins.Length + cols[i + 1].wins.Length
                     if (!bi || n < bn)
                         bi := i, bn := n
                 }
                 for it in cols[bi + 1].wins
                     cols[bi].wins.Push(it)
-                cols[bi].r := cols[bi + 1].r
                 cols.RemoveAt(bi + 1)
             }
             nc := cols.Length
@@ -6939,13 +6987,7 @@ TileEven(list, force, &mc := 0) {
                 nr := c.wins.Length
                 for ri, it in c.wins {
                     y0 := wt + Round((wb - wt) * (ri - 1) / nr), y1 := wt + Round((wb - wt) * ri / nr)
-                    fr := SetFrame(it.h), wrc := Buffer(16, 0)
-                    DllCall("GetWindowRect", "Ptr", it.h, "Ptr", wrc)
-                    dl := fr[1] - NumGet(wrc, 0, "Int"), dt := fr[2] - NumGet(wrc, 4, "Int")
-                    dr := NumGet(wrc, 8, "Int") - fr[3], db := NumGet(wrc, 12, "Int") - fr[4]
-                    DllCall("SetWindowPos", "Ptr", it.h, "Ptr", 0, "Int", x0 - dl, "Int", y0 - dt
-                        , "Int", (x1 - x0) + dl + dr, "Int", (y1 - y0) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
-                    cnt++
+                    PlaceFrame(it.h, x0, y0, x1, y1), cnt++
                 }
             }
         }
@@ -6953,6 +6995,18 @@ TileEven(list, force, &mc := 0) {
     DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
     mc := mons.Count
     return cnt
+}
+RankOf(rank, h) => (IsObject(rank) && rank.Has(h)) ? rank[h] : 0
+; Bildschirme, die ein maximiertes, sichtbares Claude-Fenster des aktuellen Desktops belegt,
+; das nicht in der Liste ist (meist das Hauptfenster mit geteilter Ansicht): Map hMonitor -> true
+ClaudeBusyMonitors(list) {
+    inList := Map(), busy := Map()
+    for h in list
+        inList[h] := true
+    try for h in WinGetList("ahk_exe claude.exe")
+        if (!inList.Has(h) && DllCall("IsZoomed", "Ptr", h) && !ZCloaked(h))
+            busy[DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")] := true
+    return busy
 }
 
 ; ---------------------------- Claude-Code-Funktionen ----------------------------
@@ -7013,6 +7067,19 @@ ClaudeWins(tag) {
     DetectHiddenWindows(dhw)
     return out
 }
+; alle Chat-Fenster der Claude-App (Titel mit [Kuerzel]) auf Desktop num
+ClaudeDeskChats(num) {
+    out := [], dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)
+    try for h in WinGetList("ahk_exe claude.exe") {
+        if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
+            continue
+        if (RegExMatch(WinGetTitle(h), "\[[^\]]+\]") && VD("GetWindowDesktopNumber", "Ptr", h, "Int") = num)
+            out.Push(h)
+    }
+    DetectHiddenWindows(dhw)
+    return out
+}
 ; Desktop zu einem Kuerzel (oder Desktop-Namen); -1 = keiner
 ClaudeDeskFor(tag) {
     Loop GetDesktopCount() {
@@ -7035,7 +7102,7 @@ ClaudeGather(num, *) {
     for h in wins
         if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") != num)
             VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
-    TileEven(wins, true, &mc)
+    SpreadWins(ClaudeDeskChats(num), &mc, tag)             ; mit allen Chats des Desktops nach Nummer verteilen
     if (num = GetCurrentDesktop()) {
         SetWinDelay(-1)
         for h in wins
@@ -7046,6 +7113,140 @@ ClaudeGather(num, *) {
     for h in wins
         rep .= WinGetTitle("ahk_id " h) "`n"
     return rep
+}
+; Claude-Chats eines Projekts nach der Nummer im Titel ("[Kuerzel] 3. ...") ueber die
+; Bildschirme verteilen: erst der Hauptbildschirm, dann die rechts daneben, dann die links
+; daneben (Bildschirme ueber oder unter dem Hauptbildschirm bleiben frei). Je Bildschirm so
+; viele Spalten, wie TileMinW() erlaubt; reicht der Platz nicht, kommen zweite Reihen dazu,
+; wieder zuerst auf dem Hauptbildschirm. Rueckgabe: Bericht fuer die Schnittstelle
+ClaudeSpread(num, *) {
+    desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk)
+    wins := ClaudeDeskChats(num)                                ; alle Chats des Desktops, Projekt zuerst
+    if (!wins.Length) {
+        ToastShow(num, T("claude.none", tag), 0xE8A9)
+        return "error: no Claude windows with [" tag "] on desktop " (num + 1)
+    }
+    order := SpreadWins(wins, &mc, tag)
+    if (num = GetCurrentDesktop()) {
+        SetWinDelay(-1)
+        for h in order
+            try WinActivate("ahk_id " h)
+    }
+    ToastShow(num, T("claude.spread", wins.Length, tag, mc), 0xECA5)
+    rep := "ok: " wins.Length " windows [" tag "] spread over " mc " screen(s)`n"
+    for h in order
+        rep .= WinGetTitle("ahk_id " h) "`n"
+    return rep
+}
+TileMinW() => 660                                  ; kleinste Spaltenbreite in Pixeln bei 100 %
+; Fenster nach ihrer Nummer sortiert auf die Bildschirme legen (siehe ClaudeSpread).
+; Rueckgabe: die Fenster in Reihenfolge, &mc: Zahl der benutzten Bildschirme
+SpreadWins(wins, &mc := 0, tag := "") {
+    items := []
+    for h in wins {
+        ti := WinGetTitle("ahk_id " h)
+        k := "~" ti                                             ; ohne Nummer ans Ende
+        if (RegExMatch(ti, "\]\s*(\d+)(?:\.(\d+))?", &m))
+            k := Format("{:06}.{:06} ", m[1], m[2] = "" ? 0 : m[2]) ti
+        if (tag != "")                                          ; Projekt-Chats vor fremden, diese nach Kuerzel
+            k := InStr(ti, "[" tag "]") ? "0 " k : "1 " (RegExMatch(ti, "\[([^\]]+)\]", &m2) ? m2[1] : "") " " k
+        items.Push({h: h, k: k})
+    }
+    Loop items.Length - 1 {
+        j := A_Index + 1
+        while (j > 1 && StrCompare(items[j].k, items[j - 1].k) < 0)
+            t0 := items[j], items[j] := items[j - 1], items[j - 1] := t0, j--
+    }
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
+    mc := 0
+    try {
+        for it in items
+            if (DllCall("IsIconic", "Ptr", it.h) || DllCall("IsZoomed", "Ptr", it.h))
+                DllCall("ShowWindow", "Ptr", it.h, "Int", 4)       ; SW_SHOWNOACTIVATE: erst normal
+        mons := [], busy := ClaudeBusyMonitors(wins)
+        for mo in SpreadMonitors()                              ; Bildschirme mit maximiertem Claude-Hauptfenster auslassen
+            if (!busy.Has(mo.hm))
+                mons.Push(mo)
+        if (!mons.Length)
+            mons := SpreadMonitors()
+        rem := items.Length
+        for mo in mons                                          ; erste Reihe: Bildschirm fuer Bildschirm
+            mo.n := Min(rem, mo.cap), rem -= mo.n
+        while (rem > 0)                                         ; weitere Reihen, wieder ab Hauptbildschirm
+            for mo in mons {
+                add := Min(rem, mo.cap), mo.n += add, rem -= add
+                if (rem <= 0)
+                    break
+            }
+        idx := 1
+        for mo in mons {
+            if (!mo.n)
+                continue
+            mc++
+            c := Min(mo.n, mo.cap), base := mo.n // c, ext := Mod(mo.n, c)
+            Loop c {                                            ; Stapel von rechts her
+                ci := A_Index, nr := base + (ci > c - ext ? 1 : 0)
+                x0 := mo.l + Round((mo.r - mo.l) * (ci - 1) / c), x1 := mo.l + Round((mo.r - mo.l) * ci / c)
+                Loop nr {
+                    y0 := mo.t + Round((mo.b - mo.t) * (A_Index - 1) / nr), y1 := mo.t + Round((mo.b - mo.t) * A_Index / nr)
+                    PlaceFrame(items[idx].h, x0, y0, x1, y1), idx++
+                }
+            }
+        }
+    }
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    out := []
+    for it in items
+        out.Push(it.h)
+    return out
+}
+; Bildschirme fuer SpreadWins: Hauptbildschirm, dann rechts daneben (von innen nach aussen),
+; dann links daneben; je {l, t, r, b} (Arbeitsbereich) und cap (Spalten)
+SpreadMonitors() {
+    all := []
+    Loop MonitorGetCount() {
+        MonitorGetWorkArea(A_Index, &wl, &wt, &wr, &wb)
+        hm := DllCall("MonitorFromPoint", "Int64", ((wt + wb) // 2) << 32 | (((wl + wr) // 2) & 0xFFFFFFFF), "UInt", 2, "Ptr")
+        dpi := 96, dpy := 96
+        try DllCall("shcore\GetDpiForMonitor", "Ptr", hm, "Int", 0, "UInt*", &dpi, "UInt*", &dpy)
+        all.Push({hm: hm, l: wl, t: wt, r: wr, b: wb, cap: Max(1, Floor((wr - wl) * 96 / dpi / TileMinW())), n: 0, prim: A_Index = MonitorGetPrimary()})
+    }
+    p := 0
+    for mo in all
+        if (mo.prim)
+            p := mo
+    if (!p)
+        p := all[1]
+    right := [], left := []
+    for mo in all {
+        if (mo = p || Min(mo.b, p.b) - Max(mo.t, p.t) <= 0)    ; nur neben dem Hauptbildschirm
+            continue
+        (mo.l >= p.l) ? right.Push(mo) : left.Push(mo)
+    }
+    SortBy(right, (m1, m2) => m1.l - m2.l)
+    SortBy(left, (m1, m2) => m2.r - m1.r)
+    out := [p]
+    for mo in right
+        out.Push(mo)
+    for mo in left
+        out.Push(mo)
+    return out
+}
+SortBy(arr, cmp) {
+    Loop arr.Length - 1 {
+        j := A_Index + 1
+        while (j > 1 && cmp(arr[j], arr[j - 1]) < 0)
+            t0 := arr[j], arr[j] := arr[j - 1], arr[j - 1] := t0, j--
+    }
+}
+; Fenster so setzen, dass sein sichtbarer Rahmen genau x0,y0 - x1,y1 einnimmt
+PlaceFrame(h, x0, y0, x1, y1) {
+    fr := SetFrame(h), wrc := Buffer(16, 0)
+    DllCall("GetWindowRect", "Ptr", h, "Ptr", wrc)
+    dl := fr[1] - NumGet(wrc, 0, "Int"), dt := fr[2] - NumGet(wrc, 4, "Int")
+    dr := NumGet(wrc, 8, "Int") - fr[3], db := NumGet(wrc, 12, "Int") - fr[4]
+    DllCall("SetWindowPos", "Ptr", h, "Ptr", 0, "Int", x0 - dl, "Int", y0 - dt
+        , "Int", (x1 - x0) + dl + dr, "Int", (y1 - y0) + dt + db, "UInt", 0x0214)   ; NOZORDER|NOACTIVATE
 }
 ClaudeTagAsk(num, *) {
     desk := GetDesktopNameRaw(num)
@@ -7136,6 +7337,9 @@ CmdRun(s) {
             case "arrange":
                 num := ClaudeDeskFor(arg)
                 return CmdResult(num < 0 ? "error: no desktop for [" arg "]" : ClaudeGather(num))
+            case "spread":
+                num := (arg = "") ? GetCurrentDesktop() : ClaudeDeskFor(arg)
+                return CmdResult(num < 0 ? "error: no desktop for [" arg "]" : ClaudeSpread(num))
             case "list":
                 return CmdResult(ClaudeListText(arg))
             case "front", "even", "align":
@@ -7144,7 +7348,7 @@ CmdRun(s) {
                 (verb = "front") ? SetRestore(arg) : (verb = "even") ? SetEven(arg) : SetTidy(arg)
                 return CmdResult("ok: " verb " " arg)
         }
-        CmdResult("error: unknown command `"" verb "`" (arrange, list, front, even, align)")
+        CmdResult("error: unknown command `"" verb "`" (arrange, spread, list, front, even, align)")
     } catch as e
         CmdResult("error: " e.Message)
 }
@@ -7564,7 +7768,7 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     lx := BarMouseX()
     item := ItemAtX(lx)
     if (!item && (si := SetAt(lx))) {
-        SetTimer(SetClick.Bind(si, GetKeyState("Shift"), GetKeyState("Ctrl")), -1)   ; nach vorne; Umschalt: neu aufnehmen; Strg: aufraeumen
+        SetTimer(SetClick.Bind(si, GetKeyState("Shift"), GetKeyState("Ctrl"), GetKeyState("Alt")), -1)   ; nach vorne; Umschalt: neu aufnehmen; Strg: buendig; Alt: gleich breit
         return 0
     }
     if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift")) {
