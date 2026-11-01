@@ -1603,6 +1603,8 @@ global LANG_DE := Map(
     "menu.claudecode", "Claude-Code-Funktionen",
     "menu.set.even", "Gleich breit verteilen",
     "menu.claude.spread", "Auf Bildschirme verteilen",
+    "menu.claude.front", "Claude-Chats nach vorne holen",
+    "claude.tile.tip", "Claude-Chats dieses Desktops`nKlick: nach vorne · Alt + Klick: ordnen · Strg + Klick: bündig · Rechtsklick: mehr",
     "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
     "claude.spread", "{1} Claude-Fenster [{2}] auf {3} Bildschirm(e) verteilt",
     "sc.k.setalt", "{1} + Klick auf eine Kachel",
@@ -1923,6 +1925,8 @@ global LANG_EN := Map(
     "menu.claudecode", "Claude Code features",
     "menu.set.even", "Distribute evenly",
     "menu.claude.spread", "Spread across screens",
+    "menu.claude.front", "Bring Claude chats to the front",
+    "claude.tile.tip", "Claude chats on this desktop`nClick: to the front · Alt + click: arrange · Ctrl + click: flush · Right-click: more",
     "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
     "claude.spread", "{1} Claude windows [{2}] spread over {3} screen(s)",
     "sc.k.setalt", "{1} + click a tile",
@@ -5034,13 +5038,13 @@ BuildBarAt() {
     DllCall("gdiplus\GdipDisposeImage", "Ptr", mBmp)
     global gSetCount := Map(), gSetNames := Map()
     setX := 0, setW := 0, setN := 0
-    if (SetsAny()) {                           ; Fensteranordnungen: ein Symbol je Anordnung rechts neben den Tabs
-        Loop cnt {
+    if (SetsAny() || CTile()) {                ; Fensteranordnungen: ein Symbol je Anordnung rechts neben den Tabs
+        Loop cnt {                             ; (mit Claude-Code-Funktionen vorneweg die Claude-Kachel)
             names := []
             for s in SetsLoad(GetDesktopNameRaw(A_Index - 1))
                 names.Push(s["name"])
             gSetNames[A_Index - 1] := names, gSetCount[A_Index - 1] := names.Length
-            setN := Max(setN, names.Length)
+            setN := Max(setN, names.Length + CTile())
         }
         setN := Max(setN, 1)
         x += gap * 2, setX := x, setW := setN * btnH, x += setW
@@ -5625,17 +5629,28 @@ RenderBar(force := false) {
         sby := L["margin"], sbh := L["btnH"], kc := (gCurrent >= 0) ? DesktopColor(gCurrent) : CONF["ColActiveBg"]
         fM := MakeFont(true, CONF["FontSizePt"] - 1)
         dvw := Max(1, px(1)), dvh := sbh - 2 * px(6)
-        if (names.Length)                          ; Trennstrich Tabs | Anordnungen, nur wenn hier Kacheln stehen
+        if (names.Length || CTile())               ; Trennstrich Tabs | Anordnungen, nur wenn hier Kacheln stehen
             FillRoundRect(g, L["setX"] - L["gap"] - dvw / 2, sby + (sbh - dvh) / 2, dvw, dvh, 0, ARGB(CONF["ColGripTx"]))
         Loop L["setN"] {
             sbx := L["setX"] + (A_Index - 1) * sbh
             if (gSetHover = A_Index)
                 FillRoundRect(g, sbx + px(2), sby, sbh - px(4), sbh, L["radius"], ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])))
-            if (A_Index > names.Length)
-                continue
             ks := Round(sbh * 0.56), kx := sbx + (sbh - ks) / 2, ky := sby + (sbh - ks) / 2
+            if (IsClaudeTile(A_Index)) {           ; Claude-Kachel: Icon der Claude-App
+                if (cb := ClaudeTileBitmap(ks))
+                    DllCall("gdiplus\GdipDrawImageRectI", "Ptr", g, "Ptr", cb, "Int", Round(kx), "Int", Round(ky), "Int", ks, "Int", ks)
+                else {
+                    FillRoundRect(g, kx, ky, ks, ks, px(5), ARGB(0xD97757))
+                    DrawText(g, fM, sf, "C", kx, ky, ks, ks, ARGB(0xFFFFFF))
+                }
+                FillRoundRect(g, kx + ks * 0.25, ky + ks + px(3), ks * 0.5, Max(2, px(2)), px(1), ARGB(CONF["ColGripTx"]))
+                continue
+            }
+            ni := A_Index - CTile()
+            if (ni > names.Length)
+                continue
             FillRoundRect(g, kx, ky, ks, ks, px(5), ARGB(kc))
-            DrawText(g, fM, sf, SetInitials(names[A_Index]), kx, ky, ks, ks, ARGB(ReadableOn(kc)))
+            DrawText(g, fM, sf, SetInitials(names[ni]), kx, ky, ks, ks, ARGB(ReadableOn(kc)))
             FillRoundRect(g, kx + ks * 0.25, ky + ks + px(3), ks * 0.5, Max(2, px(2)), px(1), ARGB(CONF["ColGripTx"]))   ; Strich wie unter Taskleisten-Programmen
         }
         DllCall("gdiplus\GdipDeleteFont", "Ptr", fM)
@@ -6539,7 +6554,82 @@ SetAt(lx) {
 SetNameAt(i) {                                   ; aus dem Stand beim Aufbau der Leiste (ohne Rueckfrage beim Explorer)
     global gSetNames, gCurrent
     names := gSetNames.Has(gCurrent) ? gSetNames[gCurrent] : []
+    i -= CTile()                                 ; Platz 1 ist ggf. die Claude-Kachel
     return (i >= 1 && i <= names.Length) ? names[i] : ""
+}
+; Claude-Kachel (mit Claude-Code-Funktionen auf jedem Desktop vorneweg): Klick holt alle
+; Claude-Chats dieses Desktops nach vorne, Alt + Klick ordnet sie, Strg + Klick richtet buendig aus
+CTile() => CONF["ClaudeCode"] ? 1 : 0
+IsClaudeTile(i) => (CTile() && i = 1)
+ClaudeTileBitmap(size) {
+    static cache := Map()
+    if (cache.Has(size))
+        return cache[size]
+    g := ClaudeGlyph(), bmp := 0
+    if (SubStr(g, 1, 4) != "ico:")
+        return 0                                 ; Claude laeuft nicht: spaeter noch einmal versuchen
+    try {
+        hIco := LoadPicture(SubStr(g, 5), "w" size " h" size " Icon1", &imgType)
+        if (hIco)
+            DllCall("gdiplus\GdipCreateBitmapFromHICON", "Ptr", hIco, "Ptr*", &bmp)
+    }
+    cache[size] := bmp
+    return bmp
+}
+; das Claude-Hauptfenster (auf allen Desktops angeheftet) und die Chats dieses Desktops nach
+; vorne. Liegen auf dem Bildschirm des Hauptfensters Einzel-Chats, bleibt es dahinter (dort wird
+; es nicht genutzt). Jedes Fenster wird aktiviert und kurz abgewartet: Die Claude-App braucht
+; einen Moment, ohne Warten blieben einzelne Chats hinten.
+ClaudeFront(*) {
+    num := GetCurrentDesktop()
+    chats := ClaudeDeskChats(num), used := Map(), wins := []
+    for h in chats
+        if (!DllCall("IsIconic", "Ptr", h))
+            used[DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")] := true
+    for h in ClaudeMainWins()                       ; zuerst, damit die Chats darueber liegen
+        if (!used.Has(DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")))
+            wins.Push(h)
+    for h in chats
+        wins.Push(h)
+    if (!wins.Length)
+        return ToastShow(num, T("desk.evennone"), 0xE8A9)
+    SetWinDelay(-1)
+    for h in wins {
+        if (DllCall("IsIconic", "Ptr", h))
+            DllCall("ShowWindow", "Ptr", h, "Int", 9)  ; SW_RESTORE
+        try {
+            WinActivate("ahk_id " h)
+            WinWaitActive("ahk_id " h, , 0.2)
+        }
+    }
+}
+; die Hauptfenster der Claude-App: sichtbar, ohne eigenen Desktop (auf allen angeheftet)
+ClaudeMainWins() {
+    out := [], dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)
+    try for h in WinGetList("ahk_exe claude.exe") {
+        if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
+            continue
+        if (PinState(h) >= 1)
+            out.Push(h)
+    }
+    DetectHiddenWindows(dhw)
+    return out
+}
+ClaudeTileMenu() {
+    m := Menu()
+    m.Add(T("menu.claude.front"), ClaudeFront)
+    MenuGlyph(m, T("menu.claude.front"), ClaudeGlyph())
+    MenuHint(m, T("menu.claude.front"), ClickHint())
+    m.Default := T("menu.claude.front")
+    SetMenuDesk(m)
+    m.Add(T("menu.claude.spread"), ClaudeSpread.Bind(GetCurrentDesktop()))
+    MenuGlyph(m, T("menu.claude.spread"), ClaudeGlyph())
+    m.Add()
+    m.Add(T("menu.set.save"), SetSaveAsk)
+    MenuGlyph(m, T("menu.set.save"), "E710")
+    OwnerDrawAll(m.Handle)
+    m.Show()
 }
 ; zwei Zeichen fuer die Kachel: Anfangsbuchstaben der ersten zwei Woerter, sonst die ersten zwei
 SetInitials(name) {
@@ -6554,6 +6644,8 @@ SetInitials(name) {
 }
 SetHoverTip(i) {
     ToolTip(, , , 5)
+    if (IsClaudeTile(i))
+        return (ToolTip(T("claude.tile.tip"), , , 5), SetTimer(() => ToolTip(, , , 5), -3000))
     name := i ? SetNameAt(i) : ""
     if (name != "")
         ToolTip(name "`n" T("set.tip"), , , 5), SetTimer(() => ToolTip(, , , 5), -3000)
@@ -6645,6 +6737,8 @@ SetClick(i, shift := false, ctrl := false, alt := false) {
         return DeskAlign()
     if (alt && CONF["ClaudeCode"])
         return DeskEven()
+    if (IsClaudeTile(i))
+        return ClaudeFront()
     name := SetNameAt(i)
     if (name = "")
         return SetMenu(i)
@@ -6654,6 +6748,8 @@ SetClick(i, shift := false, ctrl := false, alt := false) {
 }
 ; Rechtsklick: Menue der Kachel (bzw. nur "speichern" auf einem leeren Platz)
 SetMenu(i := 0) {
+    if (IsClaudeTile(i))
+        return ClaudeTileMenu()
     name := SetNameAt(i)
     m := Menu()
     if (name != "") {
@@ -6947,10 +7043,10 @@ DeskAlign(*) {
 ; Griff: Alt + Klick verteilt die Claude-Chats jedes Bildschirms (wie Alt + Klick auf eine Kachel)
 DeskEven(*) {
     num := GetCurrentDesktop()
-    cl := SetNotFull(ClaudeDeskChats(num))
+    cl := NotMinimized(ClaudeDeskChats(num))         ; maximierte Chats werden mit eingeordnet
     if (!cl.Length)
         return ToastShow(num, T("desk.evennone"), 0xE8A9)
-    cnt := TileEven(cl, false, &mc)
+    cnt := TileEven(cl, true, &mc)
     SetWinDelay(-1)
     for h in cl
         try WinActivate("ahk_id " h)
@@ -6975,27 +7071,15 @@ SetEven(name, *) {
     for h in ClaudeDeskChats(num)                               ; dazu alle uebrigen Chats des Desktops
         if (!seen.Has(h))
             cl.Push(h), seen[h] := true
-    cnt := TileEven(SetNotFull(cl), false, &mc)
+    cnt := TileEven(NotMinimized(cl), true, &mc)          ; maximierte Chats werden mit eingeordnet
     SetRestore(name)
     ToastShow(num, T("set.evened", name, cnt, mc), 0xECA5)
 }
-; die Fenster aus der Liste, die weder minimiert noch maximiert sind und nicht mindestens
-; 90 % von Breite und Hoehe des Arbeitsbereichs ihres Bildschirms bedecken
-SetNotFull(list) {
+NotMinimized(list) {
     out := []
-    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")
-    for h in list {
-        if (DllCall("IsZoomed", "Ptr", h) || DllCall("IsIconic", "Ptr", h))
-            continue
-        mi := Buffer(40, 0), NumPut("UInt", 40, mi)
-        DllCall("GetMonitorInfo", "Ptr", DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr"), "Ptr", mi)
-        fr := SetFrame(h)
-        if (fr[3] - fr[1] >= (NumGet(mi, 28, "Int") - NumGet(mi, 20, "Int")) * 0.9
-            && fr[4] - fr[2] >= (NumGet(mi, 32, "Int") - NumGet(mi, 24, "Int")) * 0.9)
-            continue
-        out.Push(h)
-    }
-    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    for h in list
+        if (!DllCall("IsIconic", "Ptr", h))
+            out.Push(h)
     return out
 }
 ; Gleich verteilen, je Bildschirm dort, wo die Fenster gerade liegen (kein Fenster wechselt
@@ -7016,7 +7100,7 @@ TileEven(list, force, &mc := 0) {
             if (DllCall("IsIconic", "Ptr", h) || DllCall("IsZoomed", "Ptr", h)) {
                 if (!force)
                     continue
-                DllCall("ShowWindow", "Ptr", h, "Int", 4)          ; SW_SHOWNOACTIVATE: erst normal
+                DllCall("ShowWindow", "Ptr", h, "Int", 9)          ; SW_RESTORE: aus maximiert/minimiert erst normal
             }
             mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
             if (!mons.Has(mon))
@@ -7433,7 +7517,14 @@ CmdRun(s) {
                 return CmdResult(num < 0 ? "error: no desktop for [" arg "]" : ClaudeSpread(num))
             case "list":
                 return CmdResult(ClaudeListText(arg))
-            case "front", "even", "align":
+            case "even":
+                if (arg = "")                           ; ohne Anordnung: wie Alt + Klick auf die Claude-Kachel
+                    return (DeskEven(), CmdResult("ok: even"))
+                if (!SetGet(arg))
+                    return CmdResult("error: no layout `"" arg "`" on the current desktop")
+                SetEven(arg)
+                return CmdResult("ok: even " arg)
+            case "front", "align":
                 if (!SetGet(arg))
                     return CmdResult("error: no layout `"" arg "`" on the current desktop")
                 (verb = "front") ? SetRestore(arg) : (verb = "even") ? SetEven(arg) : SetTidy(arg)
@@ -7861,7 +7952,7 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     if (!item && (si := SetAt(lx))) {
         if (GetKeyState("Alt", "P"))
             Send("{Blind}{vkE8}")              ; Loslassen von Alt oeffnet sonst die Menueleiste des Vordergrund-Programms
-        SetTimer(SetClick.Bind(si, GetKeyState("Shift"), GetKeyState("Ctrl"), GetKeyState("Alt")), -1)   ; nach vorne; Umschalt: neu aufnehmen; Strg: buendig; Alt: gleich breit
+        SetTimer(SetClick.Bind(si, GetKeyState("Shift", "P"), GetKeyState("Ctrl", "P"), GetKeyState("Alt", "P")), -1)   ; physisch: logisch ist Alt oft schon "los"   ; nach vorne; Umschalt: neu aufnehmen; Strg: buendig; Alt: gleich breit
         return 0
     }
     if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift")) {
