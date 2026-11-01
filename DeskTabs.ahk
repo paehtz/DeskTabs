@@ -103,6 +103,7 @@ global CONF := Map(
     "DragToTab",      1,       ; 1 = Fenster an der Titelleiste auf einen Tab ziehen schickt es auf diesen Desktop
     "RestoreZOrder",  1,       ; 1 = je Desktop merken, welche Fenster vorne lagen, und das beim Zurueckkommen wiederherstellen
     "AttentionDot",   1,       ; 1 = Punkt am Tab, wenn ein Programm auf einem anderen Desktop blinkt
+    "QuietFlash",     1,       ; 1 = dessen Blinken beenden, damit es nicht in der Taskleiste dieses Desktops auftaucht
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "ClaudeCode",     0,       ; 1 = Claude-Code-Funktionen (Chat-Fenster am Projektkuerzel, gleich breit verteilen, /cmd)
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
@@ -289,14 +290,31 @@ OnShellHook(wParam, lParam, msg, hwnd) {
     if (!CONF["AttentionDot"] || wParam != 0x8006)      ; HSHELL_FLASH
         return
     global gSelfTick
-    if (A_TickCount - gSelfTick < 2000)   ; Blinken direkt nach einem eigenen Wechsel ist Windows'
+    if (A_TickCount - gSelfTick < 2000) { ; Blinken direkt nach einem eigenen Wechsel ist Windows'
         return                            ; Fokus-Gerangel (siehe FocusTopWindow), kein echter Ruf
+    }
     desk := -1
     try desk := VD("GetWindowDesktopNumber", "Ptr", lParam, "Int")
-    if (desk >= 0 && desk != gCurrent && !gAttention.Has(desk)) {
-        gAttention[desk] := true
-        RenderBar()
+    if (desk >= 0 && desk != gCurrent) {
+        if (!gAttention.Has(desk)) {
+            gAttention[desk] := true
+            RenderBar()
+        }
+        ; Ein blinkendes Fenster eines anderen Desktops zeigt Windows auf JEDER Taskleiste;
+        ; ein Klick darauf wechselt dorthin. Blinken beenden: Der Ruf bleibt als Punkt am Tab,
+        ; die Taskleiste bleibt bei den Fenstern dieses Desktops.
+        if (CONF["QuietFlash"]) {
+            StopFlash(lParam)
+            SetTimer(StopFlash.Bind(lParam), -400)     ; manche Programme setzen kurz danach nach
+        }
     }
+}
+StopFlash(h) {
+    fi := Buffer(A_PtrSize = 8 ? 32 : 20, 0)          ; FLASHWINFO
+    NumPut("UInt", fi.Size, fi, 0)
+    NumPut("Ptr", h, fi, A_PtrSize)
+    NumPut("UInt", 0, fi, A_PtrSize * 2)                ; FLASHW_STOP
+    try DllCall("FlashWindowEx", "Ptr", fi)
 }
 
 ; Zurueck zum zuletzt genutzten Desktop (Tastenkuerzel oder Mittelklick auf die Leiste).
@@ -1636,6 +1654,7 @@ global LANG_DE := Map(
     "menu.hotkeys.back", "{1}: zurück zum letzten Desktop (auch Mittelklick auf die Leiste)",
     "menu.hotkeys.move", "{1}: aktives Fenster dorthin schicken",
     "menu.attention", "Punkt am Tab, wenn ein Programm auf einem anderen Desktop blinkt",
+    "menu.quietflash", "…dabei nicht in der Taskleiste blinken (ein Klick darauf wechselt sonst den Desktop)",
     "tip.moved", "„{1}“ verschoben nach „{2}“",
     "menu.tab.movehere", "„{1}“ hierher verschieben",
     "alert.switched.noproc", "Desktop gewechselt zu „{1}“, nicht von Dir",
@@ -1941,6 +1960,7 @@ global LANG_EN := Map(
     "menu.hotkeys.back", "{1}: back to the last desktop (or middle-click the bar)",
     "menu.hotkeys.move", "{1}: send the active window there",
     "menu.attention", "Dot on the tab when an app on another desktop wants attention",
+    "menu.quietflash", "…and keep it out of the taskbar (clicking it would switch desktops)",
     "tip.moved", "Moved “{1}” to “{2}”",
     "menu.tab.movehere", "Move “{1}” here",
     "alert.switched.noproc", "Switched to “{1}”, not by you",
@@ -2232,7 +2252,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -3691,6 +3711,11 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.attention"), ToggleView.Bind("AttentionDot"))
     if (CONF["AttentionDot"])
         xm.Check(T("menu.attention"))
+    xm.Add(T("menu.quietflash"), ToggleView.Bind("QuietFlash"))
+    if (CONF["QuietFlash"])
+        xm.Check(T("menu.quietflash"))
+    if (!CONF["AttentionDot"])
+        xm.Disable(T("menu.quietflash"))       ; ohne Punkt ginge der Ruf ganz verloren
     xm.Add(T("menu.switchalert"), ToggleView.Bind("SwitchAlert"))
     if (CONF["SwitchAlert"])
         xm.Check(T("menu.switchalert"))
@@ -7429,6 +7454,13 @@ RemapAfterMove(from, to) {
     for k in gAttention
         att[m(k)] := true
     gAttention := att
+    global gSetNames, gSetCount                     ; Kacheln der Fensteranordnungen je Desktop
+    sn := Map(), sc := Map()
+    for k, v in gSetNames
+        sn[m(k)] := v
+    for k, v in gSetCount
+        sc[m(k)] := v
+    gSetNames := sn, gSetCount := sc
 }
 ; Die Tabs stehen nach dem Gleiten schon an ihren neuen Plaetzen: nur Nummern, Beschriftungen
 ; und Abzeichen nachziehen und neu zeichnen, statt die Leiste neu aufzubauen (das liess sie
