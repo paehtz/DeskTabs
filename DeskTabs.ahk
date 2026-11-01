@@ -1540,7 +1540,7 @@ global LANG_DE := Map(
     "sc.k.setshift", "{1} + Klick auf eine Kachel",
     "sc.d.setshift", "alles, was gerade sichtbar ist, als neuen Stand der Anordnung speichern",
     "sc.k.setctrl", "{1} + Klick auf eine Kachel",
-    "sc.d.setctrl", "bündig ausrichten: Kanten aneinander und an den Bildschirmrand (nur kleine Korrekturen)",
+    "sc.d.setctrl", "alle Fenster des Desktops bündig ausrichten (auch auf einem leeren Platz)",
     "set.tidynone", "„{1}“: nichts nachzurichten, alles liegt schon bündig",
     "sc.d.altclick", "Unterprojekte: wählen, anlegen, entfernen (stehen im Tab und im Zeit-Log)",
     "sc.k.clickactivesub", "Klick auf den aktiven Tab",
@@ -1592,13 +1592,21 @@ global LANG_DE := Map(
     "menu.newdesk", "Neuer Desktop…",
     "menu.set.save", "Fensteranordnung speichern…",
     "menu.set.tidy", "Fenster bündig ausrichten",
+    "desk.aligned", "{1} Fenster bündig ausgerichtet · {2} Bildschirm(e)",
+    "desk.alignnone", "Nichts nachzurichten, alles liegt schon bündig",
+    "desk.evened", "{1} Claude-Fenster verteilt · {2} Bildschirm(e)",
+    "desk.evennone", "Keine Claude-Chats auf diesem Desktop",
+    "sc.k.ctrlgrip", "{1} + Klick auf den Griff ≡",
+    "sc.d.ctrlgrip", "alle Fenster des Desktops bündig ausrichten",
+    "sc.k.altgrip", "{1} + Klick auf den Griff ≡",
+    "sc.d.altgrip", "Claude-Chats auf jedem Bildschirm gleich breit verteilen",
     "menu.claudecode", "Claude-Code-Funktionen",
     "menu.set.even", "Gleich breit verteilen",
-    "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
     "menu.claude.spread", "Auf Bildschirme verteilen",
+    "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
     "claude.spread", "{1} Claude-Fenster [{2}] auf {3} Bildschirm(e) verteilt",
     "sc.k.setalt", "{1} + Klick auf eine Kachel",
-    "sc.d.setalt", "ihre Claude-Fenster gleich breit verteilen (übereinander liegende mit halber Höhe)",
+    "sc.d.setalt", "Claude-Chats auf jedem Bildschirm gleich breit verteilen (auch auf einem leeren Platz)",
     "claude.gathered", "{1} Claude-Fenster [{2}] verteilt · {3} von anderen Desktops geholt",
     "claude.none", "Keine Claude-Fenster mit [{1}] gefunden",
     "menu.set.overwrite", "Mit aktueller Anordnung überschreiben",
@@ -1852,7 +1860,7 @@ global LANG_EN := Map(
     "sc.k.setshift", "{1} + click a tile",
     "sc.d.setshift", "save everything visible right now as the layout's new state",
     "sc.k.setctrl", "{1} + click a tile",
-    "sc.d.setctrl", "align flush: edges to each other and to the screen edge (small corrections only)",
+    "sc.d.setctrl", "align all windows of the desktop flush (also on an empty slot)",
     "set.tidynone", "“{1}”: nothing to align, everything is flush already",
     "sc.d.altclick", "sub-projects: pick, add, remove (shown in the tab and in the time log)",
     "sc.k.clickactivesub", "Click the active tab",
@@ -1904,13 +1912,21 @@ global LANG_EN := Map(
     "menu.newdesk", "New desktop…",
     "menu.set.save", "Save window layout…",
     "menu.set.tidy", "Align windows flush",
+    "desk.aligned", "{1} windows aligned flush · {2} screen(s)",
+    "desk.alignnone", "Nothing to align, everything is flush already",
+    "desk.evened", "{1} Claude windows distributed · {2} screen(s)",
+    "desk.evennone", "No Claude chats on this desktop",
+    "sc.k.ctrlgrip", "{1} + click the grip ≡",
+    "sc.d.ctrlgrip", "align all windows of the desktop flush",
+    "sc.k.altgrip", "{1} + click the grip ≡",
+    "sc.d.altgrip", "distribute the Claude chats evenly on each screen",
     "menu.claudecode", "Claude Code features",
     "menu.set.even", "Distribute evenly",
-    "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
     "menu.claude.spread", "Spread across screens",
+    "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
     "claude.spread", "{1} Claude windows [{2}] spread over {3} screen(s)",
     "sc.k.setalt", "{1} + click a tile",
-    "sc.d.setalt", "distribute its Claude windows evenly (stacked ones at half height)",
+    "sc.d.setalt", "distribute the Claude chats evenly on each screen (also on an empty slot)",
     "claude.gathered", "{1} Claude windows [{2}] distributed · {3} brought from other desktops",
     "claude.none", "No Claude windows with [{1}] found",
     "menu.set.overwrite", "Overwrite with current layout",
@@ -3590,6 +3606,14 @@ ShowContextMenu(num, *) {
         MenuGlyph(m, T("menu.newdesk"), "E710")
         m.Add(T("menu.set.save"), SetSaveAsk)
         MenuGlyph(m, T("menu.set.save"), "E8A9")
+        m.Add(T("menu.set.tidy"), DeskAlign)
+        MenuGlyph(m, T("menu.set.tidy"), "E8A1")
+        MenuHint(m, T("menu.set.tidy"), ClickHint(T("key.ctrl")))
+        if (CONF["ClaudeCode"]) {
+            m.Add(T("menu.set.even"), DeskEven)
+            MenuGlyph(m, T("menu.set.even"), ClaudeGlyph())
+            MenuHint(m, T("menu.set.even"), ClickHint(T("key.alt")))
+        }
         m.Add()
     }
     ; Griff bzw. Luecke: gehoert keinem Desktop, also der Ort fuer "auf allen Desktops"
@@ -4144,6 +4168,9 @@ ShowShortcuts(*) {
         rows.Push([T("sc.k.dragwingrip"), T("sc.d.dragwingrip")])
     }
     rows.Push([T("sc.k.shiftgrip", S), T("sc.d.shiftgrip", S)])
+    rows.Push([T("sc.k.ctrlgrip", C), T("sc.d.ctrlgrip")])
+    if (CONF["ClaudeCode"])
+        rows.Push([T("sc.k.altgrip", T("key.alt")), T("sc.d.altgrip")])
     rows.Push([T("sc.k.rtab"), T("sc.d.rtabwin")])
     rows.Push([T("sc.sec.desktops")])
     if (CanMoveDesktop())
@@ -6611,16 +6638,18 @@ SetFound(set) {
 }
 ; Klick auf eine Kachel: nach vorne holen; Umschalt + Klick: aktuellen Stand als neue Anordnung
 ; dieser Kachel speichern. Leerer Platz: Menue zum Speichern.
+; Strg + Klick (auch auf einen leeren Platz): alle Fenster des Desktops buendig ausrichten;
+; Alt + Klick: die Claude-Chats jedes Bildschirms verteilen
 SetClick(i, shift := false, ctrl := false, alt := false) {
+    if (ctrl)
+        return DeskAlign()
+    if (alt && CONF["ClaudeCode"])
+        return DeskEven()
     name := SetNameAt(i)
     if (name = "")
         return SetMenu(i)
     if (shift)
         return SetOverwrite(name)
-    if (ctrl)
-        return SetTidy(name)
-    if (alt && CONF["ClaudeCode"])
-        return SetEven(name)
     SetRestore(name)
 }
 ; Rechtsklick: Menue der Kachel (bzw. nur "speichern" auf einem leeren Platz)
@@ -6637,24 +6666,31 @@ SetMenu(i := 0) {
         MenuHint(m, T("menu.set.overwrite"), ClickHint(T("key.shift")))
         m.Add(T("menu.set.pick"), SetPickDialog.Bind(name))
         MenuGlyph(m, T("menu.set.pick"), "E762")
-        m.Add(T("menu.set.tidy"), SetTidy.Bind(name))
-        MenuGlyph(m, T("menu.set.tidy"), "E8A1")
-        MenuHint(m, T("menu.set.tidy"), ClickHint(T("key.ctrl")))
-        if (CONF["ClaudeCode"]) {
-            m.Add(T("menu.set.even"), SetEven.Bind(name))
-            MenuGlyph(m, T("menu.set.even"), ClaudeGlyph())
-            MenuHint(m, T("menu.set.even"), ClickHint(T("key.alt")))
-        }
+        SetMenuDesk(m)
         m.Add(T("menu.set.rename"), SetRenameAsk.Bind(name))
         MenuGlyph(m, T("menu.set.rename"), "E70F")
         m.Add(T("menu.set.delete"), SetDeleteAsk.Bind(name))
         MenuGlyph(m, T("menu.set.delete"), "E74D")
+        m.Add()
+    } else {                                        ; leerer Platz: Ausrichten geht auch ohne Anordnung
+        SetMenuDesk(m)
         m.Add()
     }
     m.Add(T("menu.set.save"), SetSaveAsk)
     MenuGlyph(m, T("menu.set.save"), "E710")
     OwnerDrawAll(m.Handle)                          ; selbst zeichnen, sonst fehlen die Symbole
     m.Show()
+}
+; die beiden Eintraege fuer den ganzen Desktop (Strg + Klick, Alt + Klick)
+SetMenuDesk(m) {
+    m.Add(T("menu.set.tidy"), DeskAlign)
+    MenuGlyph(m, T("menu.set.tidy"), "E8A1")
+    MenuHint(m, T("menu.set.tidy"), ClickHint(T("key.ctrl")))
+    if (CONF["ClaudeCode"]) {
+        m.Add(T("menu.set.even"), DeskEven)
+        MenuGlyph(m, T("menu.set.even"), ClaudeGlyph())
+        MenuHint(m, T("menu.set.even"), ClickHint(T("key.alt")))
+    }
 }
 ; Neue Anordnung: Schnappschuss aller gerade sichtbaren Fenster, nur der Name wird gefragt
 ; (ausschliessen laesst sich spaeter ueber "Fenster auswaehlen...")
@@ -6821,13 +6857,22 @@ SetRestore(name, *) {
 ; Hintergrund) fasst es nicht an. Gerechnet wird mit dem sichtbaren Rahmen
 ; (DWMWA_EXTENDED_FRAME_BOUNDS), in echten Pixeln je Bildschirm.
 SetTidy(name, *) {
-    static TIDY_TOL := 0.05
     set := SetGet(name, &desk, &num)
     if (!set)
         return
     found := SetFound(set)
     if (!found.Length)
         return ToastShow(num, T("set.nonefound", name), 0xE8A9)
+    cnt := AlignWins(found, &mc)
+    SetRestore(name)
+    if (!cnt)
+        return ToastShow(num, T("set.tidynone", name), 0xE8A1)
+    ToastShow(num, T("set.tidied", name, cnt, mc), 0xE8A1)
+}
+; Kern von SetTidy: die Fenster (oben zuerst) buendig nachrichten. Rueckgabe: Zahl der
+; bewegten Fenster, &mc: Zahl der Bildschirme
+AlignWins(found, &mc := 0) {
+    static TIDY_TOL := 0.05
     old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
     cnt := 0, mons := Map()
     try {
@@ -6890,10 +6935,26 @@ SetTidy(name, *) {
         }
     }
     DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
-    SetRestore(name)
-    if (!cnt)
-        return ToastShow(num, T("set.tidynone", name), 0xE8A1)
-    ToastShow(num, T("set.tidied", name, cnt, mons.Count), 0xE8A1)
+    mc := mons.Count
+    return cnt
+}
+; Griff: Strg + Klick richtet alle sichtbaren Fenster des Desktops buendig aus (ohne Anordnung)
+DeskAlign(*) {
+    num := GetCurrentDesktop()
+    cnt := AlignWins(ZOrderCurrent(40), &mc)
+    ToastShow(num, cnt ? T("desk.aligned", cnt, mc) : T("desk.alignnone"), 0xE8A1)
+}
+; Griff: Alt + Klick verteilt die Claude-Chats jedes Bildschirms (wie Alt + Klick auf eine Kachel)
+DeskEven(*) {
+    num := GetCurrentDesktop()
+    cl := SetNotFull(ClaudeDeskChats(num))
+    if (!cl.Length)
+        return ToastShow(num, T("desk.evennone"), 0xE8A9)
+    cnt := TileEven(cl, false, &mc)
+    SetWinDelay(-1)
+    for h in cl
+        try WinActivate("ahk_id " h)
+    ToastShow(num, T("desk.evened", cnt, mc), 0xECA5)
 }
 ; Gleich breit verteilen (nur mit Claude-Code-Funktionen): die Claude-Fenster der Anordnung und
 ; alle uebrigen Claude-Chats des Desktops (damit alle gleichzeitig sichtbar sind) grob in
@@ -6914,10 +6975,7 @@ SetEven(name, *) {
     for h in ClaudeDeskChats(num)                               ; dazu alle uebrigen Chats des Desktops
         if (!seen.Has(h))
             cl.Push(h), seen[h] := true
-    tag := ClaudeTag(desk, num), rank := Map()                  ; Projekt-Chats zuerst, fremde dahinter
-    for h in cl
-        try rank[h] := InStr(WinGetTitle("ahk_id " h), "[" tag "]") ? 0 : 1
-    cnt := TileEven(SetNotFull(cl), false, &mc, rank)
+    cnt := TileEven(SetNotFull(cl), false, &mc)
     SetRestore(name)
     ToastShow(num, T("set.evened", name, cnt, mc), 0xECA5)
 }
@@ -6940,19 +6998,17 @@ SetNotFull(list) {
     DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
     return out
 }
-; Gleich verteilen, je Bildschirm dort, wo die Fenster gerade liegen: nebeneinander, von links
-; nach rechts gleich breit, volle Hoehe, buendig. Uebereinander (halbe Hoehe) liegen nur
-; Fenster, die wirklich uebereinander stehen (waagerecht zur Haelfte deckungsgleich, in der
-; Hoehe aber kaum), oder im Notfall: Je Bildschirm passen hoechstens so viele Spalten, wie
+; Gleich verteilen, je Bildschirm dort, wo die Fenster gerade liegen (kein Fenster wechselt
+; den Bildschirm; das maximierte Claude-Hauptfenster bleibt dahinter): nebeneinander in der
+; Reihenfolge von links nach rechts, volle Hoehe, buendig. Uebereinander (halbe Hoehe) kommt ein
+; Fenster, das man unter ein anderes gezogen hat (Oberkante in der unteren Haelfte, waagerecht
+; zur Haelfte deckungsgleich), sonst nur im Notfall: Je Bildschirm passen hoechstens so viele
+; Spalten, wie
 ; TileMinW(true) (Pixel bei 100 %) erlaubt (3440 -> 5, 2560 -> 4, 1920 -> 3); sind es mehr, werden
 ; die beiden schmalsten Nachbarspalten (von rechts) zusammengelegt.
-; Ein Bildschirm, den ein maximiertes Claude-Fenster ausserhalb der Liste belegt (das
-; Hauptfenster mit geteilter Ansicht), gilt als voll: Seine Fenster wandern auf den naechsten
-; freien Bildschirm (Hauptbildschirm, rechts daneben, links daneben) und reihen sich dort rechts an.
 ; force: maximierte/minimierte Fenster erst normal machen statt sie auszulassen.
-; rank (Map hwnd -> Zahl): Zugezogene mit kleinerem Rang kommen zuerst (Projekt-Chats vor fremden).
 ; Rueckgabe: Zahl der verteilten Fenster, &mc: Zahl der Bildschirme
-TileEven(list, force, &mc := 0, rank := 0) {
+TileEven(list, force, &mc := 0) {
     old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
     mons := Map(), cnt := 0
     try {
@@ -6964,51 +7020,37 @@ TileEven(list, force, &mc := 0, rank := 0) {
             }
             mon := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
             if (!mons.Has(mon))
-                mons[mon] := {own: [], moved: []}
+                mons[mon] := {own: []}
             fr := SetFrame(h)
             mons[mon].own.Push({h: h, l: fr[1], t: fr[2], r: fr[3], b: fr[4]})
         }
-        busy := ClaudeBusyMonitors(list), order := SpreadMonitors()
-        TileRehome(mons, busy, order, rank)                     ; besetzte Bildschirme raeumen
         for mon, grp in mons {
-            items := grp.own
-            SortBy(items, (a1, a2) => a1.l - a2.l)
-            cols := []                                          ; Spalten: {l, r, wins}
-            if (grp.HasOwnProp("seq"))                          ; feste Reihenfolge (Projekt-Chats nach Nummer)
-                for it in grp.seq
-                    cols.Push({l: 0, r: 0, wins: [it]})
-            for it in items {
-                hit := 0
+            mi := Buffer(40, 0), NumPut("UInt", 40, mi)
+            DllCall("GetMonitorInfo", "Ptr", mon, "Ptr", mi)
+            wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
+            items := grp.own                                    ; jedes Fenster eine Spalte, links vor rechts;
+            SortBy(items, (a1, a2) => (a1.l - a2.l) || (a1.t - a2.t))
+            cols := [], lower := []                             ; Spalten: {l, r, wins}
+            for it in items                                     ; Oberkante in der unteren Haelfte: gehoert
+                (it.t >= wt + (wb - wt) * 0.45 ? lower : cols).Push(it)   ; unter das Fenster darueber
+            for i, it in cols
+                cols[i] := {l: it.l, r: it.r, wins: [it]}
+            for it in lower {
+                hit := 0, best := 0
                 for c in cols {
-                    if (Min(c.r, it.r) - Max(c.l, it.l) < Min(c.r - c.l, it.r - it.l) / 2)
-                        continue                                ; waagerecht nicht deckungsgleich
-                    stacked := true
-                    for w in c.wins                             ; uebereinander heisst: in der Hoehe kaum ueberdeckt
-                        if (Min(w.b, it.b) - Max(w.t, it.t) > Min(w.b - w.t, it.b - it.t) / 4)
-                            stacked := false
-                    if (stacked) {
-                        hit := c
-                        break
-                    }
+                    ov := Min(c.r, it.r) - Max(c.l, it.l)
+                    if (ov > best && ov >= Min(c.r - c.l, it.r - it.l) / 2)
+                        hit := c, best := ov
                 }
                 if (hit)
                     hit.wins.Push(it)
                 else
                     cols.Push({l: it.l, r: it.r, wins: [it]})
             }
-            if (!grp.HasOwnProp("seq"))
-                SortBy(cols, (c1, c2) => c1.l - c2.l)
-            for it in grp.moved                                 ; Zugezogene rechts anreihen
-                cols.Push({l: 0, r: 0, wins: [it]})
-            for c in cols                                       ; in der Spalte von oben nach unten
-                SortBy(c.wins, (a1, a2) => a1.t - a2.t)
-            mi := Buffer(40, 0), NumPut("UInt", 40, mi)
-            DllCall("GetMonitorInfo", "Ptr", mon, "Ptr", mi)
-            wl := NumGet(mi, 20, "Int"), wt := NumGet(mi, 24, "Int"), wr := NumGet(mi, 28, "Int"), wb := NumGet(mi, 32, "Int")
+            SortBy(cols, (c1, c2) => c1.l - c2.l)
             dpi := 96, dpy := 96
             try DllCall("shcore\GetDpiForMonitor", "Ptr", mon, "Int", 0, "UInt*", &dpi, "UInt*", &dpy)
             maxc := Max(1, Floor((wr - wl) * 96 / dpi / TileMinW(true)))   ; hier von Hand hingezogen: enger erlaubt
-            capA := Max(1, Floor((wr - wl) * 96 / dpi / TileMinW()))      ; Breite fuer ein einzelnes Fenster
             while (cols.Length > maxc) {                        ; Notfall: Nachbarn stapeln
                 bi := 0, bn := 0
                 Loop cols.Length - 1 {
@@ -7021,11 +7063,15 @@ TileEven(list, force, &mc := 0, rank := 0) {
                     cols[bi].wins.Push(it)
                 cols.RemoveAt(bi + 1)
             }
-            nc := cols.Length
+            ; Breite: bei wenigen Fenstern hoechstens 1/(maxc - 1) (Hauptbildschirm ein Viertel,
+            ; seitlich ein Drittel), ab da fuellen sie den Bildschirm. Begonnen wird an der Seite
+            ; zum Hauptbildschirm: dort und darueber links, auf einem linken Bildschirm rechts.
+            nc := cols.Length, k := Max(1, maxc - 1)
+            cw := (wr - wl) / Max(nc, k)
+            MonitorGetWorkArea(MonitorGetPrimary(), &pl, &pt, &pr, &pb)
+            sx := (wr <= pl) ? wr - cw * nc : wl
             for ci, c in cols {
-                x0 := wl + Round((wr - wl) * (ci - 1) / nc), x1 := wl + Round((wr - wl) * ci / nc)
-                if (nc = 1 && c.wins.Length = 1)
-                    SingleSlot(wl, wr, capA, &x0, &x1)
+                x0 := Round(sx + cw * (ci - 1)), x1 := Round(sx + cw * ci)
                 nr := c.wins.Length
                 for ri, it in c.wins {
                     y0 := wt + Round((wb - wt) * (ri - 1) / nr), y1 := wt + Round((wb - wt) * ri / nr)
@@ -7051,103 +7097,6 @@ SingleSlot(wl, wr, maxc, &x0, &x1) {
         x0 := wr - w, x1 := wr
     else
         x0 := wl + (wr - wl - w) // 2, x1 := x0 + w
-}
-; Chats von besetzten Bildschirmen (hinter dem maximierten Claude-Hauptfenster) ein neues
-; Zuhause geben. Projekt-Chats (Rang 0) kommen auf den Bildschirm mit den meisten
-; Projekt-Chats und reihen sich dort nach ihrer Nummer ein; fremde Chats, die dort stehen,
-; weichen auf einen freien Bildschirm ohne Projekt-Chats aus (Innenseite, wenn allein).
-; Kamen nur fremde Chats an, gehen sie dorthin, sonst auf den ersten Bildschirm mit Platz.
-TileRehome(mons, busy, order, rank) {
-    free := []
-    for mo in order
-        if (!busy.Has(mo.hm))
-            free.Push(mo)
-    if (!free.Length)
-        return                                                  ; alles besetzt: bleibt, wo es ist
-    pend := []
-    for mo in order
-        if (busy.Has(mo.hm) && mons.Has(mo.hm)) {
-            for it in mons[mo.hm].own
-                pend.Push(it)
-            mons.Delete(mo.hm)
-        }
-    if (!pend.Length)
-        return
-    projCount(mo) {
-        c := 0
-        if (mons.Has(mo.hm))
-            for it in mons[mo.hm].own
-                if (RankOf(rank, it.h) = 0)
-                    c++
-        return c
-    }
-    grp(mo) {
-        if (!mons.Has(mo.hm))
-            mons[mo.hm] := {own: [], moved: []}
-        return mons[mo.hm]
-    }
-    pm := 0, pc := 0                                            ; Projekt-Bildschirm
-    for mo in free
-        if ((c := projCount(mo)) > pc)
-            pm := mo, pc := c
-    if (!pm)
-        for mo in free {                                        ; sonst der erste mit Platz
-            have := mons.Has(mo.hm) ? mons[mo.hm].own.Length : 0
-            if (!pm)
-                pm := mo
-            if (have < mo.capS) {
-                pm := mo
-                break
-            }
-        }
-    fm := 0                                                     ; Bildschirm fuer fremde Chats
-    for mo in free {
-        if (mo = pm || projCount(mo))
-            continue
-        if (!fm)
-            fm := mo
-        if (mons.Has(mo.hm) && mons[mo.hm].own.Length) {        ; lieber zu anderen fremden
-            fm := mo
-            break
-        }
-    }
-    newProj := false
-    for it in pend
-        if (RankOf(rank, it.h) = 0)
-            newProj := true
-    if (!newProj) {                                             ; nur fremde: dazustellen
-        for it in pend
-            grp(fm ? fm : pm).moved.Push(it)
-        return
-    }
-    g := grp(pm), projs := [], foreign := []
-    for it in g.own
-        (RankOf(rank, it.h) = 0 ? projs : foreign).Push(it)
-    for it in pend
-        (RankOf(rank, it.h) = 0 ? projs : foreign).Push(it)
-    SortBy(projs, (a1, a2) => StrCompare(ChatKey(WinGetTitle("ahk_id " a1.h)), ChatKey(WinGetTitle("ahk_id " a2.h))))
-    g.own := [], g.seq := projs
-    for it in foreign
-        fm ? grp(fm).moved.Push(it) : g.seq.Push(it)
-}
-; Sortierschluessel eines Chats nach der Nummer im Titel ("[Kuerzel] 3. ...", auch 26.1);
-; ohne Nummer ans Ende
-ChatKey(ti) {
-    if (RegExMatch(ti, "\]\s*(\d+)(?:\.(\d+))?", &m))
-        return Format("{:06}.{:06} ", m[1], m[2] = "" ? 0 : m[2]) ti
-    return "~" ti
-}
-RankOf(rank, h) => (IsObject(rank) && rank.Has(h)) ? rank[h] : 0
-; Bildschirme, die ein maximiertes, sichtbares Claude-Fenster des aktuellen Desktops belegt,
-; das nicht in der Liste ist (meist das Hauptfenster mit geteilter Ansicht): Map hMonitor -> true
-ClaudeBusyMonitors(list) {
-    inList := Map(), busy := Map()
-    for h in list
-        inList[h] := true
-    try for h in WinGetList("ahk_exe claude.exe")
-        if (!inList.Has(h) && DllCall("IsZoomed", "Ptr", h) && !ZCloaked(h))
-            busy[DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")] := true
-    return busy
 }
 
 ; ---------------------------- Claude-Code-Funktionen ----------------------------
@@ -7219,14 +7168,15 @@ ClaudeWins(tag) {
     DetectHiddenWindows(dhw)
     return out
 }
-; alle Chat-Fenster der Claude-App (Titel mit [Kuerzel]) auf Desktop num
+; alle Chat-Fenster der Claude-App auf Desktop num, mit oder ohne [Kuerzel] im Titel (das
+; Hauptfenster ist auf allen Desktops angeheftet, hat also keinen eigenen Desktop und faellt raus)
 ClaudeDeskChats(num) {
     out := [], dhw := A_DetectHiddenWindows
     DetectHiddenWindows(true)
     try for h in WinGetList("ahk_exe claude.exe") {
         if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
             continue
-        if (RegExMatch(WinGetTitle(h), "\[[^\]]+\]") && VD("GetWindowDesktopNumber", "Ptr", h, "Int") = num)
+        if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") = num)
             out.Push(h)
     }
     DetectHiddenWindows(dhw)
@@ -7317,12 +7267,7 @@ SpreadWins(wins, &mc := 0, tag := "") {
         for it in items
             if (DllCall("IsIconic", "Ptr", it.h) || DllCall("IsZoomed", "Ptr", it.h))
                 DllCall("ShowWindow", "Ptr", it.h, "Int", 4)       ; SW_SHOWNOACTIVATE: erst normal
-        mons := [], busy := ClaudeBusyMonitors(wins)
-        for mo in SpreadMonitors()                              ; Bildschirme mit maximiertem Claude-Hauptfenster auslassen
-            if (!busy.Has(mo.hm))
-                mons.Push(mo)
-        if (!mons.Length)
-            mons := SpreadMonitors()
+        mons := SpreadMonitors()                                ; das maximierte Hauptfenster bleibt dahinter
         rem := items.Length
         for mo in mons                                          ; erste Reihe: Bildschirm fuer Bildschirm
             mo.n := Min(rem, mo.cap), rem -= mo.n
@@ -7645,7 +7590,7 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
         return
     if (BarMouseX() >= gLayout["gripW"])     ; nur der Griff zieht die Leiste; ein Tab wird - wie
         return ReorderDrag()                 ; ein Browser-Tab - beim Ziehen umsortiert, ein Klick bleibt ein Klick
-    if (GetKeyState("Shift"))                ; Umschalt+Klick auf den Griff: Fenster auf allen Desktops (beim Loslassen)
+    if (GetKeyState("Shift") || GetKeyState("Ctrl") || GetKeyState("Alt"))   ; Klick mit Taste: Aktion beim Loslassen
         return 0
     CoordMode("Mouse", "Screen")
     MouseGetPos(&sx, &sy)
@@ -7914,11 +7859,22 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
     lx := BarMouseX()
     item := ItemAtX(lx)
     if (!item && (si := SetAt(lx))) {
+        if (GetKeyState("Alt", "P"))
+            Send("{Blind}{vkE8}")              ; Loslassen von Alt oeffnet sonst die Menueleiste des Vordergrund-Programms
         SetTimer(SetClick.Bind(si, GetKeyState("Shift"), GetKeyState("Ctrl"), GetKeyState("Alt")), -1)   ; nach vorne; Umschalt: neu aufnehmen; Strg: buendig; Alt: gleich breit
         return 0
     }
     if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift")) {
         TogglePinWindow(WorkWindow())          ; Umschalt+Klick auf den Griff: aktives Fenster auf allen Desktops (noch einmal: nur hier)
+        return 0
+    }
+    if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Ctrl")) {
+        SetTimer(DeskAlign, -1)                ; Strg+Klick auf den Griff: alle Fenster buendig
+        return 0
+    }
+    if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Alt", "P") && CONF["ClaudeCode"]) {
+        Send("{Blind}{vkE8}")                  ; Loslassen von Alt oeffnet sonst die Menueleiste des Vordergrund-Programms
+        SetTimer(DeskEven, -1)                 ; Alt+Klick auf den Griff: Claude-Chats je Bildschirm verteilen
         return 0
     }
     if (item && GetKeyState("Alt", "P")) {        ; Alt+Klick: Unterprojekt waehlen (physisch: logisch ist Alt nach dem ersten Alt-Menue schon "los")
