@@ -211,6 +211,7 @@ All options live in the `CONF` block at the very top of `DeskTabs.ahk`:
 | `PadX` / `PadXMax` | 18 / 24 | Space left and right inside a tab: `PadXMax` while the bar fits its width budget (`MaxBarWidthPct`), shrinking step by step down to `PadX` when space gets tight, before any level steps down. |
 | `TimeLog` | 1 | Write per-desktop stay times to `timelog\desktop-log_YYYY-MM.csv` in the program folder. `0` = off. |
 | `TimeLogIdleMin` | 5 | Minutes without keyboard/mouse input after which the current stay is closed (counted as a break). Lock screen always closes it. |
+| `TimeLogIdleMin` | 5 | After this many minutes without any input (key, mouse move, click, scroll wheel) a pause (`idle`) starts retroactively; the next input ends it. While a timer runs, silence does not count as a pause. |
 | `TimeLogMinSec` | 5 | Stays shorter than this many seconds are not written: they are just transitions (stepping through desktops, a quick glance). Their seconds count towards the desktop you settle on, so the log stays gap-free. `0` = log everything. |
 | `UpdateCheck` | 1 | 1 = check the GitHub releases API once a day for a newer version (only the version number is read) and show the update notice. Also switchable under *More settings* and in the Help menu; stored in `[View] UpdateCheck`. |
 | `ActiveStyle` | `desktop` | How the active tab is filled: `desktop` = its own desktop colour, `accent` = the uniform accent colour, `soliddesk` = a strong fill in its own desktop colour, `solid` = a strong fill in the accent colour. |

@@ -86,6 +86,7 @@ The glyph codes are listed with names and search words in `data\glyph-names.txt`
 | `SwitchAlert` | `0`, `1` | flag desktop switches caused by other apps |
 | `AttentionDot` | `0`, `1` | dot on a tab when an app there wants attention |
 | `TimeLog` | `0`, `1` | write the time log |
+| `TimeLogIdleMin` | number of minutes (1-99) | no input for that long = idle, written retroactively from the last input |
 | `TimeLogMinSec` | number of seconds | shorter stays count as transitions |
 | `CallHotkey` | e.g. `^#t`, empty = none | shortcut to start/stop a timer on the current desktop |
 | `UpdateCheck` | `0`, `1` | daily update check and update notice |
