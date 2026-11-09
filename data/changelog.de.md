@@ -3,6 +3,7 @@
 
 ## 1.1.22
 - **Claude-Chats mit Seitenbrowser:** Hat ein Claude-Chat den Seitenbrowser offen, bekommt er beim Ordnen (Alt + Klick auf die Claude-Kachel) doppelt so viel Breite; allein auf einem seitlichen Bildschirm die ganze Breite, neben einem zweiten Chat zwei Drittel.
+- **Kontextmenüs bleiben oben:** Der farbige Strich über der Taskleiste und die Leiste legten sich über offene Kontextmenüs, etwa aus dem Infobereich. Jetzt bleiben Menüs aller Programme darüber.
 
 ## 1.1.21
 - **Claude-Code-Funktionen (abschaltbar):** Wer viele Chats der Claude-App nutzt, schaltet sie unter *Weitere Einstellungen* ein. Eine Claude-Kachel auf jedem Desktop holt mit einem Klick alle Claude-Chats nach vorne. Alt + Klick auf sie ordnet die Chats jedes Bildschirms sauber nebeneinander, in Deiner Reihenfolge; ein unter einen anderen gezogener Chat teilt sich mit ihm die Spalte. Rechtsklick auf einen Tab › *Auf Bildschirme verteilen* verteilt alle Chats nach ihrer Nummer über alle Bildschirme. Ein Claude-Chat kann das über `DeskTabs.exe /cmd` selbst auslösen.

@@ -8285,9 +8285,42 @@ AssertTop() {
     global MyGui, gHidden, gBuilding, gStripe
     if (gHidden || gBuilding)       ; waehrend eines Neuaufbaus existiert die GUI kurz nicht
         return
-    ; HWND_TOPMOST(-1), SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE = 0x0013
-    DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
+    ; HWND_TOPMOST(-1), SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE = 0x0013. Ist ein Kontextmenue offen
+    ; (auch eines aus dem Infobereich), kommen Leiste und Kante direkt darunter statt darueber.
+    DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", (pop := OpenPopupMenu()) ? pop : -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
     StripeBelowBar()
+}
+; ein gerade offenes Kontextmenue, das Leiste oder Kante ueberdeckt, sonst 0: klassische Menues
+; (#32768) und alle fremden "immer im Vordergrund"-Popups (WinForms/WPF/Qt-Menues, etwa aus dem
+; Infobereich). Bei mehreren das unterste, damit die Leiste unter allen liegt.
+OpenPopupMenu() {
+    global MyGui, gStripe
+    static me := DllCall("GetCurrentProcessId", "UInt")
+    zones := []
+    for g in [MyGui, gStripe]
+        if (g) {
+            rc := Buffer(16, 0)
+            DllCall("GetWindowRect", "Ptr", g.Hwnd, "Ptr", rc)
+            zones.Push([NumGet(rc, 0, "Int"), NumGet(rc, 4, "Int"), NumGet(rc, 8, "Int"), NumGet(rc, 12, "Int")])
+        }
+    hit := 0
+    try for h in WinGetList() {                     ; oberstes zuerst
+        if (!(WinGetExStyle(h) & 0x8))              ; nur "immer im Vordergrund"
+            break                                   ; darunter kommt nichts mehr, das ueber uns liegen koennte
+        if (WinGetPID(h) = me || !(WinGetStyle(h) & 0x80000000) && WinGetClass(h) != "#32768")
+            continue                                ; eigene Fenster; nur Popups (WS_POPUP) bzw. Menues
+        if (InStr(WinGetClass(h), "TrayWnd") || ZCloaked(h))
+            continue                                ; die Taskleiste selbst; Fenster anderer Desktops
+        rc := Buffer(16, 0)
+        DllCall("GetWindowRect", "Ptr", h, "Ptr", rc)
+        l := NumGet(rc, 0, "Int"), t := NumGet(rc, 4, "Int"), r := NumGet(rc, 8, "Int"), b := NumGet(rc, 12, "Int")
+        for z in zones
+            if (l < z[3] && r > z[1] && t < z[4] && b > z[2]) {
+                hit := h
+                break
+            }
+    }
+    return hit
 }
 ; Register-Kante direkt UNTER die Leiste einsortieren (beide bleiben ueber der Taskleiste).
 ; Vorher kam sie als eigenes "ganz nach oben" kurz ueber die Leiste - sichtbar als Aufblitzen.
