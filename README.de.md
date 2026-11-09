@@ -110,6 +110,9 @@ Ja. Wenn Du pro Projekt einen Desktop nutzt, schreibt DeskTabs jeden Aufenthalt 
 **Warum springt Windows plötzlich auf einen anderen Desktop?**
 Öffnest Du eine Datei, deren Programm schon auf einem anderen Desktop läuft, wechselt Windows ungefragt dorthin. DeskTabs meldet solche Wechsel: Der Tab blinkt orange, und ein kurzer Hinweis nennt das Programm im Vordergrund. So landet keine Zeit unbemerkt beim falschen Projekt.
 
+**Wie ordne ich viele Claude-Code-Chatfenster auf mehreren Monitoren nebeneinander an?**
+Unter *Weitere Einstellungen › Claude-Code-Funktionen* einschalten. Dann steht auf jedem Desktop eine Claude-Kachel: Klick holt alle Claude-Chats dieses Desktops nach vorne, Alt + Klick ordnet sie auf jedem Bildschirm in Deiner Reihenfolge (Spalten, volle Höhe, bündig), Rechtsklick › *Auf Bildschirme verteilen* sortiert alle Chats nach ihrer Nummer über alle Monitore. Ein Claude-Chat kann das über `DeskTabs.exe /cmd arrange <Kürzel>` auch selbst auslösen. Schritt für Schritt: [Viele Claude-Chatfenster anordnen](docs/claude-code-fenster.md).
+
 **Ist DeskTabs kostenlos? Braucht es Administratorrechte?**
 DeskTabs ist kostenlos und quelloffen (GPL v3). Das Setup installiert pro Benutzer ohne Administratorrechte, außerdem gibt es eine portable ZIP.
 
