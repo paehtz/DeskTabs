@@ -1,6 +1,9 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.22
+- **Claude chats with the side browser:** a Claude chat with its side browser open gets twice the width when arranging (Alt + click on the Claude tile); alone on a side screen the full width, next to a second chat two thirds.
+
 ## 1.1.21
 - **Claude Code features (optional):** if you use many chats of the Claude app, turn them on under *More settings*. A Claude tile on every desktop brings all Claude chats to the front with one click. Alt + click on it arranges the chats of each screen neatly side by side, in your order; a chat dragged below another shares its column. Right-click a tab › *Spread across screens* spreads all chats by their number across all screens. A Claude chat can trigger this itself via `DeskTabs.exe /cmd`.
 - **Time log stays on the right desktop:** when Windows reported a desktop switch late or wrongly, for instance right after waking up, the time log kept booking the old desktop until the next switch. DeskTabs now checks every second.

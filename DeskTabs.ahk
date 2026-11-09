@@ -7151,14 +7151,24 @@ TileEven(list, force, &mc := 0) {
                 cols.RemoveAt(bi + 1)
             }
             ; Breite: bei wenigen Fenstern hoechstens 1/(maxc - 1) (Hauptbildschirm ein Viertel,
-            ; seitlich ein Drittel), ab da fuellen sie den Bildschirm. Begonnen wird an der Seite
-            ; zum Hauptbildschirm: dort und darueber links, auf einem linken Bildschirm rechts.
-            nc := cols.Length, k := Max(1, maxc - 1)
-            cw := (wr - wl) / Max(nc, k)
+            ; seitlich ein Drittel), ab da fuellen sie den Bildschirm. Ein Chat mit offenem
+            ; Seitenbrowser zaehlt doppelt; steht er allein auf einem seitlichen Bildschirm, bekommt
+            ; er die ganze Breite. Begonnen wird an der Seite zum Hauptbildschirm: dort und darueber
+            ; links, auf einem linken Bildschirm rechts.
+            nc := cols.Length, k := Max(1, maxc - 1), sumw := 0
+            for c in cols {
+                c.w := 1
+                for it in c.wins
+                    if (ClaudeSidePane(it.h))
+                        c.w := 2
+                sumw += c.w
+            }
             MonitorGetWorkArea(MonitorGetPrimary(), &pl, &pt, &pr, &pb)
-            sx := (wr <= pl) ? wr - cw * nc : wl
+            side := (wl >= pr || wr <= pl)
+            cw := (side && nc = 1 && cols[1].w = 2) ? (wr - wl) / 2 : (wr - wl) / Max(sumw, k)
+            sx := (wr <= pl) ? wr - cw * sumw : wl, acc := 0
             for ci, c in cols {
-                x0 := Round(sx + cw * (ci - 1)), x1 := Round(sx + cw * ci)
+                x0 := Round(sx + cw * acc), acc += c.w, x1 := Round(sx + cw * acc)
                 nr := c.wins.Length
                 for ri, it in c.wins {
                     y0 := wt + Round((wb - wt) * (ri - 1) / nr), y1 := wt + Round((wb - wt) * ri / nr)
@@ -7268,6 +7278,33 @@ ClaudeDeskChats(num) {
     }
     DetectHiddenWindows(dhw)
     return out
+}
+; Hat ein Claude-Chatfenster den Seitenbrowser offen? Dann enthaelt es (laut UI Automation)
+; zwei grosse Webinhalte statt einem: den Chat und die Seite. Kleine Einblendungen zaehlen nicht.
+ClaudeSidePane(h) {
+    static uia := 0, cond := 0
+    try {
+        if (!uia) {
+            uia := ComObject("{e22ad333-b25f-460c-83d0-0581107395c9}", "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}")
+            v := Buffer(24, 0), NumPut("UShort", 3, v, 0), NumPut("Int", 50030, v, 8)   ; VT_I4, Document
+            ComCall(23, uia, "Int", 30003, "Ptr", v, "Ptr*", &cond)                      ; CreatePropertyCondition(ControlType)
+        }
+        el := 0, arr := 0, n := 0, big := 0
+        ComCall(6, uia, "Ptr", h, "Ptr*", &el)                                          ; ElementFromHandle
+        ComCall(6, el, "Int", 4, "Ptr", cond, "Ptr*", &arr)                             ; FindAll(Descendants)
+        ComCall(3, arr, "Int*", &n)
+        Loop n {
+            dE := 0, rc := Buffer(16, 0)
+            ComCall(4, arr, "Int", A_Index - 1, "Ptr*", &dE)
+            ComCall(43, dE, "Ptr", rc)                                                  ; CurrentBoundingRectangle
+            if (NumGet(rc, 8, "Int") - NumGet(rc, 0, "Int") >= 300 && NumGet(rc, 12, "Int") - NumGet(rc, 4, "Int") >= 300)
+                big++
+            ObjRelease(dE)
+        }
+        ObjRelease(arr), ObjRelease(el)
+        return big >= 2
+    }
+    return false
 }
 ; Desktop zu einem Kuerzel (oder Desktop-Namen); -1 = keiner
 ClaudeDeskFor(tag) {

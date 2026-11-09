@@ -1,6 +1,9 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.22
+- **Claude-Chats mit Seitenbrowser:** Hat ein Claude-Chat den Seitenbrowser offen, bekommt er beim Ordnen (Alt + Klick auf die Claude-Kachel) doppelt so viel Breite; allein auf einem seitlichen Bildschirm die ganze Breite, neben einem zweiten Chat zwei Drittel.
+
 ## 1.1.21
 - **Claude-Code-Funktionen (abschaltbar):** Wer viele Chats der Claude-App nutzt, schaltet sie unter *Weitere Einstellungen* ein. Eine Claude-Kachel auf jedem Desktop holt mit einem Klick alle Claude-Chats nach vorne. Alt + Klick auf sie ordnet die Chats jedes Bildschirms sauber nebeneinander, in Deiner Reihenfolge; ein unter einen anderen gezogener Chat teilt sich mit ihm die Spalte. Rechtsklick auf einen Tab › *Auf Bildschirme verteilen* verteilt alle Chats nach ihrer Nummer über alle Bildschirme. Ein Claude-Chat kann das über `DeskTabs.exe /cmd` selbst auslösen.
 - **Zeit-Log bleibt beim richtigen Desktop:** Meldete Windows einen Desktop-Wechsel verspätet oder falsch, etwa direkt nach dem Aufwachen, buchte das Zeit-Log bis zum nächsten Wechsel auf den alten Desktop. DeskTabs gleicht das jetzt jede Sekunde ab.
