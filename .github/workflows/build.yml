@@ -50,7 +50,7 @@ jobs:
       - name: Fetch AutoHotkey v2 and Ahk2Exe
         shell: pwsh
         run: |
-          $ahkVersion = '2.0.28'
+          $ahkVersion = '2.0.31'
           $ahk2exe    = 'Ahk2Exe1.1.37.02a2'
           New-Item -ItemType Directory -Force -Path tools\ahk, tools\ahk2exe | Out-Null
           Invoke-WebRequest "https://github.com/AutoHotkey/AutoHotkey/releases/download/v$ahkVersion/AutoHotkey_$ahkVersion.zip" -OutFile ahk.zip

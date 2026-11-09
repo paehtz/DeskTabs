@@ -5,6 +5,7 @@
 - **Claude Code features (optional):** if you use many chats of the Claude app, turn them on under *More settings*. A Claude tile on every desktop brings all Claude chats to the front with one click. Alt + click on it arranges the chats of each screen neatly side by side, in your order; a chat dragged below another shares its column. Right-click a tab › *Spread across screens* spreads all chats by their number across all screens. A Claude chat can trigger this itself via `DeskTabs.exe /cmd`.
 - **Time log stays on the right desktop:** when Windows reported a desktop switch late or wrongly, for instance right after waking up, the time log kept booking the old desktop until the next switch. DeskTabs now checks every second.
 - **Shortcuts in the menus:** menus show, faintly at the edge, which click does the same (such as Ctrl + click, Alt + click). Ctrl + click on a layout tile now aligns all windows of the desktop flush, also on an empty slot. Ctrl + click on a tab now cycles between icon only, abbreviation and name, bundled in the tab menu under *Appearance*.
+- **No jumps from foreign flashing:** when an app on another desktop wanted attention, Windows showed its button flashing on every desktop's taskbar, and clicking it switched desktops. DeskTabs now stops that flashing; the call stays as a dot on the tab (can be turned off under *More settings*).
 - **Tiles after reordering:** after moving a desktop, its tile showed another desktop's layout and its menu did nothing. Fixed; the tile menu now shows its icons too.
 
 ## 1.1.20
