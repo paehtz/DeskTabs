@@ -33,7 +33,7 @@ The Claude desktop app shows one main window with a split view. Every other chat
 ### How the arrangement works
 
 - **You decide roughly, DeskTabs does the pixels.** Drag the chats onto the screen where you want them, in roughly the right order, then Alt + click. No chat changes screens.
-- **Columns:** up to five on a 3440 px screen, four on 2560 px (at least 640 px per column at 100 % scaling). With only a few chats, each gets at most a quarter (main screen) or a third (side screens) of the width, starting on the side facing the main screen.
+- **Columns:** up to five on a 3440 px screen, four on 2560 px (at least 640 px per column at 100 % scaling). With only a few chats, each gets at most a third of the width; only from the fourth chat on do they get narrower, starting on the side facing the main screen.
 - **Two chats in one column:** drag a chat below another one (its top edge in the lower half of the screen) and both share the column at half height. Otherwise chats only stack when there are more than fit side by side.
 - **Chats with the side browser open** count double: alone on a side screen they get the full width, next to one other chat two thirds.
 - **The Claude main window** (maximised, shown on all desktops) stays behind; chats on top of it are arranged over it.

@@ -7150,12 +7150,12 @@ TileEven(list, force, &mc := 0) {
                     cols[bi].wins.Push(it)
                 cols.RemoveAt(bi + 1)
             }
-            ; Breite: bei wenigen Fenstern hoechstens 1/(maxc - 1) (Hauptbildschirm ein Viertel,
-            ; seitlich ein Drittel), ab da fuellen sie den Bildschirm. Ein Chat mit offenem
+            ; Breite: bei wenigen Fenstern hoechstens ein Drittel (auf jedem Bildschirm), ab drei
+            ; fuellen sie den Bildschirm, erst ab vier werden sie schmaler. Ein Chat mit offenem
             ; Seitenbrowser zaehlt doppelt; steht er allein auf einem seitlichen Bildschirm, bekommt
             ; er die ganze Breite. Begonnen wird an der Seite zum Hauptbildschirm: dort und darueber
             ; links, auf einem linken Bildschirm rechts.
-            nc := cols.Length, k := Max(1, maxc - 1), sumw := 0
+            nc := cols.Length, k := Max(1, Min(3, maxc - 1)), sumw := 0
             for c in cols {
                 c.w := 1
                 for it in c.wins

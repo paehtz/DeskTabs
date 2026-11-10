@@ -1,6 +1,9 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.23
+- **More room for Claude chats on the main screen:** when arranging (Alt + click on the Claude tile), a chat now gets a third of the width on the main screen too, instead of a quarter. Three chats fill the screen; only from four on do they get narrower. A chat with the side browser counts as two: next to a second chat it gets two thirds.
+
 ## 1.1.22
 - **Claude chats with the side browser:** a Claude chat with its side browser open gets twice the width when arranging (Alt + click on the Claude tile); alone on a side screen the full width, next to a second chat two thirds.
 - **Context menus stay on top:** the colored line above the taskbar and the bar covered open context menus, for instance from the notification area. Menus of all programs now stay above them.

@@ -1,6 +1,9 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.23
+- **Mehr Platz für Claude-Chats auf dem Hauptbildschirm:** Beim Ordnen (Alt + Klick auf die Claude-Kachel) bekommt ein Chat auch auf dem Hauptbildschirm ein Drittel der Breite statt eines Viertels. Drei Chats füllen den Bildschirm, erst ab vier werden sie schmaler. Ein Chat mit Seitenbrowser zählt wie zwei: neben einem zweiten Chat bekommt er zwei Drittel.
+
 ## 1.1.22
 - **Claude-Chats mit Seitenbrowser:** Hat ein Claude-Chat den Seitenbrowser offen, bekommt er beim Ordnen (Alt + Klick auf die Claude-Kachel) doppelt so viel Breite; allein auf einem seitlichen Bildschirm die ganze Breite, neben einem zweiten Chat zwei Drittel.
 - **Kontextmenüs bleiben oben:** Der farbige Strich über der Taskleiste und die Leiste legten sich über offene Kontextmenüs, etwa aus dem Infobereich. Jetzt bleiben Menüs aller Programme darüber.
