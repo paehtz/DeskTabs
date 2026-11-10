@@ -81,7 +81,7 @@ The glyph codes are listed with names and search words in `data\glyph-names.txt`
 | `SwitchMethod` | `dll`, `native` | jump straight to a desktop, or step like Ctrl+Win+Arrow |
 | `SnapToTaskbar` | `0`, `1` | snap onto the taskbar when dragged |
 | `DragToTab` | `0`, `1` | drag a window onto a tab to move it there |
-| `ClaudeCode` | `0`, `1` | Claude Code features (chat windows by project tag, distribute evenly, `/cmd` interface; see below) |
+| `ClaudeCode` | `0`, `1` | Claude app features, Claude desktop app for Windows only, not Claude Code in a terminal (chat windows by project tag, distribute evenly, `/cmd` interface; see below) |
 | `RestoreZOrder` | `0`, `1` | each desktop keeps the windows that were in front there (a desktop-only window right behind a global one may flash up for a moment on arrival: Windows picks it before DeskTabs restores the order; minimising it avoids that) |
 | `SwitchAlert` | `0`, `1` | flag desktop switches caused by other apps |
 | `AttentionDot` | `0`, `1` | dot on a tab when an app there wants attention |

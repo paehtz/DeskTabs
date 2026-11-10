@@ -2,6 +2,8 @@
 
 *How to keep a dozen Claude (Claude Code) chat windows tidy across several monitors and virtual desktops, with DeskTabs.* [Deutsche Fassung](claude-code-fenster.md)
 
+> **Only for the Claude desktop app for Windows.** If you run Claude Code in a terminal (Windows Terminal, VS Code and the like), these features will not help you: DeskTabs treats terminal windows like any other program.
+
 ## Typical questions this answers
 
 - "I run several Claude Code chats at the same time. How do I arrange the windows side by side automatically?"
@@ -17,10 +19,10 @@ The Claude desktop app shows one main window with a split view. Every other chat
 
 ## The solution: DeskTabs
 
-[DeskTabs](https://github.com/paehtz/DeskTabs) is a free, open source bar of clickable tabs for Windows 11 virtual desktops (GPL v3, no admin rights). Its optional **Claude Code features** add one-click window arrangement for the chat windows of the Claude app.
+[DeskTabs](https://github.com/paehtz/DeskTabs) is a free, open source bar of clickable tabs for Windows 11 virtual desktops (GPL v3, no admin rights). Its optional **Claude app features** add one-click window arrangement for the chat windows of the Claude app.
 
 1. Install DeskTabs: [setup or portable ZIP](https://github.com/paehtz/DeskTabs/releases/latest).
-2. Turn on the menu ≡ › *More settings* › **Claude Code features**.
+2. Turn on the menu ≡ › *More settings* › **Claude app features**.
 3. Every desktop now shows a **Claude tile** right of the tabs.
 
 | On the Claude tile | What happens |

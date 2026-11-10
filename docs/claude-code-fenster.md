@@ -2,6 +2,8 @@
 
 *Wie ein Dutzend Claude- (Claude-Code-)Chatfenster über mehrere Bildschirme und virtuelle Desktops ordentlich bleibt, mit DeskTabs.* [English version](claude-code-windows.md)
 
+> **Nur für die Claude-Desktop-App für Windows.** Wer Claude Code im Terminal nutzt (Windows Terminal, VS Code und Ähnliches), hat von diesen Funktionen nichts: DeskTabs behandelt Terminalfenster wie jedes andere Programm.
+
 ## Typische Fragen, die diese Seite beantwortet
 
 - „Ich habe mehrere Claude-Code-Chats gleichzeitig offen. Wie ordne ich die Fenster automatisch nebeneinander an?“
@@ -11,10 +13,10 @@
 
 ## Die Lösung: DeskTabs
 
-[DeskTabs](https://github.com/paehtz/DeskTabs) ist eine kostenlose, quelloffene Leiste mit klickbaren Tabs für die virtuellen Desktops von Windows 11 (GPL v3, ohne Adminrechte). Die abschaltbaren **Claude-Code-Funktionen** ordnen die Chatfenster der Claude-App mit einem Klick.
+[DeskTabs](https://github.com/paehtz/DeskTabs) ist eine kostenlose, quelloffene Leiste mit klickbaren Tabs für die virtuellen Desktops von Windows 11 (GPL v3, ohne Adminrechte). Die abschaltbaren **Claude-App-Funktionen** ordnen die Chatfenster der Claude-App mit einem Klick.
 
 1. DeskTabs installieren: [Setup oder ZIP](https://github.com/paehtz/DeskTabs/releases/latest).
-2. Menü ≡ › *Weitere Einstellungen* › **Claude-Code-Funktionen** einschalten.
+2. Menü ≡ › *Weitere Einstellungen* › **Claude-App-Funktionen** einschalten.
 3. Auf jedem Desktop steht jetzt rechts neben den Tabs eine **Claude-Kachel**.
 
 | Auf der Claude-Kachel | Wirkung |

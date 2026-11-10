@@ -1600,7 +1600,7 @@ global LANG_DE := Map(
     "sc.d.ctrlgrip", "alle Fenster des Desktops bündig ausrichten",
     "sc.k.altgrip", "{1} + Klick auf den Griff ≡",
     "sc.d.altgrip", "Claude-Chats auf jedem Bildschirm gleich breit verteilen",
-    "menu.claudecode", "Claude-Code-Funktionen",
+    "menu.claudecode", "Claude-App-Funktionen",
     "menu.set.even", "Gleich breit verteilen",
     "menu.claude.spread", "Auf Bildschirme verteilen",
     "menu.claude.front", "Claude-Chats nach vorne holen",
@@ -1922,7 +1922,7 @@ global LANG_EN := Map(
     "sc.d.ctrlgrip", "align all windows of the desktop flush",
     "sc.k.altgrip", "{1} + click the grip ≡",
     "sc.d.altgrip", "distribute the Claude chats evenly on each screen",
-    "menu.claudecode", "Claude Code features",
+    "menu.claudecode", "Claude app features",
     "menu.set.even", "Distribute evenly",
     "menu.claude.spread", "Spread across screens",
     "menu.claude.front", "Bring Claude chats to the front",
@@ -7546,7 +7546,7 @@ CmdRun(s) {
     s := Trim(s), p := InStr(s, " ")
     verb := p ? SubStr(s, 1, p - 1) : s, arg := p ? Trim(SubStr(s, p + 1), " `"") : ""
     if (!CONF["ClaudeCode"])
-        return CmdResult("error: Claude Code features are off (DeskTabs menu > More settings)")
+        return CmdResult("error: Claude app features are off (DeskTabs menu > More settings)")
     try {
         switch verb, false {
             case "arrange":
