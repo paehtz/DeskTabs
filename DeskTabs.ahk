@@ -1487,7 +1487,6 @@ global gNameCache := 0         ; Desktop-Namen, nur waehrend eines Aufbaus gemer
 global gIniGen := 0            ; zaehlt eigene Schreibzugriffe auf settings.ini (Zwischenspeicher ungueltig)
 global gFsHit := ""            ; Fenster, das zuletzt als Vollbild galt (nur fuer _debug.txt)
 global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
-global gPopHide := Map()       ; mit UIAccess: Fenster, die gerade einem fremden Menue ausweichen
 global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
@@ -2195,9 +2194,6 @@ Main() {
     OnError(LogErr)
     ReplaceOtherInstance()
     OnMessage(0x4A, OnCopyData)             ; WM_COPYDATA: Befehle von DeskTabs.exe /cmd ...
-    ; mit UIAccess filtert Windows Nachrichten normaler Prozesse; WM_COPYDATA ausdruecklich zulassen
-    for wm in [0x4A, 0x10]                  ; WM_COPYDATA; WM_CLOSE (ein neuer Start ersetzt diese Leiste)
-        try DllCall("ChangeWindowMessageFilterEx", "Ptr", A_ScriptHwnd, "UInt", wm, "UInt", 1, "Ptr", 0)   ; MSGFLT_ALLOW
     NormalizeIniEncoding()
     InitLanguage()
     if !FileExist(CONF["DllPath"]) {
@@ -8320,8 +8316,7 @@ UpdateStripe() {
         DllCall("SetWindowPos", "Ptr", gStripe.Hwnd, "Ptr", 0, "Int", tb[1], "Int", tb[2], "Int", tb[3], "Int", StripeH(), "UInt", 0x0014)   ; NOZORDER|NOACTIVATE
         geo := g
     }
-    global gPopHide
-    if (!DllCall("IsWindowVisible", "Ptr", gStripe.Hwnd) && !gPopHide.Has(gStripe.Hwnd))   ; weicht gerade einem Menue
+    if (!DllCall("IsWindowVisible", "Ptr", gStripe.Hwnd))
         DllCall("ShowWindow", "Ptr", gStripe.Hwnd, "Int", 4)        ; SW_SHOWNOACTIVATE
     StripeBelowBar()
 }
@@ -8332,52 +8327,8 @@ AssertTop() {
         return
     ; HWND_TOPMOST(-1), SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE = 0x0013. Ist ein Kontextmenue offen
     ; (auch eines aus dem Infobereich), kommen Leiste und Kante direkt darunter statt darueber.
-    pop := OpenPopupMenu()
-    if (HighBand()) {           ; mit UIAccess: ueber allen Menues, einsortieren geht nicht -> weichen
-        PopDodge(pop)
-        pop := 0
-    }
-    DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", pop ? pop : -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
+    DllCall("SetWindowPos", "Ptr", MyGui.Hwnd, "Ptr", (pop := OpenPopupMenu()) ? pop : -1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
     StripeBelowBar()
-}
-; Laeuft DeskTabs mit UIAccess (AutoHotkey64_UIA.exe), liegen Leiste und Kante in einer hoeheren
-; Fensterebene: Sie bleiben auch bei offenem Startmenue ueber der Taskleiste, die Windows dann
-; anhebt. Dafuer liegen sie auch ueber allen Kontextmenues normaler Programme.
-HighBand() {
-    global MyGui
-    static band := -1
-    if (band < 0) {
-        b := 0
-        try DllCall("GetWindowBand", "Ptr", MyGui.Hwnd, "UInt*", &b)
-        band := b
-    }
-    return band > 1
-}
-; In der hoeheren Ebene: Leiste bzw. Kante ausblenden, solange ein fremdes Menue sie ueberdeckt
-PopDodge(pop) {
-    global MyGui, gStripe, gPopHide
-    prc := 0
-    if (pop)
-        prc := Buffer(16, 0), DllCall("GetWindowRect", "Ptr", pop, "Ptr", prc)
-    for g in [MyGui, gStripe] {
-        if (!g)
-            continue
-        h := g.Hwnd, over := false
-        if (prc) {
-            rc := Buffer(16, 0)
-            DllCall("GetWindowRect", "Ptr", h, "Ptr", rc)
-            over := NumGet(prc, 0, "Int") < NumGet(rc, 8, "Int") && NumGet(prc, 8, "Int") > NumGet(rc, 0, "Int")
-                 && NumGet(prc, 4, "Int") < NumGet(rc, 12, "Int") && NumGet(prc, 12, "Int") > NumGet(rc, 4, "Int")
-        }
-        if (over && DllCall("IsWindowVisible", "Ptr", h)) {
-            DllCall("ShowWindow", "Ptr", h, "Int", 0)                 ; SW_HIDE
-            gPopHide[h] := true
-        } else if (!over && gPopHide.Has(h)) {
-            gPopHide.Delete(h)
-            if (h = MyGui.Hwnd || RegisterOn())
-                DllCall("ShowWindow", "Ptr", h, "Int", 4)             ; SW_SHOWNOACTIVATE
-        }
-    }
 }
 ; ein gerade offenes Kontextmenue, das Leiste oder Kante ueberdeckt, sonst 0: klassische Menues
 ; (#32768) und alle fremden "immer im Vordergrund"-Popups (WinForms/WPF/Qt-Menues, etwa aus dem

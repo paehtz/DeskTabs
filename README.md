@@ -185,8 +185,6 @@ It stops DeskTabs, removes the autostart shortcut and the program folder, and as
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`)
 → target: `AutoHotkey64.exe`, with the path to `DeskTabs.ahk` as the argument.
 
-**Bar stays visible with the Start menu open:** run it with `AutoHotkey64_UIA.exe` (same folder) instead of `AutoHotkey64.exe`. Windows lifts the taskbar above all normal windows while the Start menu is open; with UI Access the bar stays on top, and it steps aside while a context menu of another program covers it.
-
 **Quit / control:** tray icon (DeskTabs symbol) → right-click: the full settings menu (*Rebuild bar* and *Reset position* are under *More settings*), Help (docs, feedback, updates, About) and Exit.
 
 ---

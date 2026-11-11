@@ -185,8 +185,6 @@ Stoppt DeskTabs, entfernt die Autostart-Verknüpfung und den Programmordner und 
 (`%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`)
 → Ziel: `AutoHotkey64.exe`, als Argument der Pfad zu `DeskTabs.ahk`.
 
-**Leiste bleibt bei offenem Startmenü sichtbar:** mit `AutoHotkey64_UIA.exe` (gleicher Ordner) statt `AutoHotkey64.exe` starten. Windows hebt die Taskleiste bei offenem Startmenü über alle normalen Fenster; mit UI Access bleibt die Leiste darüber und weicht aus, solange ein Kontextmenü eines anderen Programms sie überdeckt.
-
 **Beenden / Steuern:** Tray-Icon (DeskTabs-Symbol) → Rechtsklick: das komplette Einstellungsmenü (*Leiste neu aufbauen* und *Position zurücksetzen* unter *Weitere Einstellungen*), Hilfe (Doku, Feedback, Updates, Über) und Beenden.
 
 ---
