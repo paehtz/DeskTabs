@@ -3,6 +3,8 @@
 
 ## 1.1.23
 - **Mehr Platz für Claude-Chats auf dem Hauptbildschirm:** Beim Ordnen (Alt + Klick auf die Claude-Kachel) bekommt ein Chat auch auf dem Hauptbildschirm ein Drittel der Breite statt eines Viertels. Drei Chats füllen den Bildschirm, erst ab vier werden sie schmaler. Ein Chat mit Seitenbrowser zählt wie zwei: neben einem zweiten Chat bekommt er zwei Drittel.
+- **Seitenbrowser auf dem Hauptbildschirm:** Liegt dort ein Claude-Chat mit offenem Seitenbrowser, bekommen die anderen Chats beim Ordnen nur die schmalste Spalte (ein Fünftel bei 3440 Pixeln), der Seitenbrowser den ganzen Rest.
+- **Verteilen mit Seitenbrowser:** *Auf Bildschirme verteilen* gibt einem Claude-Chat mit offenem Seitenbrowser einen seitlichen Bildschirm für sich allein, bevorzugt den linken. Die übrigen Chats teilen sich die anderen Bildschirme.
 - **Klarerer Name:** Die Claude-Code-Funktionen heißen jetzt *Claude-App-Funktionen*, denn sie ordnen die Fenster der Claude-Desktop-App für Windows, nicht Claude Code im Terminal. Deine Einstellung bleibt erhalten.
 
 ## 1.1.22

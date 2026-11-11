@@ -3,6 +3,8 @@
 
 ## 1.1.23
 - **More room for Claude chats on the main screen:** when arranging (Alt + click on the Claude tile), a chat now gets a third of the width on the main screen too, instead of a quarter. Three chats fill the screen; only from four on do they get narrower. A chat with the side browser counts as two: next to a second chat it gets two thirds.
+- **Side browser on the main screen:** if a Claude chat with its side browser open is there, the other chats get only the narrowest column when arranging (a fifth on 3440 px), the side browser gets all the rest.
+- **Spreading with the side browser:** *Spread across screens* gives a Claude chat with its side browser open a side screen to itself, the left one first. The other chats share the remaining screens.
 - **Clearer name:** the Claude Code features are now called *Claude app features*, because they arrange the windows of the Claude desktop app for Windows, not Claude Code in a terminal. Your setting is kept.
 
 ## 1.1.22

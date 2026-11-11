@@ -7159,20 +7159,32 @@ TileEven(list, force, &mc := 0) {
             ; Seitenbrowser zaehlt doppelt; steht er allein auf einem seitlichen Bildschirm, bekommt
             ; er die ganze Breite. Begonnen wird an der Seite zum Hauptbildschirm: dort und darueber
             ; links, auf einem linken Bildschirm rechts.
-            nc := cols.Length, k := Max(1, Min(3, maxc - 1)), sumw := 0
+            ; Auf dem Hauptbildschirm (und darueber) bekommen neben einem Chat mit Seitenbrowser die
+            ; anderen Chats nur die kleinste Spaltenbreite (1/maxc), der Rest geht an den Seitenbrowser.
+            nc := cols.Length, k := Max(1, Min(3, maxc - 1)), sumw := 0, np := 0
             for c in cols {
                 c.w := 1
                 for it in c.wins
                     if (ClaudeSidePane(it.h))
                         c.w := 2
-                sumw += c.w
+                sumw += c.w, np += (c.w = 2)
             }
             MonitorGetWorkArea(MonitorGetPrimary(), &pl, &pt, &pr, &pb)
             side := (wl >= pr || wr <= pl)
-            cw := (side && nc = 1 && cols[1].w = 2) ? (wr - wl) / 2 : (wr - wl) / Max(sumw, k)
-            sx := (wr <= pl) ? wr - cw * sumw : wl, acc := 0
+            if (!side && np && np < nc && nc - np < maxc) {
+                small := (wr - wl) / maxc, big := ((wr - wl) - small * (nc - np)) / np
+                for c in cols
+                    c.px := (c.w = 2) ? big : small
+                sx := wl
+            } else {
+                cw := (side && nc = 1 && cols[1].w = 2) ? (wr - wl) / 2 : (wr - wl) / Max(sumw, k)
+                for c in cols
+                    c.px := cw * c.w
+                sx := (wr <= pl) ? wr - cw * sumw : wl
+            }
+            acc := sx
             for ci, c in cols {
-                x0 := Round(sx + cw * acc), acc += c.w, x1 := Round(sx + cw * acc)
+                x0 := Round(acc), acc += c.px, x1 := Round(acc)
                 nr := c.wins.Length
                 for ri, it in c.wins {
                     y0 := wt + Round((wb - wt) * (ri - 1) / nr), y1 := wt + Round((wb - wt) * ri / nr)
@@ -7396,7 +7408,35 @@ SpreadWins(wins, &mc := 0, tag := "") {
             if (DllCall("IsIconic", "Ptr", it.h) || DllCall("IsZoomed", "Ptr", it.h))
                 DllCall("ShowWindow", "Ptr", it.h, "Int", 4)       ; SW_SHOWNOACTIVATE: erst normal
         mons := SpreadMonitors()                                ; das maximierte Hauptfenster bleibt dahinter
-        rem := items.Length
+        ; Chats mit offenem Seitenbrowser bekommen je einen seitlichen Bildschirm fuer sich allein,
+        ; links zuerst (von innen nach aussen), dann rechts; der Hauptbildschirm bleibt den anderen
+        solo := [], rest := []
+        if (mons.Length > 1) {
+            sides := []
+            for mo in mons
+                if (A_Index > 1 && mo.l < mons[1].l)
+                    sides.Push(mo)
+            for mo in mons
+                if (A_Index > 1 && mo.l >= mons[1].l)
+                    sides.Push(mo)
+            for it in items
+                (solo.Length < sides.Length && ClaudeSidePane(it.h) ? solo : rest).Push(it)
+            if (solo.Length) {
+                for i, it in solo {
+                    mo := sides[i], mo.solo := true, mc++
+                    PlaceFrame(it.h, mo.l, mo.t, mo.r, mo.b)
+                }
+                free := []
+                for mo in mons
+                    if (!mo.HasOwnProp("solo"))
+                        free.Push(mo)
+                mons := free
+                for it in solo                                  ; in der Rueckgabe hinter die anderen
+                    rest.Push(it)
+                items := rest
+            }
+        }
+        rem := items.Length - solo.Length
         for mo in mons                                          ; erste Reihe: Bildschirm fuer Bildschirm
             mo.n := Min(rem, mo.cap), rem -= mo.n
         while (rem > 0)                                         ; weitere Reihen, wieder ab Hauptbildschirm
