@@ -30,6 +30,7 @@ The Claude desktop app shows one main window with a split view. Every other chat
 | **Click** | brings all Claude chats of this desktop to the front (and the Claude main window, if no chats share its screen) |
 | **Alt + click** | arranges the chats on each screen where they are: side by side in your order, full height, flush |
 | **Ctrl + click** | aligns all windows of the desktop flush, any program (closes small gaps, snaps to the screen edges) |
+| **Ctrl + Shift + click** | *Spread across screens*: all chats of the desktop by their number over all screens |
 | **Right-click** | menu with all actions, including *Spread across screens* |
 
 ### How the arrangement works
@@ -38,8 +39,9 @@ The Claude desktop app shows one main window with a split view. Every other chat
 - **Columns:** up to five on a 3440 px screen, four on 2560 px (at least 640 px per column at 100 % scaling). With only a few chats, each gets at most a third of the width; only from the fourth chat on do they get narrower, starting on the side facing the main screen.
 - **Two chats in one column:** drag a chat below another one (its top edge in the lower half of the screen) and both share the column at half height. Otherwise chats only stack when there are more than fit side by side.
 - **Chats with the side browser open** count double: alone on a side screen they get the full width, next to one other chat two thirds. On the main screen the other chats get only the narrowest column (a fifth on 3440 px) and the side browser chat gets the rest.
+- **Undocked panes** (browser, files and the like, in a window of their own) are not arranged into the columns: they are maximised and placed behind the other windows, so you can bring them forward when you need them.
 - **The Claude main window** (maximised, shown on all desktops) stays behind; chats on top of it are arranged over it.
-- **Spread across screens** (tab menu) tidies up from scratch: all chats sorted by the number in their title ("[ACME] 3. …"), main screen first, then the right one, then the left one. A chat with its side browser open gets a side screen to itself (the left one first), the other chats share the remaining screens.
+- **Spread across screens** (tab menu) tidies up from scratch: all chats sorted by the number in their title ("[ACME] 3. …"), main screen first, then the right one, then the left one. A chat with its side browser open gets a side screen to itself (the left one first), the other chats share the remaining screens. An undocked pane gets a side screen of its own as well, the right one first, maximised, as long as the other screens still hold the chats.
 - Chats without a project tag in the title, new chats and renamed chats are included.
 
 ### For Claude itself: a command interface
