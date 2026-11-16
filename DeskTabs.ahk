@@ -106,6 +106,8 @@ global CONF := Map(
     "QuietFlash",     1,       ; 1 = dessen Blinken beenden, damit es nicht in der Taskleiste dieses Desktops auftaucht
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "ClaudeCode",     0,       ; 1 = Claude-Code-Funktionen (Chat-Fenster am Projektkuerzel, gleich breit verteilen, /cmd)
+    "CalmSwitch",     0,       ; 1 = Strg+Win+Pfeil wechselt ueber DeskTabs, ohne die Schiebe-Animation von Windows
+    "Snow",           1,       ; 1 = in der Weihnachtszeit (1. Advent bis 26.12.) Schnee beim Klick auf einen Tab
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
 )
 
@@ -524,6 +526,23 @@ InitSwitchWatch() {
 }
 MarkKeySwitch(*) {
     global gKeyTick := A_TickCount
+}
+; Ruhiger Wechsel: Strg+Win+Pfeil links/rechts faengt DeskTabs ab und springt selbst (wie ein
+; Klick auf einen Tab), dann schiebt Windows die Bildschirme nicht animiert zur Seite. Sonst
+; gehen die Tasten wie gewohnt an Windows durch.
+ApplyCalmSwitch() {
+    for dir, key in Map(-1, "^#Left", 1, "^#Right") {
+        if (CONF["CalmSwitch"]) {
+            try Hotkey(key, CalmStep.Bind(dir), "On")
+        } else {
+            try Hotkey("~" key, MarkKeySwitch, "On")
+        }
+    }
+}
+CalmStep(dir, *) {
+    t := GetCurrentDesktop() + dir
+    if (t >= 0 && t < GetDesktopCount())
+        SwitchToDesktop(t, true)
 }
 MarkTaskView(*) {
     global gTaskViewTick := A_TickCount
@@ -1487,6 +1506,7 @@ global gNameCache := 0         ; Desktop-Namen, nur waehrend eines Aufbaus gemer
 global gIniGen := 0            ; zaehlt eigene Schreibzugriffe auf settings.ini (Zwischenspeicher ungueltig)
 global gFsHit := ""            ; Fenster, das zuletzt als Vollbild galt (nur fuer _debug.txt)
 global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
+global gSnow := 0             ; Weihnachtsschnee: laufender Flockenschauer
 global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
@@ -1601,6 +1621,8 @@ global LANG_DE := Map(
     "sc.k.altgrip", "{1} + Klick auf den Griff ≡",
     "sc.d.altgrip", "Claude-Chats auf jedem Bildschirm gleich breit verteilen",
     "menu.claudecode", "Claude-App-Funktionen",
+    "menu.calmswitch", "Strg+Win+Pfeil ohne Animation wechseln",
+    "menu.snow", "❄ Schnee (Weihnachtszeit)",
     "menu.set.even", "Gleich breit verteilen",
     "menu.claude.spread", "Auf Bildschirme verteilen",
     "menu.claude.front", "Claude-Chats nach vorne holen",
@@ -1923,6 +1945,8 @@ global LANG_EN := Map(
     "sc.k.altgrip", "{1} + click the grip ≡",
     "sc.d.altgrip", "distribute the Claude chats evenly on each screen",
     "menu.claudecode", "Claude app features",
+    "menu.calmswitch", "Ctrl+Win+Arrow switches without animation",
+    "menu.snow", "❄ Snow (Christmas season)",
     "menu.set.even", "Distribute evenly",
     "menu.claude.spread", "Spread across screens",
     "menu.claude.front", "Bring Claude chats to the front",
@@ -2250,6 +2274,7 @@ Main() {
     SetTimer(FirstRunHint, -1500)            ; beim allerersten Start kurz erklaeren, wo die Einstellungen sind
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
+    ApplyCalmSwitch()                        ; ggf. Strg+Win+Pfeil selbst uebernehmen (ohne Animation)
     InitAttentionWatch()                     ; blinkende Programme auf anderen Desktops
     InitDragWatch()                          ; Fenster per Titelleiste auf einen Tab ziehen
 }
@@ -2286,7 +2311,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash", "CalmSwitch", "Snow"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1")
             CONF[key] := Integer(v)
@@ -2313,6 +2338,8 @@ SetView(key, val) {
         val ? LogOpen(GetCurrentDesktop()) : LogClose()
     if (key = "Hotkeys" || key = "HotkeyMod")
         ApplyHotkeys()
+    if (key = "CalmSwitch")
+        ApplyCalmSwitch()
     if (key = "Language") {
         InitLanguage()
         BuildTray()
@@ -3805,6 +3832,14 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.claudecode"), ToggleView.Bind("ClaudeCode"))
     if (CONF["ClaudeCode"])
         xm.Check(T("menu.claudecode"))
+    xm.Add(T("menu.calmswitch"), ToggleView.Bind("CalmSwitch"))
+    if (CONF["CalmSwitch"])
+        xm.Check(T("menu.calmswitch"))
+    if (SnowSeason()) {                         ; nur in der Weihnachtszeit sichtbar
+        xm.Add(T("menu.snow"), ToggleView.Bind("Snow"))
+        if (CONF["Snow"])
+            xm.Check(T("menu.snow"))
+    }
     lgm := Menu()
     lgm.Add(T("menu.report"), OpenTimeReport)
     MenuGlyph(lgm, T("menu.report"), "E9D2")
@@ -5456,7 +5491,7 @@ RenderBar(force := false) {
         return
     global gReorderFrom
     global gSetHover, gSetCount
-    sig := gSetHover "|" (gSetCount.Has(gCurrent) ? gSetCount[gCurrent] : 0) "|" gReorderFrom "|" RegisterOn() "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase
+    sig := gSetHover "|" (gSetCount.Has(gCurrent) ? gSetCount[gCurrent] : 0) "|" gReorderFrom "|" RegisterOn() "|" gCurrent "|" gTheme "|" CONF["ActiveStyle"] "|" CONF["ColorCoding"] "|" CONF["ShowDividers"] "|" gGripHover "|" gAlertNum "|" gAlertPhase "|" AttentionSig() "|" (gDragHwnd ? gDragTipNum : -1) "|" gConfirmNum "|" gConfirmPhase "|" SnowOn()
     for item in BTNS
         sig .= (item["hover"] ? "h" : "-") item["icon"]
     if (!force && sig = gRenderSig)
@@ -5521,6 +5556,8 @@ RenderBar(force := false) {
                 base := (style = "accent") ? CONF["ColActiveBg"] : col
                 FillRoundRectGrad(g, x, ay, w, ah, r, ARGB(TintFill(base)), grad)
             }
+            if (SnowOn() && gReorderFrom < 0)
+                SnowCap(g, x, reg ? StripeH() : ay, w, r)   ; Register: unter der farbigen Kante
         } else if (item["hover"]) {
             ; wie der Windows-Taskleisten-Hover: der Tab wird HELLER, mit leichtem Verlauf
             FillRoundRectGrad(g, x, y, w, h, r, ARGB(Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"])), grad)
@@ -6284,7 +6321,7 @@ ClampY(y, h) {
 ; ------------------------------ Aktionen ------------------------------------
 ; Wechselt zu einem Desktop. "native" bildet Strg+Win+Pfeil nach -> Fenster
 ; bleiben stabil auf ihren Desktops (kein Mitwandern wie bei GoToDesktopNumber).
-SwitchToDesktop(target) {
+SwitchToDesktop(target, direct := false) {
     global gSwitching, MyGui
     cur := GetCurrentDesktop()
     cnt := GetDesktopCount()
@@ -6298,7 +6335,7 @@ SwitchToDesktop(target) {
     }
     gSwitching := true            ; sperrt Rebuilds + Mausrad-Folgeticks waehrend des Wechsels
     global gSelfTick := A_TickCount
-    if (CONF["SwitchMethod"] = "native") {
+    if (CONF["SwitchMethod"] = "native" && !direct) {   ; direct: ruhiger Wechsel, sonst loeste Send die eigene Taste aus
         steps := Abs(target - cur)
         key := (target > cur) ? "{Right}" : "{Left}"
         Loop steps {
@@ -8159,8 +8196,10 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
         MoveActiveTo(item["num"])              ; Umschalt+Klick: aktives Fenster dorthin schicken, selbst bleiben
         return 0
     }
-    if (item)
+    if (item) {
+        SnowBurst(item)                        ; nur in der Weihnachtszeit
         BtnClick(item["num"])
+    }
     return 0
 }
 
@@ -8462,6 +8501,159 @@ StripeBelowBar() {
     global gStripe, MyGui
     if (gStripe && MyGui && DllCall("IsWindowVisible", "Ptr", gStripe.Hwnd))
         DllCall("SetWindowPos", "Ptr", gStripe.Hwnd, "Ptr", MyGui.Hwnd, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)
+}
+
+; ------------------------------ Weihnachtsschnee ------------------------------
+; Kleines Geschenk ohne Changelog: vom 1. Advent bis zum 26.12. rieseln beim Klick auf einen Tab
+; ein paar Flocken auf ihn herab, und auf dem aktiven Tab liegt eine Schneekante. Abschaltbar
+; (Weitere Einstellungen, nur in dieser Zeit sichtbar); aus bleibt aus, auch in den Folgejahren.
+; Zum Ausprobieren ausserhalb der Saison: [View] SnowForce=1 in der settings.ini.
+SnowSeason() {
+    static day := "", res := false
+    if (day = A_YYYY A_MM A_DD)
+        return res
+    day := A_YYYY A_MM A_DD
+    try if (IniRead(CONF["IniPath"], "View", "SnowForce", "0") = "1")
+        return res := true
+    wd := FormatTime(A_YYYY "1225", "WDay")                      ; 1 = Sonntag
+    adv := DateAdd(A_YYYY "1225", -((wd = 1 ? 7 : wd - 1) + 21), "Days")   ; 4. Advent minus drei Wochen
+    return res := (day >= SubStr(adv, 1, 8) && day <= A_YYYY "1226")
+}
+SnowOn() => CONF["Snow"] && SnowSeason()
+; Flocken ueber dem angeklickten Tab: eigenes, durchklickbares Schichtfenster, rund eine Sekunde.
+; Sind die Windows-Animationen aus, fallen sie nicht, sondern erscheinen kurz und blenden aus.
+SnowBurst(item) {
+    global gSnow, MyGui
+    if (!SnowOn() || !MyGui)
+        return
+    SnowStop()
+    bx := 0, by := 0
+    try WinGetPos(&bx, &by, , , MyGui.Hwnd)
+    pad := px(45), w := item["w"] + 2 * pad, h := px(170)
+    left := bx + item["x"] - pad, top := by - h + px(6)
+    anim := 1
+    DllCall("SystemParametersInfo", "UInt", 0x1042, "UInt", 0, "Int*", &anim, "UInt", 0)   ; SPI_GETCLIENTAREAANIMATION
+    ; Wind: eine leichte Brise fuer alle Flocken, mal von links, mal von rechts; jede Flocke
+    ; segelt zusaetzlich in eigenem Takt hin und her und dreht sich langsam. Etwa jede dritte
+    ; ist ein Kristall mit sechs Armen, die kleinen bleiben weiche Punkte.
+    wind := px(Random(18, 38)) * (Random(0, 1) ? 1 : -1)
+    flakes := []
+    Loop 18 {
+        cr := (Random(1, 3) = 1)
+        r := cr ? px(Random(35, 60) / 10) : Max(1.2, px(Random(12, 24) / 10))
+        flakes.Push({x0: pad - wind * 1.5 + Random(0, item["w"]), x: 0, y: anim ? -Random(px(6), px(90)) : Random(h // 2, h - px(14))
+            , r: r, cr: cr, v: px(Random(110, 170)) * (cr ? 0.85 : 1), amp: px(Random(8, 22)), fr: Random(12, 24) / 10
+            , ph: Random(0, 628) / 100, rot: Random(0, 59), spin: Random(-70, 70)
+            , land: h - px(7) - Random(0, px(4)), a: 255, t: 0})
+    }
+    GdipStart()
+    bi := Buffer(40, 0)
+    NumPut("UInt", 40, bi, 0), NumPut("Int", w, bi, 4), NumPut("Int", -h, bi, 8), NumPut("UShort", 1, bi, 12), NumPut("UShort", 32, bi, 14)
+    dc := DllCall("CreateCompatibleDC", "Ptr", 0, "Ptr"), bits := 0
+    hbm := DllCall("CreateDIBSection", "Ptr", dc, "Ptr", bi, "UInt", 0, "Ptr*", &bits, "Ptr", 0, "UInt", 0, "Ptr")
+    obm := DllCall("SelectObject", "Ptr", dc, "Ptr", hbm, "Ptr")
+    sg := Gui("-Caption +AlwaysOnTop +ToolWindow +E0x08080020 -DPIScale")   ; NOACTIVATE | LAYERED | TRANSPARENT
+    sg.Show(Format("NA x{1} y{2} w1 h1", left, top))
+    try DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", sg.Hwnd)    ; der Klick wechselt gleich den Desktop
+    gSnow := {gui: sg, dc: dc, hbm: hbm, obm: obm, w: w, h: h, x: left, y: top, flakes: flakes
+        , t0: A_TickCount, last: A_TickCount, anim: anim, wind: wind}
+    SnowTick()
+    SetTimer(SnowTick, 30)
+}
+SnowTick() {
+    global gSnow
+    if (!gSnow)
+        return SetTimer(SnowTick, 0)
+    s := gSnow, now := A_TickCount, dt := (now - s.last) / 1000, el := now - s.t0
+    s.last := now
+    g := 0, alive := 0
+    DllCall("gdiplus\GdipCreateFromHDC", "Ptr", s.dc, "Ptr*", &g)
+    DllCall("gdiplus\GdipSetSmoothingMode", "Ptr", g, "Int", 4)
+    DllCall("gdiplus\GdipGraphicsClear", "Ptr", g, "UInt", 0)
+    for f in s.flakes {
+        if (s.anim) {
+            if (f.y < f.land) {
+                f.t += dt
+                f.y := Min(f.land, f.y + f.v * (0.75 + 0.25 * Sin(f.t * f.fr * 2 + f.ph)) * dt)   ; sinkt im Takt des Segelns
+                f.rot += f.spin * dt
+            } else
+                f.a := Max(0, f.a - 255 * dt / 0.6)                  ; gelandet: schmilzt weg
+        } else
+            f.a := (el < 400) ? 255 : Max(0, 255 - (el - 400) * 255 / 800)
+        f.x := f.x0 + s.wind * f.t + f.amp * Sin(f.t * f.fr + f.ph)
+        if (f.a <= 0)
+            continue
+        alive++
+        if (f.y < -f.r)
+            continue
+        if (f.cr)
+            SnowCrystal(g, f.x, f.y, f.r, f.rot, f.a)
+        else
+            for lay in [[f.r + Max(1, px(1)), Round(f.a * 0.22), 0x3A4A5E], [f.r, Round(f.a * 0.9), 0xFFFFFF]] {
+                br := 0
+                DllCall("gdiplus\GdipCreateSolidFill", "UInt", ARGB(lay[3], lay[2]), "Ptr*", &br)
+                DllCall("gdiplus\GdipFillEllipse", "Ptr", g, "Ptr", br, "Float", f.x - lay[1], "Float", f.y - lay[1], "Float", 2 * lay[1], "Float", 2 * lay[1])
+                DllCall("gdiplus\GdipDeleteBrush", "Ptr", br)
+            }
+    }
+    DllCall("gdiplus\GdipDeleteGraphics", "Ptr", g)
+    pt := Buffer(8, 0), sz := Buffer(8, 0), src := Buffer(8, 0)
+    NumPut("Int", s.x, "Int", s.y, pt), NumPut("Int", s.w, "Int", s.h, sz)
+    try DllCall("UpdateLayeredWindow", "Ptr", s.gui.Hwnd, "Ptr", 0, "Ptr", pt, "Ptr", sz, "Ptr", s.dc
+        , "Ptr", src, "UInt", 0, "UInt*", 0x01FF0000, "UInt", 2)
+    if (!alive || el > 5000)
+        SnowStop()
+}
+; Schneekristall: sechs Arme mit je zwei Seitenaestchen, darunter ein zarter dunkler Rand,
+; damit er auch vor hellen Fenstern zu sehen ist
+SnowCrystal(g, cx, cy, r, rot, a) {
+    static rad := 3.14159265 / 180
+    lw := Max(1, r / 4.5)
+    for pass in [[lw + Max(1, px(1)), ARGB(0x3A4A5E, Round(a * 0.25))], [lw, ARGB(0xFFFFFF, Round(a * 0.95))]] {
+        pen := 0
+        DllCall("gdiplus\GdipCreatePen1", "UInt", pass[2], "Float", pass[1], "Int", 2, "Ptr*", &pen)
+        DllCall("gdiplus\GdipSetPenStartCap", "Ptr", pen, "Int", 2), DllCall("gdiplus\GdipSetPenEndCap", "Ptr", pen, "Int", 2)
+        Loop 6 {
+            ang := (rot + (A_Index - 1) * 60) * rad
+            ex := cx + r * Cos(ang), ey := cy + r * Sin(ang)
+            DllCall("gdiplus\GdipDrawLine", "Ptr", g, "Ptr", pen, "Float", cx, "Float", cy, "Float", ex, "Float", ey)
+            bx := cx + r * 0.55 * Cos(ang), by := cy + r * 0.55 * Sin(ang)
+            for s in [-1, 1] {                                     ; Aestchen schraeg nach aussen
+                b2 := ang + s * 45 * rad
+                DllCall("gdiplus\GdipDrawLine", "Ptr", g, "Ptr", pen, "Float", bx, "Float", by
+                    , "Float", bx + r * 0.32 * Cos(b2), "Float", by + r * 0.32 * Sin(b2))
+            }
+        }
+        DllCall("gdiplus\GdipDeletePen", "Ptr", pen)
+    }
+}
+SnowStop() {
+    global gSnow
+    SetTimer(SnowTick, 0)
+    if (!gSnow)
+        return
+    s := gSnow, gSnow := 0
+    DllCall("SelectObject", "Ptr", s.dc, "Ptr", s.obm), DllCall("DeleteObject", "Ptr", s.hbm), DllCall("DeleteDC", "Ptr", s.dc)
+    try s.gui.Destroy()
+}
+; Schneekante auf der Oberkante des aktiven Tabs (in RenderBar)
+SnowCap(g, x, y, w, r) {
+    cy := Max(y, 0), x0 := x + r * 0.7, cw := w - r * 1.4
+    if (cw < px(8))
+        return
+    FillRoundRect(g, x0, cy + Max(1, px(1)), cw, px(5), px(2.5), 0x30000000)      ; zarter Schatten darunter
+    FillRoundRect(g, x0, cy, cw, px(5), px(2.5), 0xF2FFFFFF)
+    br := 0, sh := 0
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", 0xF2FFFFFF, "Ptr*", &br)
+    DllCall("gdiplus\GdipCreateSolidFill", "UInt", 0x26000000, "Ptr*", &sh)
+    step := px(11), n := Floor((cw - px(14)) / step)
+    for pass in [[sh, Max(1, px(1))], [br, 0]]                     ; erst alle Schatten, dann der Schnee
+        Loop n {                                                   ; Boegen nach unten, unregelmaessig
+            bw := px(10 + Mod(A_Index * 7, 5)), bh := px(7 + Mod(A_Index * 5, 3))
+            bx := x0 + (A_Index - 1) * step + Mod(A_Index * 3, 4), by := cy + px(5) - bh / 2
+            DllCall("gdiplus\GdipFillEllipse", "Ptr", g, "Ptr", pass[1], "Float", bx, "Float", by + pass[2], "Float", bw, "Float", bh)
+        }
+    DllCall("gdiplus\GdipDeleteBrush", "Ptr", br), DllCall("gdiplus\GdipDeleteBrush", "Ptr", sh)
 }
 
 ; Wird bei jedem Vordergrund-Wechsel aufgerufen -> Leiste sofort wieder nach oben

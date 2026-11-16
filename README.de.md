@@ -236,6 +236,7 @@ Alle Optionen stehen im `CONF`-Block ganz oben in `DeskTabs.ahk`:
 | `DragToTab` | 1 | Ein Fenster an der Titelleiste auf einen Tab ziehen verschiebt es auf diesen Desktop, auf den Griff ≡ zeigt es auf allen Desktops. Auch unter *Weitere Einstellungen*. |
 | `RestoreZOrder` | 1 | Je Desktop merken, welche Fenster vorne lagen, und Reihenfolge samt Fokus beim Zurückkommen wiederherstellen. Auch unter *Weitere Einstellungen*. |
 | `ClaudeCode` | 0 | Claude-App-Funktionen (nur Claude-Desktop-App): Chat-Fenster am Projektkürzel erkennen, gleich breit verteilen, Befehle über `/cmd`. Auch unter *Weitere Einstellungen*. |
+| `CalmSwitch` | 0 | Strg+Win+Pfeil links/rechts übernimmt DeskTabs und wechselt ohne die Schiebe-Animation von Windows. Auch unter *Weitere Einstellungen*. |
 | `HotkeyMod` | `^#` | Modifikator dafür, in AutoHotkey-Schreibweise: `^#` Strg+Windows, `^!` Strg+Alt, `#!` Windows+Alt, `^+` Strg+Umschalt. |
 | `SwitchMethod` | `dll` | `dll` = direkt zum Desktop springen, `native` = `Win+Strg+Pfeil` schrittweise nachbilden. |
 | `Language` | `auto` | Oberflächensprache: `auto` folgt der Windows-Anzeigesprache (Deutsch → `de`, alles andere → `en`), oder `de` / `en` fest. Jeder andere Code lädt `lang\<code>.ini`. Auch in `settings.ini` `[View] Language=` setzbar. Wirkt nach Neustart. |

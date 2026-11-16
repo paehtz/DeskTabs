@@ -2,6 +2,7 @@
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
 ## 1.1.23
+- **Calm desktop switching:** if the sliding screens bother you when switching with Ctrl+Win+Arrow, turn on “Ctrl+Win+Arrow switches without animation” under *More settings*. DeskTabs then jumps straight to the neighbouring desktop, while the other Windows animations stay on.
 - **More room for Claude chats on the main screen:** when arranging (Alt + click on the Claude tile), a chat now gets a third of the width on the main screen too, instead of a quarter. Three chats fill the screen; only from four on do they get narrower. A chat with the side browser counts as two: next to a second chat it gets two thirds.
 - **Side browser on the main screen:** if a Claude chat with its side browser open is there, the other chats get only the narrowest column when arranging (a fifth on 3440 px), the side browser gets all the rest.
 - **Spread with one click:** Ctrl + Shift + click on the Claude tile spreads all chats of the desktop across the screens, like *Spread across screens* in the menu.

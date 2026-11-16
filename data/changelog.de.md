@@ -2,6 +2,7 @@
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
 ## 1.1.23
+- **Ruhiger Desktop-Wechsel:** Wen beim Wechsel mit Strg+Win+Pfeil das Schieben der Bildschirme stört, schaltet unter *Weitere Einstellungen* „Strg+Win+Pfeil ohne Animation wechseln“ ein. Dann springt DeskTabs direkt zum Nachbar-Desktop, die übrigen Windows-Animationen bleiben an.
 - **Mehr Platz für Claude-Chats auf dem Hauptbildschirm:** Beim Ordnen (Alt + Klick auf die Claude-Kachel) bekommt ein Chat auch auf dem Hauptbildschirm ein Drittel der Breite statt eines Viertels. Drei Chats füllen den Bildschirm, erst ab vier werden sie schmaler. Ein Chat mit Seitenbrowser zählt wie zwei: neben einem zweiten Chat bekommt er zwei Drittel.
 - **Seitenbrowser auf dem Hauptbildschirm:** Liegt dort ein Claude-Chat mit offenem Seitenbrowser, bekommen die anderen Chats beim Ordnen nur die schmalste Spalte (ein Fünftel bei 3440 Pixeln), der Seitenbrowser den ganzen Rest.
 - **Verteilen per Klick:** Strg + Umschalt + Klick auf die Claude-Kachel verteilt alle Chats des Desktops auf die Bildschirme, wie *Auf Bildschirme verteilen* im Menü.
