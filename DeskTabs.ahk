@@ -1625,6 +1625,11 @@ global LANG_DE := Map(
     "menu.snow", "❄ Schnee (Weihnachtszeit)",
     "menu.set.even", "Gleich breit verteilen",
     "menu.claude.spread", "Auf Bildschirme verteilen",
+    "menu.claude.gather", "Chats dieses Projekts hierher holen",
+    "menu.claude.tags", "Projektkürzel dieses Desktops: {1} …",
+    "prompt.ctag.title", "Projektkürzel für „{1}“",
+    "prompt.ctag.found", "In den Chats auf diesem Desktop gefunden: {1}",
+    "prompt.ctag.text", "Kürzel der Claude-Chats, die auf diesen Desktop gehören (wie im Titel in eckigen Klammern). Mehrere durch Komma oder Semikolon trennen, z. B. kapierbar, Privat. Leer lassen: automatisch erkennen.",
     "menu.claude.front", "Claude-Chats nach vorne holen",
     "claude.tile.tip", "Claude-Chats dieses Desktops`nKlick: nach vorne · Alt + Klick: ordnen · Strg + Klick: bündig · Strg + Umschalt + Klick: auf Bildschirme verteilen · Rechtsklick: mehr",
     "set.evened", "„{1}“ gleich breit verteilt · {2} Fenster auf {3} Bildschirm(en)",
@@ -1633,6 +1638,9 @@ global LANG_DE := Map(
     "sc.d.setalt", "Claude-Chats auf jedem Bildschirm gleich breit verteilen (auch auf einem leeren Platz)",
     "claude.gathered", "{1} Claude-Fenster [{2}] verteilt · {3} von anderen Desktops geholt",
     "claude.none", "Keine Claude-Fenster mit [{1}] gefunden",
+    "claude.sent", "{1} Claude-Fenster [{2}] dorthin geschickt und verteilt",
+    "claude.distributed", "{1} Claude-Fenster auf {2} Projekt-Desktop(s) verteilt",
+    "claude.distnone", "Hier liegen keine Claude-Chats, die zu einem anderen Desktop gehören",
     "menu.set.overwrite", "Mit aktueller Anordnung überschreiben",
     "menu.set.rename", "Umbenennen",
     "menu.set.delete", "Löschen",
@@ -1949,6 +1957,11 @@ global LANG_EN := Map(
     "menu.snow", "❄ Snow (Christmas season)",
     "menu.set.even", "Distribute evenly",
     "menu.claude.spread", "Spread across screens",
+    "menu.claude.gather", "Bring this project's chats here",
+    "menu.claude.tags", "Project tags of this desktop: {1} …",
+    "prompt.ctag.title", "Project tags for “{1}”",
+    "prompt.ctag.found", "Found in the chats on this desktop: {1}",
+    "prompt.ctag.text", "Tags of the Claude chats that belong on this desktop (as in the title, in square brackets). Separate several with commas or semicolons, e.g. acme, private. Leave empty: detect automatically.",
     "menu.claude.front", "Bring Claude chats to the front",
     "claude.tile.tip", "Claude chats on this desktop`nClick: to the front · Alt + click: arrange · Ctrl + click: flush · Ctrl + Shift + click: spread across screens · Right-click: more",
     "set.evened", "“{1}” distributed evenly · {2} windows on {3} screen(s)",
@@ -1957,6 +1970,9 @@ global LANG_EN := Map(
     "sc.d.setalt", "distribute the Claude chats evenly on each screen (also on an empty slot)",
     "claude.gathered", "{1} Claude windows [{2}] distributed · {3} brought from other desktops",
     "claude.none", "No Claude windows with [{1}] found",
+    "claude.sent", "{1} Claude windows [{2}] sent there and spread",
+    "claude.distributed", "{1} Claude windows sent to {2} project desktop(s)",
+    "claude.distnone", "No Claude chats here that belong to another desktop",
     "menu.set.overwrite", "Overwrite with current layout",
     "menu.set.rename", "Rename",
     "menu.set.delete", "Delete",
@@ -6643,20 +6659,22 @@ ClaudeFront(*) {
         }
     }
 }
-; die Hauptfenster der Claude-App: sichtbar, ohne eigenen Desktop (auf allen angeheftet)
+; die Hauptfenster der Claude-App: sichtbar, ohne eigenen Desktop (auf allen angeheftet), dazu
+; die Hauptfenster weiterer Instanzen, die auf dem aktuellen Desktop liegen
 ClaudeMainWins() {
-    out := [], dhw := A_DetectHiddenWindows
+    out := [], dhw := A_DetectHiddenWindows, cur := GetCurrentDesktop()
     DetectHiddenWindows(true)
     try for h in WinGetList("ahk_exe claude.exe") {
         if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
             continue
-        if (PinState(h) >= 1)
+        if (PinState(h) >= 1 || (ClaudeIsMain(h) && VD("GetWindowDesktopNumber", "Ptr", h, "Int") = cur))
             out.Push(h)
     }
     DetectHiddenWindows(dhw)
     return out
 }
 ClaudeTileMenu() {
+    ToolTip(, , , 5)                                ; Kachel-Tooltip weg, sonst steht er hinter dem Menue
     m := Menu()
     m.Add(T("menu.claude.front"), ClaudeFront)
     MenuGlyph(m, T("menu.claude.front"), ClaudeGlyph())
@@ -6666,6 +6684,14 @@ ClaudeTileMenu() {
     m.Add(T("menu.claude.spread"), ClaudeSpread.Bind(GetCurrentDesktop()))
     MenuGlyph(m, T("menu.claude.spread"), ClaudeGlyph())
     MenuHint(m, T("menu.claude.spread"), ClickHint(T("key.ctrl") " + " T("key.shift")))
+    m.Add(T("menu.claude.gather"), ClaudeGather.Bind(GetCurrentDesktop()))
+    MenuGlyph(m, T("menu.claude.gather"), ClaudeGlyph())
+    tl := ""
+    for tg in ClaudeTagList(GetDesktopNameRaw(GetCurrentDesktop()), GetCurrentDesktop())
+        tl .= (tl = "" ? "" : ", ") tg
+    tl := StrReplace(tl, "&", "&&")                 ; "T&K" sonst als Tastenkuerzel gelesen
+    m.Add(T("menu.claude.tags", tl), ClaudeTagPrompt.Bind(GetCurrentDesktop()))
+    MenuGlyph(m, T("menu.claude.tags", tl), "E8EC")
     m.Add()
     m.Add(T("menu.set.save"), SetSaveAsk)
     MenuGlyph(m, T("menu.set.save"), "E710")
@@ -7087,9 +7113,10 @@ DeskAlign(*) {
 ; Griff: Alt + Klick verteilt die Claude-Chats jedes Bildschirms (wie Alt + Klick auf eine Kachel)
 DeskEven(*) {
     num := GetCurrentDesktop()
-    cl := NotMinimized(ClaudeDeskChats(num, &panes))  ; maximierte Chats werden mit eingeordnet
+    cl := NotMinimized(ClaudeDeskChats(num, &panes, &mains))  ; maximierte Chats werden mit eingeordnet
     if (!cl.Length)
         return ToastShow(num, T("desk.evennone"), 0xE8A9)
+    ClaudeMainsFront(mains)                          ; Hauptfenster weiterer Instanzen: maximiert, vorne (Chats kommen darueber)
     ClaudePanesBack(panes)
     cnt := TileEven(cl, true, &mc)
     SetWinDelay(-1)
@@ -7111,11 +7138,12 @@ SetEven(name, *) {
         return ToastShow(num, T("set.nonefound", name), 0xE8A9)
     cl := [], seen := Map()                                     ; nur die Claude-Fenster
     for h in found
-        try if (WinGetProcessName("ahk_id " h) = "claude.exe" && !ClaudePaneWin(h))
+        try if (WinGetProcessName("ahk_id " h) = "claude.exe" && !ClaudeIsMain(h) && !ClaudePaneWin(h))
             cl.Push(h), seen[h] := true
-    for h in ClaudeDeskChats(num, &panes)                       ; dazu alle uebrigen Chats des Desktops
+    for h in ClaudeDeskChats(num, &panes, &mains)               ; dazu alle uebrigen Chats des Desktops
         if (!seen.Has(h))
             cl.Push(h), seen[h] := true
+    ClaudeMainsFront(mains)
     ClaudePanesBack(panes)
     cnt := TileEven(NotMinimized(cl), true, &mc)          ; maximierte Chats werden mit eingeordnet
     SetRestore(name)
@@ -7283,10 +7311,59 @@ OdExeIcon(path, sz) {
     }
     return cache[k]
 }
+; Alle Kuerzel eines Desktops: in der Einstellung durch Komma oder Semikolon getrennt (ein
+; Desktop kann mehrere Projekte tragen, etwa "Standard" fuer private Projekte), sonst das eine
+; ermittelte Kuerzel
+ClaudeTagList(desk, num := -1) {
+    v := IniLookup("ClaudeTags", desk), out := []
+    for tg in StrSplit(v, [",", ";"], " `t")
+        if (tg != "")
+            out.Push(tg)
+    if (!out.Length)
+        out.Push(ClaudeTag(desk, num))
+    return out
+}
+; Traegt der Titel eines der Kuerzel in eckigen Klammern?
+ClaudeTitleHasTag(title, tags) {
+    for tg in tags
+        if (InStr(title, "[" tg "]"))
+            return true
+    return false
+}
+; Kuerzel der Chats, die auf Desktop num liegen, mit Anzahl, die haeufigsten zuerst
+ClaudeTagsFound(num) {
+    cnt := Map(), out := []
+    for h in ClaudeDeskChats(num)
+        if (RegExMatch(WinGetTitle("ahk_id " h), "\[([^\]]+)\]", &m))
+            cnt[m[1]] := (cnt.Has(m[1]) ? cnt[m[1]] : 0) + 1
+    for k, n in cnt
+        out.Push({tag: k, n: n})
+    SortBy(out, (a1, a2) => a2.n - a1.n)
+    return out
+}
+; Kuerzel eines Desktops per Eingabe festlegen (leer = wieder automatisch ermitteln)
+ClaudeTagPrompt(num := -1, *) {
+    if (num < 0)
+        num := GetCurrentDesktop()
+    raw := GetDesktopNameRaw(num), cur := IniLookup("ClaudeTags", raw)
+    ; Vorschlag aus den Chats, die gerade hier liegen: alle Kuerzel in eckigen Klammern,
+    ; das haeufigste zuerst. Ist schon etwas eingetragen, steht der Vorschlag nur im Hinweis.
+    found := ClaudeTagsFound(num), sug := "", info := ""
+    for f in found
+        sug .= (sug = "" ? "" : ", ") f.tag, info .= (info = "" ? "" : ", ") f.tag " (" f.n ")"
+    if (cur = "")
+        cur := (sug != "") ? sug : ClaudeTag(raw, num)
+    txt := T("prompt.ctag.text") (info != "" ? "`n`n" T("prompt.ctag.found", info) : "")
+    ib := InputBox(txt, T("prompt.ctag.title", raw), "w460 h" (info != "" ? 190 : 150), cur)
+    if (ib.Result != "OK")
+        return
+    v := Trim(RegExReplace(ib.Value, "\s*[,;]\s*", ", "), " ,")
+    v = "" ? IniDelLoose("ClaudeTags", raw) : IniSet("ClaudeTags", raw, v)
+}
 ClaudeTag(desk, num := -1) {
     v := IniLookup("ClaudeTags", desk)
     if (v != "")
-        return v
+        return Trim(StrSplit(v, [",", ";"])[1])
     cnt := Map(), best := "", bn := 0
     if (num >= 0) {                                             ; zuerst die Chats, die gerade dort liegen
         for h in ClaudeDeskChats(num)
@@ -7323,17 +7400,24 @@ ClaudeWins(tag) {
 ; alle Chat-Fenster der Claude-App auf Desktop num, mit oder ohne [Kuerzel] im Titel (das
 ; Hauptfenster ist auf allen Desktops angeheftet, hat also keinen eigenen Desktop und faellt raus)
 ; Ausgedockte Bereiche (Browser, Dateien, ...) sind keine Chats: sie kommen nach &panes.
-ClaudeDeskChats(num, &panes := 0) {
-    out := [], panes := [], dhw := A_DetectHiddenWindows
+; Hauptfenster einer weiteren Claude-Instanz (eigenes Profil, --user-data-dir) liegen nicht
+; auf allen Desktops, sondern auf einem; auch sie sind keine Chats: sie kommen nach &mains.
+ClaudeDeskChats(num, &panes := 0, &mains := 0) {
+    out := [], panes := [], mains := [], dhw := A_DetectHiddenWindows
     DetectHiddenWindows(true)
     try for h in WinGetList("ahk_exe claude.exe") {
         if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
             continue
         if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") = num)
-            (ClaudePaneWin(h) ? panes : out).Push(h)
+            (ClaudeIsMain(h) ? mains : ClaudePaneWin(h) ? panes : out).Push(h)
     }
     DetectHiddenWindows(dhw)
     return out
+}
+; Hauptfenster der Claude-App (jeder Instanz): Titel genau "Claude", Chats tragen ihren Namen
+ClaudeIsMain(h) {
+    try return WinGetTitle("ahk_id " h) == "Claude"
+    return false
 }
 ; Ist das ein ausgedockter Bereich der Claude-App (Browser, Dateien, ...) statt eines Chats?
 ; Erkennbar am Knopf "Im Sitzungsfenster oeffnen" (UI Automation). Chats mit [Kuerzel] im
@@ -7384,6 +7468,40 @@ ClaudePanesBack(panes) {
         DllCall("SetWindowPos", "Ptr", h, "Ptr", 1, "Int", 0, "Int", 0, "Int", 0, "Int", 0, "UInt", 0x0013)   ; HWND_BOTTOM
     }
 }
+; Hauptfenster einer weiteren Instanz: maximiert auf seinem Bildschirm und nach vorne geholt.
+; Die Chats werden danach aktiviert und liegen so darueber; ohne Chats auf seinem Bildschirm
+; bleibt es dort vorne.
+ClaudeMainsFront(mains) {
+    SetWinDelay(-1)
+    cur := GetCurrentDesktop()
+    for h in mains {
+        if (DllCall("IsIconic", "Ptr", h) || VD("GetWindowDesktopNumber", "Ptr", h, "Int") != cur)
+            continue                                    ; auf einem anderen Desktop: Aktivieren wuerde dorthin springen
+        if (!DllCall("IsZoomed", "Ptr", h))
+            DllCall("ShowWindow", "Ptr", h, "Int", 3)                                   ; SW_MAXIMIZE
+        try {
+            WinActivate("ahk_id " h)
+            WinWaitActive("ahk_id " h, , 0.2)
+        }
+    }
+}
+; Zu welcher Claude-Instanz gehoert das Fenster? "" = Standardprofil, sonst der Profilordner
+; (--user-data-dir). Je Prozess einmal nachgesehen.
+ClaudeInstance(h) {
+    static cache := Map()
+    pid := 0
+    try pid := WinGetPID("ahk_id " h)
+    if (!pid)
+        return ""
+    if (!cache.Has(pid)) {
+        v := ""
+        try for p in ComObjGet("winmgmts:").ExecQuery("select CommandLine from Win32_Process where ProcessId=" pid)
+            if (RegExMatch(p.CommandLine, "i)--user-data-dir=(`"[^`"]+`"|\S+)", &m))
+                v := Trim(m[1], "`"")
+        cache[pid] := v
+    }
+    return cache[pid]
+}
 ; Hat ein Claude-Chatfenster den Seitenbrowser offen? Dann enthaelt es (laut UI Automation)
 ; zwei grosse Webinhalte statt einem: den Chat und die Seite. Kleine Einblendungen zaehlen nicht.
 ClaudeSidePane(h) {
@@ -7415,16 +7533,67 @@ ClaudeSidePane(h) {
 ClaudeDeskFor(tag) {
     Loop GetDesktopCount() {
         nm := GetDesktopNameRaw(A_Index - 1)
-        if (nm = tag || ClaudeTag(nm) = tag)
+        if (nm = tag)
             return A_Index - 1
+        for tg in ClaudeTagList(nm)                             ; ein Desktop kann mehrere Kuerzel tragen
+            if (tg = tag)
+                return A_Index - 1
     }
     return -1
+}
+; Strg+Alt+Klick auf einen Tab: die Claude-Chats des AKTUELLEN Desktops, die das Kuerzel des
+; angeklickten Desktops tragen, dorthin schicken und dort verteilen. Man bleibt, wo man ist -
+; so raeumt man nach dem Start der Claude-App (alle Chats landen auf einem Desktop) Tab fuer Tab auf.
+ClaudeSendTo(num, *) {
+    cur := GetCurrentDesktop()
+    if (num = cur)
+        return ClaudeGather(num)
+    tags := ClaudeTagList(GetDesktopNameRaw(num)), tag := tags[1], moved := 0
+    for h in ClaudeDeskChats(cur)
+        if (ClaudeTitleHasTag(WinGetTitle("ahk_id " h), tags))
+            VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
+    if (!moved)
+        return ToastShow(num, T("claude.none", tag), 0xE8A9)
+    chats := ClaudeDeskChats(num, &panes)
+    SpreadWins(chats, &mc, tag, panes)
+    ToastShow(num, T("claude.sent", moved, tag), 0xECA5)
+}
+; Strg+Alt+Klick auf den Griff: alle Claude-Chats des aktuellen Desktops auf die Desktops ihrer
+; Projektkuerzel schicken. Chats ohne passenden Desktop bleiben hier; Chats auf anderen Desktops
+; werden nicht angefasst.
+ClaudeDistribute(*) {
+    cur := GetCurrentDesktop(), targets := Map(), moved := 0
+    for h in ClaudeDeskChats(cur) {
+        if (!RegExMatch(WinGetTitle("ahk_id " h), "\[([^\]]+)\]", &m))
+            continue
+        d := ClaudeDeskFor(m[1])
+        if (d < 0 || d = cur)
+            continue
+        VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", d), moved++
+        targets[d] := m[1]
+    }
+    if (!moved)
+        return ToastShow(cur, T("claude.distnone"), 0xE8A9)
+    for d, tag in targets {
+        chats := ClaudeDeskChats(d, &panes)
+        SpreadWins(chats, &mc, tag, panes)
+    }
+    ToastShow(cur, T("claude.distributed", moved, targets.Count), 0xECA5)
 }
 ; Alle Claude-Fenster des Projekts auf Desktop num holen, gleich breit verteilen und, wenn
 ; es der aktuelle Desktop ist, nach vorne holen. Rueckgabe: Bericht fuer die Schnittstelle
 ClaudeGather(num, *) {
-    desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk)
-    wins := ClaudeWins(tag)
+    desk := GetDesktopNameRaw(num), tags := ClaudeTagList(desk), tag := tags[1]
+    wins := [], seen := Map()
+    for tg in tags                                              ; alle Kuerzel des Desktops
+        for h in ClaudeWins(tg)
+            if (!seen.Has(h))
+                wins.Push(h), seen[h] := true
+    if (tags.Length > 1) {                                      ; in Meldungen alle nennen
+        tag := ""
+        for tg in tags
+            tag .= (tag = "" ? "" : ", ") tg
+    }
     if (!wins.Length) {
         ToastShow(num, T("claude.none", tag), 0xE8A9)
         return "error: no Claude windows with [" tag "]"
@@ -7433,7 +7602,8 @@ ClaudeGather(num, *) {
     for h in wins
         if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") != num)
             VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
-    chats := ClaudeDeskChats(num, &panes)
+    chats := ClaudeDeskChats(num, &panes, &mains)
+    ClaudeMainsFront(mains)
     SpreadWins(chats, &mc, tag, panes)                          ; mit allen Chats des Desktops nach Nummer verteilen
     if (num = GetCurrentDesktop()) {
         SetWinDelay(-1)
@@ -7453,7 +7623,8 @@ ClaudeGather(num, *) {
 ; wieder zuerst auf dem Hauptbildschirm. Rueckgabe: Bericht fuer die Schnittstelle
 ClaudeSpread(num, *) {
     desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk, num)
-    wins := ClaudeDeskChats(num, &panes)                        ; alle Chats des Desktops, Projekt zuerst
+    wins := ClaudeDeskChats(num, &panes, &mains)                ; alle Chats des Desktops, Projekt zuerst
+    ClaudeMainsFront(mains)
     if (!wins.Length) {
         ClaudePanesBack(panes)
         ToastShow(num, T("claude.none", tag), 0xE8A9)
@@ -7485,6 +7656,8 @@ SpreadWins(wins, &mc := 0, tag := "", panes := 0) {
             k := Format("{:06}.{:06} ", m[1], m[2] = "" ? 0 : m[2]) ti
         if (tag != "")                                          ; Projekt-Chats vor fremden, diese nach Kuerzel
             k := InStr(ti, "[" tag "]") ? "0 " k : "1 " (RegExMatch(ti, "\[([^\]]+)\]", &m2) ? m2[1] : "") " " k
+        inst := ClaudeInstance(h)                               ; Chats einer Instanz bleiben beieinander
+        k := (inst = "" ? "0|" : "1|" inst "|") k
         items.Push({h: h, k: k})
     }
     Loop items.Length - 1 {
@@ -8160,6 +8333,16 @@ OnLButtonUp(wParam, lParam, msg, hwnd) {
         if (GetKeyState("Alt", "P"))
             Send("{Blind}{vkE8}")              ; Loslassen von Alt oeffnet sonst die Menueleiste des Vordergrund-Programms
         SetTimer(SetClick.Bind(si, GetKeyState("Shift", "P"), GetKeyState("Ctrl", "P"), GetKeyState("Alt", "P")), -1)   ; physisch: logisch ist Alt oft schon "los"   ; nach vorne; Umschalt: neu aufnehmen; Strg: buendig; Alt: gleich breit
+        return 0
+    }
+    if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Ctrl") && GetKeyState("Alt", "P") && CONF["ClaudeCode"]) {
+        Send("{Blind}{vkE8}")
+        SetTimer(ClaudeDistribute, -1)         ; Strg+Alt+Klick auf den Griff: Chats dieses Desktops auf ihre Projekt-Desktops
+        return 0
+    }
+    if (item && GetKeyState("Ctrl") && GetKeyState("Alt", "P") && CONF["ClaudeCode"]) {
+        Send("{Blind}{vkE8}")
+        SetTimer(ClaudeSendTo.Bind(item["num"]), -1)   ; Strg+Alt+Klick auf einen Tab: Chats dieses Desktops mit dessen Kuerzel dorthin; auf den eigenen: von ueberall herholen
         return 0
     }
     if (!item && lx >= 0 && lx < gLayout["gripW"] && GetKeyState("Shift") && GetKeyState("Ctrl") && CONF["ClaudeCode"]) {

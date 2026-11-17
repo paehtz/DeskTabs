@@ -53,7 +53,7 @@ Acme Bakery=*Site updates|Call with Anna|Flyer proofs
 ; per desktop: arrangements separated by U+241D, name and windows by U+241C,
 ; windows by U+241E, fields by U+241F (exe, title, window handle in hex)
 
-[ClaudeTags]     ; only with ClaudeCode=1: project tag of a desktop's Claude chats (title "[Tag] ...")
+[ClaudeTags]     ; only with ClaudeCode=1: project tag(s) of a desktop's Claude chats (title "[Tag] ..."), several separated by commas
 Acme Bakery=ACME ; without an entry: the most common tag in its layouts, else the desktop name
 ```
 
