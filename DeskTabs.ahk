@@ -1507,6 +1507,7 @@ global gIniGen := 0            ; zaehlt eigene Schreibzugriffe auf settings.ini 
 global gFsHit := ""            ; Fenster, das zuletzt als Vollbild galt (nur fuer _debug.txt)
 global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
 global gSnow := 0             ; Weihnachtsschnee: laufender Flockenschauer
+global gClaudeStat := Map()   ; je Desktop: Claude-Sitzungen, die warten / laufen / ungelesen sind
 global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
@@ -2245,6 +2246,8 @@ T(key, args*) {
 }
 
 ; ------------------------------- Start --------------------------------------
+if (A_Args.Length && A_Args[1] = "/claudestat")      ; Hilfsprozess (siehe ClaudeStatHelper), nie eine Leiste
+    ClaudeStatHelper(A_Args.Length > 1 ? Integer(A_Args[2]) : 0)
 if (A_Args.Length && A_Args[1] = "/cmd")
     CmdForward()
 Main()
@@ -2311,6 +2314,7 @@ Main() {
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
     ApplyCalmSwitch()                        ; ggf. Strg+Win+Pfeil selbst uebernehmen (ohne Animation)
+    ClaudeStatStart()                        ; Hilfsprozess: Status der Claude-Sitzungen fuer die Punkte im Tab
     InitAttentionWatch()                     ; blinkende Programme auf anderen Desktops
     InitDragWatch()                          ; Fenster per Titelleiste auf einen Tab ziehen
 }
@@ -2376,6 +2380,11 @@ SetView(key, val) {
         ApplyHotkeys()
     if (key = "CalmSwitch")
         ApplyCalmSwitch()
+    if (key = "ClaudeCode") {
+        global gClaudeStat := Map()                 ; aus: Punkte weg, der Hilfsprozess beendet sich selbst
+        if (val)
+            ClaudeStatStart()
+    }
     if (key = "Language") {
         InitLanguage()
         BuildTray()
@@ -5779,6 +5788,9 @@ RenderBar(force := false) {
             FillRoundRect(g, dcx - dr - rg, dcy - dr - rg, 2 * (dr + rg), 2 * (dr + rg), dr + rg, ARGB(item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg))
             FillRoundRect(g, dcx - dr, dcy - dr, 2 * dr, 2 * dr, dr, ARGB(0xF7630C))
         }
+        ; Claude-Sitzungen dieses Desktops: Zahlen oben rechts, nur bei vollem Namen im Tab
+        if (gClaudeStat.Has(item["num"]) && item["label"] != "" && InStr(item["label"], GetDesktopNameRaw(item["num"])))
+            DrawClaudeStat(g, gClaudeStat[item["num"]], x + w - px(5), y + px(4), tx)
         ; fremder Wechsel: Tab blinkt orange, danach bleibt ein oranger Rahmen
         if (item["num"] = gAlertNum) {
             if (gAlertPhase & 1)
@@ -7477,6 +7489,103 @@ ClaudeCloseChats(*) {
     DetectHiddenWindows(dhw)
     ToastShow(cur, T("claude.closed", list.Length), 0xECA5)
 }
+; Status der Claude-Sitzungen je Desktop. Die Seitenleiste jedes Claude-Hauptfensters (jede
+; Instanz hat eins) nennt zu jeder Sitzung ihren Zustand am Ende des Namens, z. B.
+; "🏢 [visuplus] 10. GEO Warte auf Eingabe". Das Auslesen (UI Automation, ~0,4 s) laeuft in
+; einem eigenen Hilfsprozess (DeskTabs /claudestat), damit die Leiste dabei nicht stockt; er
+; schickt alle 10 s je Kuerzel die Zahlen w (wartet auf Eingabe), r (laeuft), u (ungelesen).
+; Nur mit eingeschalteten Claude-App-Funktionen. Ausgedockte Fenster braucht es dafuer nicht.
+ClaudeStatStart() {
+    static pid := 0
+    if (!CONF["ClaudeCode"] || (pid && ProcessExist(pid)))
+        return
+    try Run(A_IsCompiled ? '"' A_ScriptFullPath '" /claudestat ' A_ScriptHwnd
+        : '"' A_AhkPath '" "' A_ScriptFullPath '" /claudestat ' A_ScriptHwnd, , , &pid)
+}
+ClaudeStatHelper(parent) {
+    DetectHiddenWindows(true)
+    try WinSetTitle("DeskTabs Claude-Status", "ahk_id " A_ScriptHwnd)   ; damit ihn ein Neustart nicht fuer die Leiste haelt
+    uia := ComObject("{e22ad333-b25f-460c-83d0-0581107395c9}", "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}")
+    v := Buffer(24, 0), NumPut("UShort", 3, v, 0), NumPut("Int", 50000, v, 8)   ; Button
+    cond := 0
+    ComCall(23, uia, "Int", 30003, "Ptr", v, "Ptr*", &cond)
+    last := "-"
+    Loop {
+        if (!parent || !WinExist("ahk_id " parent))
+            ExitApp
+        if (IniRead(CONF["IniPath"], "View", "ClaudeCode", "0") != "1")
+            ExitApp                                          ; Funktionen aus: nichts mehr lesen
+        tags := Map(), seen := Map()
+        try for h in WinGetList("ahk_exe claude.exe") {
+            if (WinGetTitle(h) != "Claude" || !(WinGetStyle(h) & 0x10000000))
+                continue
+            el := 0, arr := 0, n := 0
+            ComCall(6, uia, "Ptr", h, "Ptr*", &el)
+            ComCall(6, el, "Int", 4, "Ptr", cond, "Ptr*", &arr)
+            ComCall(3, arr, "Int*", &n)
+            Loop n {
+                e := 0, nm := 0
+                ComCall(4, arr, "Int", A_Index - 1, "Ptr*", &e)
+                ComCall(23, e, "Ptr*", &nm)
+                s := nm ? StrGet(nm, "UTF-16") : ""
+                if (nm)
+                    DllCall("OleAut32\SysFreeString", "Ptr", nm)
+                ObjRelease(e)
+                if (!RegExMatch(s, "^(.*?)\s+(Warte auf Eingabe|Waiting for input|Läuft|Running|Ungelesene Antwort|Unread reply|Unread response)$", &m)
+                    || seen.Has(s) || !RegExMatch(m[1], "\[([^\]]+)\]", &tm))
+                    continue
+                seen[s] := true
+                if (!tags.Has(tm[1]))
+                    tags[tm[1]] := [0, 0, 0]
+                k := (m[2] = "Warte auf Eingabe" || m[2] = "Waiting for input") ? 1 : (m[2] = "Läuft" || m[2] = "Running") ? 2 : 3
+                tags[tm[1]][k] += 1
+            }
+            ObjRelease(arr), ObjRelease(el)
+        }
+        msg := ""
+        for tg, c in tags
+            msg .= tg "`t" c[1] "`t" c[2] "`t" c[3] "`n"
+        if (msg != last) {
+            cds := Buffer(A_PtrSize * 3, 0)
+            NumPut("UPtr", 0x44545354, cds, 0), NumPut("UInt", (StrLen(msg) + 1) * 2, cds, A_PtrSize)
+            NumPut("Ptr", StrPtr(msg), cds, A_PtrSize * 2)
+            try {
+                SendMessage(0x4A, 0, cds.Ptr, , "ahk_id " parent, , , , 3000)
+                last := msg
+            }
+        }
+        Sleep(10000)
+    }
+}
+; Ergebnis des Hilfsprozesses: Kuerzel den Desktops zuordnen und neu zeichnen, wenn sich etwas aendert
+ClaudeStatApply(msg) {
+    global gClaudeStat
+    stat := Map()
+    if (CONF["ClaudeCode"])
+        Loop Parse, msg, "`n" {
+            f := StrSplit(A_LoopField, "`t")
+            if (f.Length < 4 || (d := ClaudeDeskFor(f[1])) < 0)
+                continue
+            if (!stat.Has(d))
+                stat[d] := {w: 0, r: 0, u: 0}
+            stat[d].w += f[2], stat[d].r += f[3], stat[d].u += f[4]
+        }
+    gClaudeStat := stat
+    RenderBar(true)
+}
+; Drei feste Punkte oben rechts im Tab, von links: wartet auf Eingabe (rot), laeuft (gruen),
+; ungelesene Antwort (blau). Ein Punkt leuchtet, sobald mindestens eine Sitzung des Desktops
+; in diesem Zustand ist; sonst bleibt er als blasser Ring stehen, damit die Stellen fest sind.
+DrawClaudeStat(g, st, right, top, txcol) {
+    d := Max(5, px(7)), gap := Max(2, px(3)), x0 := right - 3 * d - 2 * gap
+    for i, it in [[st.w, 0xE5471D], [st.r, 0x2EA043], [st.u, 0x1E88E5]] {
+        cx := x0 + (i - 1) * (d + gap)
+        if (it[1] > 0)
+            FillRoundRect(g, cx, top, d, d, d / 2, ARGB(it[2]))
+        else
+            StrokeRoundRect(g, cx + 0.5, top + 0.5, d - 1, d - 1, (d - 1) / 2, 0x50000000 | (txcol & 0xFFFFFF), 1)
+    }
+}
 ; Kuerzel der Chats, die auf Desktop num liegen, mit Anzahl, die haeufigsten zuerst
 ClaudeTagsFound(num) {
     cnt := Map(), out := []
@@ -8024,6 +8133,10 @@ ReplaceOtherInstance() {
     DetectHiddenWindows(dhw)
 }
 OnCopyData(wParam, lParam, msg, hwnd) {
+    if (NumGet(lParam, 0, "UPtr") = 0x44545354) {                  ; Hilfsprozess: Status der Claude-Sitzungen
+        SetTimer(ClaudeStatApply.Bind(StrGet(NumGet(lParam, A_PtrSize * 2, "Ptr"), "UTF-16")), -1)
+        return 1
+    }
     if (NumGet(lParam, 0, "UPtr") != 0x444B4344)
         return 0
     s := StrGet(NumGet(lParam, A_PtrSize * 2, "Ptr"), "UTF-16")
