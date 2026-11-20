@@ -33,7 +33,7 @@ The Claude desktop app shows one main window with a split view. Every other chat
 | **Ctrl + Shift + click** | *Spread across screens*: all chats of the desktop by their number over all screens |
 | **Right-click** | menu with all actions, including *Spread across screens* |
 
-**Ctrl + Alt + click on the tab of the current desktop** brings all chats with this desktop's project tag here from other desktops. **Ctrl + Alt + click on another tab** sends the chats of the current desktop that carry that desktop's tag over there; **Ctrl + Alt + click on the grip ≡** sends every chat of the current desktop to the desktop of its tag, which tidies up quickly after the Claude app has opened all chats on one desktop. Chats without a matching desktop stay put. Nothing moves on its own.
+**Ctrl + Alt + click on the tab of the current desktop** brings all chats with this desktop's project tag here from other desktops. **Ctrl + Alt + click on another tab** sends the chats of the current desktop that carry that desktop's tag over there; **Ctrl + Alt + click on the grip ≡** sends every chat of the current desktop to the desktop of its tag, which tidies up quickly after the Claude app has opened all chats on one desktop. Chats without a matching desktop go to the default desktop. Nothing moves on its own.
 
 ### How the arrangement works
 

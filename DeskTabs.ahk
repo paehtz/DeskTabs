@@ -1677,6 +1677,8 @@ global LANG_DE := Map(
     "prompt.rename.title", "„{1}“ umbenennen",
     "prompt.rename.text", "Neuer Name. Farbe, Symbol, Kürzel und Kompakt-Einstellung ziehen mit:",
     "menu.tab.remove", "Desktop entfernen…",
+    "menu.tab.home", "Als Standard-Desktop festlegen",
+    "home.set", "„{1}“ ist jetzt der Standard-Desktop",
     "ask.remove.windows", "Desktop „{1}“ entfernen?`n`nWindows schließt dabei keine Fenster: Die {2} Fenster darauf wandern nach „{3}“.`n`nFarbe, Symbol und Kürzel bleiben gespeichert und sind wieder da, wenn Du erneut einen Desktop „{1}“ anlegst.",
     "ask.remove.empty", "Desktop „{1}“ entfernen? Es liegen keine Fenster darauf.`n`nFarbe, Symbol und Kürzel bleiben gespeichert und sind wieder da, wenn Du erneut einen Desktop „{1}“ anlegst.",
     "menu.tab.compact", "Kompakt anzeigen (nur Symbol)",
@@ -2017,6 +2019,8 @@ global LANG_EN := Map(
     "prompt.rename.title", "Rename “{1}”",
     "prompt.rename.text", "New name. Colour, icon, abbreviation and compact setting move along:",
     "menu.tab.remove", "Remove desktop…",
+    "menu.tab.home", "Set as default desktop",
+    "home.set", "“{1}” is now the default desktop",
     "ask.remove.windows", "Remove the desktop “{1}”?`n`nWindows closes no windows when doing so: its {2} windows move to “{3}”.`n`nColour, icon and abbreviation stay saved and come back if you create a desktop called “{1}” again.",
     "ask.remove.empty", "Remove the desktop “{1}”? There are no windows on it.`n`nColour, icon and abbreviation stay saved and come back if you create a desktop called “{1}” again.",
     "menu.tab.compact", "Compact (icon only)",
@@ -3661,6 +3665,10 @@ ShowContextMenu(num, *) {
         MenuHint(m, T("menu.tab.look"), ClickHint(T("key.ctrl")))
         m.Add(T("menu.tab.rename"), PromptRename.Bind(num))
         MenuGlyph(m, T("menu.tab.rename"), "E70F")
+        m.Add(T("menu.tab.home"), SetHomeDesk.Bind(num))
+        MenuGlyph(m, T("menu.tab.home"), "E80F")
+        if (HomeDeskNum() = num)
+            m.Check(T("menu.tab.home"))
         m.Add(T("menu.tab.remove"), RemoveDesktopAsk.Bind(num))
         MenuGlyph(m, T("menu.tab.remove"), "E74D")
         if (GetDesktopCount() < 2)
@@ -4627,6 +4635,23 @@ PromptRename(num, *) {
     SyncDesktopIds()
     RebuildAll()
 }
+; Standard-Desktop: Sammelstelle fuer Fenster ohne eigenen Platz (beim Entfernen eines Desktops,
+; beim Verteilen von Claude-Chats ohne passenden Desktop). [View] HomeDesk=Name; ohne Eintrag
+; ein Desktop namens "Standard". -1 = keiner.
+HomeDeskNum() {
+    name := ""
+    try name := IniRead(CONF["IniPath"], "View", "HomeDesk", "")
+    if (name = "")
+        name := "Standard"
+    Loop GetDesktopCount()
+        if (NormName(GetDesktopNameRaw(A_Index - 1)) = NormName(name))
+            return A_Index - 1
+    return -1
+}
+SetHomeDesk(num, *) {
+    IniSet("View", "HomeDesk", GetDesktopNameRaw(num))
+    ToastShow(num, T("home.set", GetDesktopNameRaw(num)), 0xE80F)
+}
 ; Tab-Menue: Desktop entfernen. Windows schliesst dabei keine Fenster, sondern schiebt sie
 ; auf den Nachbarn - deshalb vorher klar sagen, wie viele wohin wandern. Die Einstellungen
 ; bleiben in der settings.ini: ein neuer Desktop gleichen Namens bekommt sie zurueck.
@@ -4635,6 +4660,8 @@ RemoveDesktopAsk(num, *) {
     if (cnt < 2 || num < 0 || num >= cnt)
         return
     fb := (num > 0) ? num - 1 : 1
+    if ((home := HomeDeskNum()) >= 0 && home != num)
+        fb := home                                  ; Fenster wandern auf den Standard-Desktop
     name := GetDesktopNameRaw(num), fbName := GetDesktopNameRaw(fb)
     wins := WindowsOnDesktop(num).Length
     txt := wins ? T("ask.remove.windows", name, wins, fbName) : T("ask.remove.empty", name)
@@ -7682,15 +7709,16 @@ ClaudeSendTo(num, *) {
 ; Projektkuerzel schicken. Chats ohne passenden Desktop bleiben hier; Chats auf anderen Desktops
 ; werden nicht angefasst.
 ClaudeDistribute(*) {
-    cur := GetCurrentDesktop(), targets := Map(), moved := 0
+    cur := GetCurrentDesktop(), targets := Map(), moved := 0, home := HomeDeskNum()
     for h in ClaudeDeskChats(cur) {
-        if (!RegExMatch(WinGetTitle("ahk_id " h), "\[([^\]]+)\]", &m))
-            continue
-        d := ClaudeDeskFor(m[1])
+        tag := RegExMatch(WinGetTitle("ahk_id " h), "\[([^\]]+)\]", &m) ? m[1] : ""
+        d := (tag != "") ? ClaudeDeskFor(tag) : -1
+        if (d < 0)                                  ; kein passender Desktop: auf den Standard-Desktop
+            d := home, tag := (home >= 0) ? ClaudeTag(GetDesktopNameRaw(home), home) : ""
         if (d < 0 || d = cur)
             continue
         VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", d), moved++
-        targets[d] := m[1]
+        targets[d] := tag
     }
     if (!moved)
         return ToastShow(cur, T("claude.distnone"), 0xE8A9)

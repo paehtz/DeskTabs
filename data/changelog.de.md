@@ -2,6 +2,7 @@
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
 ## 1.1.23
+- **Standard-Desktop:** Tab-Menü › *Als Standard-Desktop festlegen* (ohne Festlegung gilt ein Desktop namens „Standard“). Entfernst Du einen Desktop, wandern seine Fenster dorthin statt auf den Nachbarn, und beim Verteilen der Claude-Chats landen Chats ohne passenden Desktop dort.
 - **Geschlossene Desktops wieder öffnen:** Entfernst Du einen Desktop über sein Tab-Menü, merkt sich DeskTabs ihn. Unter ≡ › *Neuer Desktop* kannst Du ihn später per Knopf wieder öffnen, mit Name, Farbe, Symbol, Kürzel und Anordnungen, und er erscheint an seiner alten Stelle.
 - **Ruhiger Desktop-Wechsel:** Wen beim Wechsel mit Strg+Win+Pfeil das Schieben der Bildschirme stört, schaltet unter *Weitere Einstellungen* „Strg+Win+Pfeil ohne Animation wechseln“ ein. Dann springt DeskTabs direkt zum Nachbar-Desktop, die übrigen Windows-Animationen bleiben an.
 - **Mehr Platz für Claude-Chats auf dem Hauptbildschirm:** Beim Ordnen (Alt + Klick auf die Claude-Kachel) bekommt ein Chat auch auf dem Hauptbildschirm ein Drittel der Breite statt eines Viertels. Drei Chats füllen den Bildschirm, erst ab vier werden sie schmaler. Ein Chat mit Seitenbrowser zählt wie zwei: neben einem zweiten Chat bekommt er zwei Drittel.
