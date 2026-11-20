@@ -1507,7 +1507,9 @@ global gIniGen := 0            ; zaehlt eigene Schreibzugriffe auf settings.ini 
 global gFsHit := ""            ; Fenster, das zuletzt als Vollbild galt (nur fuer _debug.txt)
 global gStripe := 0           ; Register-Form: Kante ueber der Taskleiste (eigenes Fenster)
 global gSnow := 0             ; Weihnachtsschnee: laufender Flockenschauer
-global gClaudeStat := Map()   ; je Desktop: Claude-Sitzungen, die warten / laufen / ungelesen sind
+global gClaudeStat := Map()   ; je Desktop: Claude-Sitzungen, die auf Eingabe warten (w) / laufen (r)
+global gClaudeDone := Map()   ; Desktops, auf denen alles fertig ist, seit sie zuletzt besucht wurden
+global gClaudePulse := true   ; Pulsieren des Punkts "laeuft"
 global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
@@ -5782,15 +5784,23 @@ RenderBar(force := false) {
         ; Fenster wird auf diesen Tab gezogen: kraeftig getoent mit Rahmen in der Desktop-Farbe
         if (gDragHwnd && item["num"] = gDragTipNum)
             StrokeRoundRect(g, x, y, w, h, r, ARGB(col), Max(2, px(2)))
-        ; Programm auf diesem Desktop blinkt: oranger Punkt oben rechts (wie in der Taskleiste)
+        ; Programm auf diesem Desktop blinkt in der Taskleiste: blaues Quadrat oben rechts. Bewusst
+        ; anders als die runden Claude-Signale (rot/gelb/grau): andere Farbe, andere Form, und
+        ; steht ein Claude-Signal da, rueckt das Quadrat links daneben
         if (gAttention.Has(item["num"]) && !active) {
-            dr := Max(3, px(4)), dcx := x + w - px(9), dcy := y + px(9), rg := Max(1, px(1.5))
-            FillRoundRect(g, dcx - dr - rg, dcy - dr - rg, 2 * (dr + rg), 2 * (dr + rg), dr + rg, ARGB(item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg))
-            FillRoundRect(g, dcx - dr, dcy - dr, 2 * dr, 2 * dr, dr, ARGB(0xF7630C))
+            dr := Max(3, px(4)), dcx := x + w - px(10), dcy := y + px(9), rg := Max(1, px(1.5))
+            if (ClaudeSignal(item["num"]) != "" && item["label"] != "")
+                dcx -= px(14)
+            FillRoundRect(g, dcx - dr - rg, dcy - dr - rg, 2 * (dr + rg), 2 * (dr + rg), Max(1, px(2)) + rg, ARGB(item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg))
+            FillRoundRect(g, dcx - dr, dcy - dr, 2 * dr, 2 * dr, Max(1, px(2)), ARGB(0x1E6FD9))
         }
         ; Claude-Sitzungen dieses Desktops: Zahlen oben rechts, nur bei vollem Namen im Tab
-        if (gClaudeStat.Has(item["num"]) && item["label"] != "" && InStr(item["label"], GetDesktopNameRaw(item["num"])))
-            DrawClaudeStat(g, gClaudeStat[item["num"]], x + w - px(5), y + px(4), tx)
+        if ((csig := ClaudeSignal(item["num"])) != "") {
+            if (csig = "w")                             ; Rueckfrage: deutlich, auch bei Symbol- und Kuerzel-Tabs
+                StrokeRoundRect(g, x, y, w, h, r, ARGB(0xE5242B), Max(2, px(2)))
+            if (item["label"] != "" && InStr(item["label"], GetDesktopNameRaw(item["num"])))
+                DrawClaudeSignal(g, csig, x + w - px(6), y + px(5), active ? (solid ? solidBg : TintFill((style = "accent") ? CONF["ColActiveBg"] : col)) : item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg)
+        }
         ; fremder Wechsel: Tab blinkt orange, danach bleibt ein oranger Rahmen
         if (item["num"] = gAlertNum) {
             if (gAlertPhase & 1)
@@ -7515,7 +7525,7 @@ ClaudeStatHelper(parent) {
             ExitApp
         if (IniRead(CONF["IniPath"], "View", "ClaudeCode", "0") != "1")
             ExitApp                                          ; Funktionen aus: nichts mehr lesen
-        tags := Map(), seen := Map()
+        seen := Map()
         try for h in WinGetList("ahk_exe claude.exe") {
             if (WinGetTitle(h) != "Claude" || !(WinGetStyle(h) & 0x10000000))
                 continue
@@ -7531,20 +7541,15 @@ ClaudeStatHelper(parent) {
                 if (nm)
                     DllCall("OleAut32\SysFreeString", "Ptr", nm)
                 ObjRelease(e)
-                if (!RegExMatch(s, "^(.*?)\s+(Warte auf Eingabe|Waiting for input|Läuft|Running|Ungelesene Antwort|Unread reply|Unread response)$", &m)
-                    || seen.Has(s) || !RegExMatch(m[1], "\[([^\]]+)\]", &tm))
+                if (!RegExMatch(s, "^(.*?)\s+(Warte auf Eingabe|Waiting for input|Läuft|Running)$", &m) || seen.Has(m[1]))
                     continue
-                seen[s] := true
-                if (!tags.Has(tm[1]))
-                    tags[tm[1]] := [0, 0, 0]
-                k := (m[2] = "Warte auf Eingabe" || m[2] = "Waiting for input") ? 1 : (m[2] = "Läuft" || m[2] = "Running") ? 2 : 3
-                tags[tm[1]][k] += 1
+                seen[m[1]] := (m[2] = "Läuft" || m[2] = "Running") ? "r" : "w"
             }
             ObjRelease(arr), ObjRelease(el)
         }
-        msg := ""
-        for tg, c in tags
-            msg .= tg "`t" c[1] "`t" c[2] "`t" c[3] "`n"
+        msg := ""                                            ; je Sitzung: Name, w (wartet) oder r (laeuft)
+        for nm2, st in seen
+            msg .= nm2 "`t" st "`n"
         if (msg != last) {
             cds := Buffer(A_PtrSize * 3, 0)
             NumPut("UPtr", 0x44545354, cds, 0), NumPut("UInt", (StrLen(msg) + 1) * 2, cds, A_PtrSize)
@@ -7557,34 +7562,77 @@ ClaudeStatHelper(parent) {
         Sleep(10000)
     }
 }
-; Ergebnis des Hilfsprozesses: Kuerzel den Desktops zuordnen und neu zeichnen, wenn sich etwas aendert
+; Ergebnis des Hilfsprozesses auswerten. Zuordnung (Hennings Regel): Hat eine Sitzung ein
+; ausgedocktes Fenster, gehoert sie zu dessen Desktop; lebt sie nur im Hauptfenster, zum
+; Standard-Desktop. Je Desktop zaehlt w (wartet auf Eingabe) und r (laeuft). Laeuft auf einem
+; Desktop nichts mehr, nachdem dort etwas lief, merkt sich gClaudeDone das, bis man ihn besucht.
 ClaudeStatApply(msg) {
-    global gClaudeStat
+    global gClaudeStat, gClaudeDone, gCurrent
     stat := Map()
-    if (CONF["ClaudeCode"])
+    if (CONF["ClaudeCode"]) {
+        winDesk := Map(), dhw := A_DetectHiddenWindows, home := HomeDeskNum()
+        DetectHiddenWindows(true)
+        try for h in WinGetList("ahk_exe claude.exe") {
+            if (!(WinGetStyle(h) & 0x10000000) || (WinGetExStyle(h) & 0x80) || ClaudeIsMain(h))
+                continue
+            winDesk[WinGetTitle("ahk_id " h)] := VD("GetWindowDesktopNumber", "Ptr", h, "Int")
+        }
+        DetectHiddenWindows(dhw)
         Loop Parse, msg, "`n" {
             f := StrSplit(A_LoopField, "`t")
-            if (f.Length < 4 || (d := ClaudeDeskFor(f[1])) < 0)
+            if (f.Length < 2)
+                continue
+            d := winDesk.Has(f[1]) ? winDesk[f[1]] : home
+            if (d < 0)
                 continue
             if (!stat.Has(d))
-                stat[d] := {w: 0, r: 0, u: 0}
-            stat[d].w += f[2], stat[d].r += f[3], stat[d].u += f[4]
+                stat[d] := {w: 0, r: 0}
+            (f[2] = "r") ? stat[d].r += 1 : stat[d].w += 1
         }
+    }
+    for d, old in gClaudeStat                           ; war dort etwas am Laufen und ist jetzt alles still?
+        if (old.r > 0 && (!stat.Has(d) || stat[d].r = 0) && d != gCurrent)
+            gClaudeDone[d] := true
+    for d, st in stat
+        if (st.r > 0 && gClaudeDone.Has(d))
+            gClaudeDone.Delete(d)                       ; laeuft wieder
     gClaudeStat := stat
+    ClaudePulseUpdate()
     RenderBar(true)
 }
-; Drei feste Punkte oben rechts im Tab, von links: wartet auf Eingabe (rot), laeuft (gruen),
-; ungelesene Antwort (blau). Ein Punkt leuchtet, sobald mindestens eine Sitzung des Desktops
-; in diesem Zustand ist; sonst bleibt er als blasser Ring stehen, damit die Stellen fest sind.
-DrawClaudeStat(g, st, right, top, txcol) {
-    d := Max(5, px(7)), gap := Max(2, px(3)), x0 := right - 3 * d - 2 * gap
-    for i, it in [[st.w, 0xE5471D], [st.r, 0x2EA043], [st.u, 0x1E88E5]] {
-        cx := x0 + (i - 1) * (d + gap)
-        if (it[1] > 0)
-            FillRoundRect(g, cx, top, d, d, d / 2, ARGB(it[2]))
-        else
-            StrokeRoundRect(g, cx + 0.5, top + 0.5, d - 1, d - 1, (d - 1) / 2, 0x50000000 | (txcol & 0xFFFFFF), 1)
-    }
+; Ein Signal oben rechts im Tab, nach Wichtigkeit: rot = eine Sitzung wartet auf Deine
+; Entscheidung (dazu ein roter Rahmen um den Tab), gelb = hier lief etwas und ist fertig
+; (bis Du den Desktop besuchst), gruen = es laeuft etwas (Normalzustand, dezent).
+ClaudeSignal(num) {
+    global gClaudeStat, gClaudeDone
+    st := gClaudeStat.Has(num) ? gClaudeStat[num] : 0
+    return (st && st.w > 0) ? "w" : gClaudeDone.Has(num) ? "d" : (st && st.r > 0) ? "r" : ""
+}
+DrawClaudeSignal(g, sig, right, top, under) {
+    global gClaudePulse
+    d := Max(6, px(9)), rg := Max(1, px(1.5)), a := 255
+    col := (sig = "w") ? 0xE5242B : (sig = "d") ? 0xF2B600 : 0x8A857C
+    if (sig = "r")                                      ; laeuft: grauer Punkt, der wie in der Claude-App pulsiert
+        d := Max(5, px(7)), a := gClaudePulse ? 255 : 90
+    FillRoundRect(g, right - d - rg, top - rg, d + 2 * rg, d + 2 * rg, d / 2 + rg, ARGB(under))   ; Freistellung
+    FillRoundRect(g, right - d, top, d, d, d / 2, ARGB(col, a))
+}
+; Takt fuer das Pulsieren, nur solange irgendwo etwas laeuft; ohne Windows-Animationen ruhig
+ClaudePulseTick() {
+    global gClaudePulse := !gClaudePulse
+    RenderBar(true)
+}
+ClaudePulseUpdate() {
+    global gClaudeStat, gClaudePulse
+    any := false
+    for d, st in gClaudeStat
+        any := any || (st.r > 0 && ClaudeSignal(d) = "r")
+    anim := 1
+    DllCall("SystemParametersInfo", "UInt", 0x1042, "UInt", 0, "Int*", &anim, "UInt", 0)   ; SPI_GETCLIENTAREAANIMATION
+    if (any && anim)
+        SetTimer(ClaudePulseTick, 700)
+    else
+        SetTimer(ClaudePulseTick, 0), gClaudePulse := true
 }
 ; Kuerzel der Chats, die auf Desktop num liegen, mit Anzahl, die haeufigsten zuerst
 ClaudeTagsFound(num) {
@@ -7669,6 +7717,11 @@ ClaudeDeskChats(num, &panes := 0, &mains := 0) {
     }
     DetectHiddenWindows(dhw)
     return out
+}
+; Titel eines Fensters, das sich gerade schliessen kann ("" statt Fehler)
+WinTitleSafe(h) {
+    try return WinGetTitle("ahk_id " h)
+    return ""
 }
 ; Hauptfenster der Claude-App (jeder Instanz): Titel genau "Claude", Chats tragen ihren Namen
 ClaudeIsMain(h) {
@@ -7806,7 +7859,7 @@ ClaudeSendTo(num, *) {
         return ClaudeGather(num)
     tags := ClaudeTagList(GetDesktopNameRaw(num)), tag := tags[1], moved := 0
     for h in ClaudeDeskChats(cur)
-        if (ClaudeTitleHasTag(WinGetTitle("ahk_id " h), tags))
+        if (ClaudeTitleHasTag(WinTitleSafe(h), tags))
             VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
     if (!moved)
         return ToastShow(num, T("claude.none", tag), 0xE8A9)
@@ -7820,7 +7873,7 @@ ClaudeSendTo(num, *) {
 ClaudeDistribute(*) {
     cur := GetCurrentDesktop(), targets := Map(), moved := 0, home := HomeDeskNum()
     for h in ClaudeDeskChats(cur) {
-        tag := RegExMatch(WinGetTitle("ahk_id " h), "\[([^\]]+)\]", &m) ? m[1] : ""
+        tag := RegExMatch(WinTitleSafe(h), "\[([^\]]+)\]", &m) ? m[1] : ""
         d := (tag != "") ? ClaudeDeskFor(tag) : -1
         if (d < 0)                                  ; kein passender Desktop: auf den Standard-Desktop
             d := home, tag := (home >= 0) ? ClaudeTag(GetDesktopNameRaw(home), home) : ""
@@ -7870,7 +7923,7 @@ ClaudeGather(num, *) {
     ToastShow(num, T("claude.gathered", wins.Length, tag, moved), 0xECA5)
     rep := "ok: " wins.Length " windows [" tag "] on desktop " (num + 1) " (" desk "), " moved " moved here`n"
     for h in wins
-        rep .= WinGetTitle("ahk_id " h) "`n"
+        try rep .= WinGetTitle("ahk_id " h) "`n"          ; Fenster kann inzwischen zu sein
     return rep
 }
 ; Claude-Chats eines Projekts nach der Nummer im Titel ("[Kuerzel] 3. ...") ueber die
@@ -7896,7 +7949,7 @@ ClaudeSpread(num, *) {
     ToastShow(num, T("claude.spread", wins.Length, tag, mc), 0xECA5)
     rep := "ok: " wins.Length " windows [" tag "] spread over " mc " screen(s)`n"
     for h in order
-        rep .= WinGetTitle("ahk_id " h) "`n"
+        try rep .= WinGetTitle("ahk_id " h) "`n"          ; Fenster kann inzwischen zu sein
     return rep
 }
 ; kleinste Spaltenbreite in Pixeln bei 100 %: automatisch verteilt 660 (seitlich 3 Spalten),
@@ -7907,7 +7960,8 @@ TileMinW(stay := false) => stay ? 640 : 660
 SpreadWins(wins, &mc := 0, tag := "", panes := 0) {
     items := []
     for h in wins {
-        ti := WinGetTitle("ahk_id " h)
+        ti := ""
+        try ti := WinGetTitle("ahk_id " h)                    ; Fenster kann inzwischen zu sein
         k := "~" ti                                             ; ohne Nummer ans Ende
         if (RegExMatch(ti, "\]\s*(\d+)(?:\.(\d+))?", &m))
             k := Format("{:06}.{:06} ", m[1], m[2] = "" ? 0 : m[2]) ti
@@ -8662,6 +8716,9 @@ UpdateHighlight(known := -1) {
         if (A_TickCount - gDeskSince >= Max(1, CONF["TimeLogMinSec"]) * 1000)
             gLastDesk := prev                  ; nur echte Aufenthalte, keine Durchfahrten
         gDeskSince := A_TickCount
+        global gClaudeDone
+        if (gClaudeDone.Has(gCurrent))
+            gClaudeDone.Delete(gCurrent)       ; angekommen: "fertig" gesehen
         if (gAttention.Has(gCurrent))
             gAttention.Delete(gCurrent)        ; angekommen: Punkt erledigt
         if (known < 0) {

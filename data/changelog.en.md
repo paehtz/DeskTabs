@@ -2,7 +2,8 @@
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
 ## 1.1.23
-- **Claude status on the tab:** three dots at the top right of a tab show whether a Claude session of the project is waiting for your input (red), running (green) or has an unread reply (blue). No undocked windows needed; only with the Claude app features turned on.
+- **Claude status on the tab:** a round dot at the top right of a tab shows whether a Claude session is waiting for your decision (red, plus a red frame), has finished (yellow, until you visit the desktop) or is running (grey, pulsing). Sessions without a window of their own count for the default desktop; only with the Claude app features turned on.
+- **Taskbar hint now blue:** when an app on another desktop flashes, its tab shows a blue square instead of an orange dot, so it stands apart from the Claude signals.
 - **Default desktop:** tab menu › *Set as default desktop* (without one, a desktop named “Standard” counts). When you remove a desktop its windows move there instead of to the neighbour, and when spreading Claude chats, chats without a matching desktop end up there.
 - **Reopen closed desktops:** when you remove a desktop from its tab menu, DeskTabs remembers it. Under ≡ › *New desktop* you can reopen it later with one click, with its name, colour, icon, abbreviation and layouts, and it appears at its old position.
 - **Calm desktop switching:** if the sliding screens bother you when switching with Ctrl+Win+Arrow, turn on “Ctrl+Win+Arrow switches without animation” under *More settings*. DeskTabs then jumps straight to the neighbouring desktop, while the other Windows animations stay on.
