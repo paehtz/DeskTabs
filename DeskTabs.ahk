@@ -1626,6 +1626,10 @@ global LANG_DE := Map(
     "menu.set.even", "Gleich breit verteilen",
     "menu.claude.spread", "Auf Bildschirme verteilen",
     "menu.claude.gather", "Chats dieses Projekts hierher holen",
+    "menu.claude.close", "Alle Chatfenster schließen …",
+    "claude.closeask", "{1} ausgedockte Claude-Fenster auf allen Desktops schließen?`n`nNur die Hauptfenster bleiben offen.",
+    "claude.closenone", "Keine ausgedockten Claude-Fenster offen",
+    "claude.closed", "{1} Claude-Fenster geschlossen",
     "menu.claude.tags", "Projektkürzel dieses Desktops: {1} …",
     "prompt.ctag.title", "Projektkürzel für „{1}“",
     "prompt.ctag.found", "In den Chats auf diesem Desktop gefunden: {1}",
@@ -1958,6 +1962,10 @@ global LANG_EN := Map(
     "menu.set.even", "Distribute evenly",
     "menu.claude.spread", "Spread across screens",
     "menu.claude.gather", "Bring this project's chats here",
+    "menu.claude.close", "Close all chat windows …",
+    "claude.closeask", "Close {1} undocked Claude windows on all desktops?`n`nOnly the main windows stay open.",
+    "claude.closenone", "No undocked Claude windows open",
+    "claude.closed", "{1} Claude windows closed",
     "menu.claude.tags", "Project tags of this desktop: {1} …",
     "prompt.ctag.title", "Project tags for “{1}”",
     "prompt.ctag.found", "Found in the chats on this desktop: {1}",
@@ -6686,6 +6694,8 @@ ClaudeTileMenu() {
     MenuHint(m, T("menu.claude.spread"), ClickHint(T("key.ctrl") " + " T("key.shift")))
     m.Add(T("menu.claude.gather"), ClaudeGather.Bind(GetCurrentDesktop()))
     MenuGlyph(m, T("menu.claude.gather"), ClaudeGlyph())
+    m.Add(T("menu.claude.close"), ClaudeCloseChats)
+    MenuGlyph(m, T("menu.claude.close"), "E711")
     tl := ""
     for tg in ClaudeTagList(GetDesktopNameRaw(GetCurrentDesktop()), GetCurrentDesktop())
         tl .= (tl = "" ? "" : ", ") tg
@@ -7329,6 +7339,34 @@ ClaudeTitleHasTag(title, tags) {
         if (InStr(title, "[" tg "]"))
             return true
     return false
+}
+; Alle ausgedockten Claude-Fenster schliessen (Chats und Bereiche, auf allen Desktops, jeder
+; Instanz), nur die Hauptfenster bleiben. Danach startet die Claude-App nicht mehr mit einem
+; Schwall alter Fenster auf einem Desktop. Mit Rueckfrage, die Chats selbst bleiben in der App.
+ClaudeCloseChats(*) {
+    list := [], dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)                       ; Fenster anderer Desktops gelten sonst als versteckt
+    try for h in WinGetList("ahk_exe claude.exe") {
+        if (!(WinGetStyle(h) & 0x10000000) || DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr")
+            || (WinGetExStyle(h) & 0x80))           ; unsichtbar, Unterfenster, Werkzeugfenster
+            continue
+        if (ClaudeIsMain(h) || PinState(h) >= 1)    ; Hauptfenster bleiben
+            continue
+        list.Push(h)
+    }
+    cur := GetCurrentDesktop()
+    if (!list.Length) {
+        DetectHiddenWindows(dhw)
+        return ToastShow(cur, T("claude.closenone"), 0xE8A9)
+    }
+    if (MsgBox(T("claude.closeask", list.Length), "DeskTabs", 0x24) != "Yes") {
+        DetectHiddenWindows(dhw)
+        return
+    }
+    for h in list
+        try PostMessage(0x10, 0, 0, , "ahk_id " h)  ; WM_CLOSE, wie das X des Fensters
+    DetectHiddenWindows(dhw)
+    ToastShow(cur, T("claude.closed", list.Length), 0xECA5)
 }
 ; Kuerzel der Chats, die auf Desktop num liegen, mit Anzahl, die haeufigsten zuerst
 ClaudeTagsFound(num) {
