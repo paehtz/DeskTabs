@@ -1510,6 +1510,8 @@ global gSnow := 0             ; Weihnachtsschnee: laufender Flockenschauer
 global gClaudeStat := Map()   ; je Desktop: Claude-Sitzungen, die auf Eingabe warten (w) / laufen (r)
 global gClaudeDone := Map()   ; Desktops, auf denen alles fertig ist, seit sie zuletzt besucht wurden
 global gClaudePulse := true   ; Pulsieren des Punkts "laeuft"
+global gHookSess := Map()     ; Plugin: Stand je Claude-Sitzung {st: r|w|d|x, t: Zeitstempel}
+global gHookActive := false   ; Plugin liefert (dann kein Auslesen der Seitenleiste)
 global gShortcutsGui := 0     ; Fenster "Tastenkuerzel und Gesten"
 global gPadX := 18          ; aktueller Innenabstand der Tabs (BuildBar passt ihn an den Platz an)
 global gOrdCache := Map()    ; Desktop-Index -> feste laufende Nummer (DeskOrdinal)
@@ -1630,6 +1632,9 @@ global LANG_DE := Map(
     "menu.claude.spread", "Auf Bildschirme verteilen",
     "menu.claude.gather", "Chats dieses Projekts hierher holen",
     "menu.claude.close", "Alle Chatfenster schließen …",
+    "menu.claude.plugin", "Status-Plugin für Claude Code einrichten …",
+    "plugin.done", "Das Plugin liegt jetzt in:`n{1}`n`nInstallieren in jeder Claude-Instanz, im Terminal:`n`nclaude plugin marketplace add `"{1}`"`nclaude plugin install desktabs-status@desktabs`n`nDanach die Claude-App neu starten. Ab dann melden die Sitzungen ihren Stand sofort, DeskTabs liest die Seitenleiste nicht mehr aus.",
+    "plugin.fail", "Das Plugin konnte nicht angelegt werden:`n{1}",
     "claude.closeask", "{1} ausgedockte Claude-Fenster auf allen Desktops schließen?`n`nNur die Hauptfenster bleiben offen.",
     "claude.closenone", "Keine ausgedockten Claude-Fenster offen",
     "claude.closed", "{1} Claude-Fenster geschlossen",
@@ -1972,6 +1977,9 @@ global LANG_EN := Map(
     "menu.claude.spread", "Spread across screens",
     "menu.claude.gather", "Bring this project's chats here",
     "menu.claude.close", "Close all chat windows …",
+    "menu.claude.plugin", "Set up the status plugin for Claude Code …",
+    "plugin.done", "The plugin is now in:`n{1}`n`nInstall it in every Claude instance, in a terminal:`n`nclaude plugin marketplace add `"{1}`"`nclaude plugin install desktabs-status@desktabs`n`nThen restart the Claude app. From then on the sessions report their state immediately and DeskTabs no longer reads the sidebar.",
+    "plugin.fail", "The plugin could not be created:`n{1}",
     "claude.closeask", "Close {1} undocked Claude windows on all desktops?`n`nOnly the main windows stay open.",
     "claude.closenone", "No undocked Claude windows open",
     "claude.closed", "{1} Claude windows closed",
@@ -2248,6 +2256,8 @@ T(key, args*) {
 }
 
 ; ------------------------------- Start --------------------------------------
+if (A_Args.Length && A_Args[1] = "/hook")            ; von Claude Code gestartet (Plugin desktabs-status)
+    ClaudeHookMain()
 if (A_Args.Length && A_Args[1] = "/claudestat")      ; Hilfsprozess (siehe ClaudeStatHelper), nie eine Leiste
     ClaudeStatHelper(A_Args.Length > 1 ? Integer(A_Args[2]) : 0)
 if (A_Args.Length && A_Args[1] = "/cmd")
@@ -2316,7 +2326,10 @@ Main() {
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
     ApplyCalmSwitch()                        ; ggf. Strg+Win+Pfeil selbst uebernehmen (ohne Animation)
-    ClaudeStatStart()                        ; Hilfsprozess: Status der Claude-Sitzungen fuer die Punkte im Tab
+    ClaudeHookLoad()                         ; Stand aus dem Plugin (falls eingerichtet)
+    global gHookActive
+    if (!gHookActive)
+        ClaudeStatStart()                    ; sonst Hilfsprozess: Seitenleiste auslesen
     InitAttentionWatch()                     ; blinkende Programme auf anderen Desktops
     InitDragWatch()                          ; Fenster per Titelleiste auf einen Tab ziehen
 }
@@ -2384,8 +2397,10 @@ SetView(key, val) {
         ApplyCalmSwitch()
     if (key = "ClaudeCode") {
         global gClaudeStat := Map()                 ; aus: Punkte weg, der Hilfsprozess beendet sich selbst
-        if (val)
+        if (val && !gHookActive)
             ClaudeStatStart()
+        else if (val)
+            ClaudeHookRecalc()
     }
     if (key = "Language") {
         InitLanguage()
@@ -5784,15 +5799,15 @@ RenderBar(force := false) {
         ; Fenster wird auf diesen Tab gezogen: kraeftig getoent mit Rahmen in der Desktop-Farbe
         if (gDragHwnd && item["num"] = gDragTipNum)
             StrokeRoundRect(g, x, y, w, h, r, ARGB(col), Max(2, px(2)))
-        ; Programm auf diesem Desktop blinkt in der Taskleiste: blaues Quadrat oben rechts. Bewusst
+        ; Programm auf diesem Desktop blinkt in der Taskleiste: blauer Punkt oben rechts. Bewusst
         ; anders als die runden Claude-Signale (rot/gelb/grau): andere Farbe, andere Form, und
-        ; steht ein Claude-Signal da, rueckt das Quadrat links daneben
+        ; steht ein Claude-Signal da, rueckt der blaue Punkt links daneben
         if (gAttention.Has(item["num"]) && !active) {
             dr := Max(3, px(4)), dcx := x + w - px(10), dcy := y + px(9), rg := Max(1, px(1.5))
             if (ClaudeSignal(item["num"]) != "" && item["label"] != "")
                 dcx -= px(14)
-            FillRoundRect(g, dcx - dr - rg, dcy - dr - rg, 2 * (dr + rg), 2 * (dr + rg), Max(1, px(2)) + rg, ARGB(item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg))
-            FillRoundRect(g, dcx - dr, dcy - dr, 2 * dr, 2 * dr, Max(1, px(2)), ARGB(0x1E6FD9))
+            FillRoundRect(g, dcx - dr - rg, dcy - dr - rg, 2 * (dr + rg), 2 * (dr + rg), dr + rg, ARGB(item["hover"] ? Mix(CONF["ColHoverBg"], bg, CONF["HoverPct"]) : bg))
+            FillRoundRect(g, dcx - dr, dcy - dr, 2 * dr, 2 * dr, dr, ARGB(0x1E6FD9))
         }
         ; Claude-Sitzungen dieses Desktops: Zahlen oben rechts, nur bei vollem Namen im Tab
         if ((csig := ClaudeSignal(item["num"])) != "") {
@@ -6827,6 +6842,8 @@ ClaudeTileMenu() {
     MenuGlyph(m, T("menu.claude.gather"), ClaudeGlyph())
     m.Add(T("menu.claude.close"), ClaudeCloseChats)
     MenuGlyph(m, T("menu.claude.close"), "E711")
+    m.Add(T("menu.claude.plugin"), ClaudePluginWrite)
+    MenuGlyph(m, T("menu.claude.plugin"), "EA86")
     tl := ""
     for tg in ClaudeTagList(GetDesktopNameRaw(GetCurrentDesktop()), GetCurrentDesktop())
         tl .= (tl = "" ? "" : ", ") tg
@@ -7575,7 +7592,7 @@ ClaudeStatApply(msg) {
         try for h in WinGetList("ahk_exe claude.exe") {
             if (!(WinGetStyle(h) & 0x10000000) || (WinGetExStyle(h) & 0x80) || ClaudeIsMain(h))
                 continue
-            winDesk[WinGetTitle("ahk_id " h)] := VD("GetWindowDesktopNumber", "Ptr", h, "Int")
+            winDesk[WinTitleSafe(h)] := VD("GetWindowDesktopNumber", "Ptr", h, "Int")
         }
         DetectHiddenWindows(dhw)
         Loop Parse, msg, "`n" {
@@ -7599,6 +7616,152 @@ ClaudeStatApply(msg) {
     gClaudeStat := stat
     ClaudePulseUpdate()
     RenderBar(true)
+}
+; ------------------------- Claude-Status per Plugin (Hooks) -------------------------
+; Statt die Seitenleiste auszulesen, meldet Claude Code selbst: Das Plugin "desktabs-status"
+; startet bei jedem Ereignis "DeskTabs /hook" (asynchron, Claude wartet nicht). Der Hook liest
+; das Ereignis von stdin, schreibt den Stand der Sitzung in eine kleine Datei und meldet ihn der
+; laufenden Leiste. Die Leiste findet ueber die Sitzungsdateien der Claude-App den Titel der
+; Sitzung (= Fenstertitel) und damit den Desktop. Laeuft das Plugin, schweigt der Hilfsprozess.
+ClaudeHookDir() => EnvGet("LOCALAPPDATA") "\DeskTabs\claude-status"
+ClaudeHookMain() {
+    js := ""
+    try js := FileOpen("*", "r", "UTF-8").Read()
+    sid := JsonField(js, "session_id"), ev := JsonField(js, "hook_event_name"), tool := JsonField(js, "tool_name")
+    if (sid = "" || !RegExMatch(sid, "^[\w-]+$"))
+        ExitApp
+    st := (ev = "UserPromptSubmit" || ev = "PostToolUse" || ev = "PostToolUseFailure") ? "r"
+        : (ev = "PermissionRequest" || (ev = "PreToolUse" && tool = "AskUserQuestion")) ? "w"
+        : (ev = "Stop" || ev = "StopFailure") ? "d" : (ev = "SessionEnd") ? "x" : ""
+    if (st = "")
+        ExitApp
+    ; Fertig, aber die letzte Antwort endet mit einer Frage ("Soll ich ... umstellen?"): Die
+    ; Claude-App macht daraus Antwortknoepfe, die Sitzung wartet also auf eine Entscheidung
+    if (st = "d" && RegExMatch(Trim(StrReplace(JsonField(js, "last_assistant_message"), "*", ""), " `t`r`n"), "\?\s*$"))
+        st := "w"
+    stamp := A_Now Format("{:03}", A_MSec), dir := ClaudeHookDir(), f := dir "\" sid ".txt"
+    try DirCreate(dir)
+    old := ""
+    try old := FileRead(f, "UTF-8")
+    p := StrSplit(old, "|")
+    if (p.Length > 1 && StrCompare(p[2], stamp) > 0)  ; spaeter gestartetes Ereignis war schneller: nichts tun
+        ExitApp
+    try FileOpen(f, "w", "UTF-8-RAW").Write(st "|" stamp)
+    if (h := OtherInstance()) {
+        msg := sid "`t" st "`t" stamp
+        cds := Buffer(A_PtrSize * 3, 0)
+        NumPut("UPtr", 0x4448484B, cds, 0), NumPut("UInt", (StrLen(msg) + 1) * 2, cds, A_PtrSize)
+        NumPut("Ptr", StrPtr(msg), cds, A_PtrSize * 2)
+        try SendMessage(0x4A, 0, cds.Ptr, , "ahk_id " h, , , , 1000)
+    }
+    ExitApp
+}
+JsonField(js, key) => RegExMatch(js, '"' key '"\s*:\s*"((?:\\.|[^"\\])*)"', &m) ? JsonUnescape(m[1]) : ""
+JsonUnescape(s) {
+    while RegExMatch(s, "\\u([0-9a-fA-F]{4})", &m)
+        s := StrReplace(s, m[0], Chr(Integer("0x" m[1])), , , 1)
+    return StrReplace(StrReplace(StrReplace(StrReplace(s, '\"', '"'), "\/", "/"), "\n", " "), "\\", "\")
+}
+; Leiste: Stand je Sitzung aus den Dateien (beim Start) und aus den Meldungen der Hooks
+ClaudeHookLoad() {
+    global gHookSess, gHookActive
+    Loop Files ClaudeHookDir() "\*.txt" {
+        p := StrSplit(FileRead(A_LoopFileFullPath, "UTF-8"), "|")
+        if (p.Length > 1)
+            gHookSess[SubStr(A_LoopFileName, 1, -4)] := {st: p[1], t: p[2]}
+        gHookActive := true
+    }
+    if (gHookActive)
+        ClaudeHookOn()
+}
+ClaudeHookMsg(s) {
+    global gHookSess
+    f := StrSplit(s, "`t")
+    if (f.Length < 3)
+        return
+    if (gHookSess.Has(f[1]) && StrCompare(gHookSess[f[1]].t, f[3]) > 0)
+        return
+    gHookSess[f[1]] := {st: f[2], t: f[3]}
+    ClaudeHookOn()
+    ClaudeHookRecalc()
+}
+; Plugin aktiv: Hilfsprozess beenden, Stand regelmaessig neu zuordnen (Fenster wandern zwischen Desktops)
+ClaudeHookOn() {
+    global gHookActive := true
+    dhw := A_DetectHiddenWindows
+    DetectHiddenWindows(true)
+    try WinClose("DeskTabs Claude-Status ahk_class AutoHotkey")
+    DetectHiddenWindows(dhw)
+    SetTimer(ClaudeHookRecalc, 15000)
+    SetTimer(() => ClaudeHookRecalc(), -1500)       ; gleich einmal, nicht erst nach 15 s
+}
+ClaudeHookRecalc() {
+    global gHookSess
+    if (!CONF["ClaudeCode"])
+        return ClaudeStatApply("")
+    msg := "", now := A_Now
+    for sid, v in gHookSess {
+        if (v.st != "r" && v.st != "w")
+            continue
+        age := DateDiff(now, SubStr(v.t, 1, 14), "Minutes")
+        if ((v.st = "r" && age > 90) || (v.st = "w" && age > 720))
+            continue                                    ; haengengeblieben (App geschlossen, Absturz)
+        if ((title := ClaudeSessionTitle(sid)) != "")
+            msg .= title "`t" v.st "`n"
+    }
+    ClaudeStatApply(msg)
+}
+; Titel einer Sitzung aus den Sitzungsdateien der Claude-App (je Instanz ein Profilordner)
+ClaudeSessionTitle(sid) {
+    static cache := Map(), scanned := 0
+    if (A_TickCount - scanned > 600000)                 ; alle 10 Minuten frisch (Umbenennen)
+        cache := Map(), scanned := 0
+    if (cache.Has(sid))
+        return cache[sid]
+    if (scanned && A_TickCount - scanned < 20000)
+        return ""
+    scanned := A_TickCount
+    for dir in ClaudeSessionDirs()
+        Loop Files dir "\*.json", "R" {
+            head := ""
+            try {
+                fo := FileOpen(A_LoopFileFullPath, "r", "UTF-8")
+                head := fo.Read(4000), fo.Close()
+            }
+            if (RegExMatch(head, '"cliSessionId"\s*:\s*"([^"]+)"', &a) && RegExMatch(head, '"title"\s*:\s*"((?:\\.|[^"\\])*)"', &b))
+                cache[a[1]] := JsonUnescape(b[1])
+        }
+    return cache.Has(sid) ? cache[sid] : ""
+}
+ClaudeSessionDirs() {
+    out := [EnvGet("APPDATA") "\Claude\claude-code-sessions"], seen := Map(), dhw := A_DetectHiddenWindows
+    seen[out[1]] := true
+    DetectHiddenWindows(true)
+    try for h in WinGetList("ahk_exe claude.exe")
+        if (ClaudeIsMain(h) && (inst := ClaudeInstance(h)) != "" && !seen.Has(d := inst "\claude-code-sessions"))
+            out.Push(d), seen[d] := true
+    DetectHiddenWindows(dhw)
+    return out
+}
+; Menue der Claude-Kachel: Plugin-Dateien erzeugen (mit den Pfaden dieser DeskTabs-Installation)
+ClaudePluginWrite(*) {
+    base := EnvGet("LOCALAPPDATA") "\DeskTabs\claude-plugin", pl := base "\desktabs-status"
+    J(s) => StrReplace(StrReplace(s, "\", "\\"), '"', '\"')
+    cmd := A_IsCompiled ? A_ScriptFullPath : A_AhkPath
+    args := A_IsCompiled ? '["/hook"]' : '["' J(A_ScriptFullPath) '", "/hook"]'
+    hk := '{ "type": "command", "command": "' J(cmd) '", "args": ' args ', "async": true, "timeout": 10 }'
+    ev := ""
+    for e in ["UserPromptSubmit", "PermissionRequest", "PostToolUse", "PostToolUseFailure", "Stop", "StopFailure", "SessionEnd"]
+        ev .= '    "' e '": [ { "hooks": [ ' hk ' ] } ],`n'
+    ev .= '    "PreToolUse": [ { "matcher": "AskUserQuestion", "hooks": [ ' hk ' ] } ]`n'
+    try {
+        DirCreate(pl "\.claude-plugin"), DirCreate(pl "\hooks"), DirCreate(base "\.claude-plugin")
+        FileOpen(base "\.claude-plugin\marketplace.json", "w", "UTF-8-RAW").Write('{`n  "name": "desktabs",`n  "owner": { "name": "DeskTabs" },`n  "plugins": [ { "name": "desktabs-status", "source": "./desktabs-status", "description": "Reports the state of Claude Code sessions to DeskTabs" } ]`n}`n')
+        FileOpen(pl "\.claude-plugin\plugin.json", "w", "UTF-8-RAW").Write('{`n  "name": "desktabs-status",`n  "version": "1.0.0",`n  "description": "Reports the state of Claude Code sessions (running, waiting for you, finished) to DeskTabs, which shows it on the desktop tabs."`n}`n')
+        FileOpen(pl "\hooks\hooks.json", "w", "UTF-8-RAW").Write('{`n  "hooks": {`n' ev '  }`n}`n')
+    } catch as e
+        return MsgBox(T("plugin.fail", e.Message), "DeskTabs", 0x30)
+    MsgBox(T("plugin.done", base), "DeskTabs", 0x40)
 }
 ; Ein Signal oben rechts im Tab, nach Wichtigkeit: rot = eine Sitzung wartet auf Deine
 ; Entscheidung (dazu ein roter Rahmen um den Tab), gelb = hier lief etwas und ist fertig
@@ -7864,7 +8027,7 @@ ClaudeSendTo(num, *) {
     if (!moved)
         return ToastShow(num, T("claude.none", tag), 0xE8A9)
     chats := ClaudeDeskChats(num, &panes)
-    SpreadWins(chats, &mc, tag, panes)
+    SpreadWins(chats, &mc, tag, panes, num)
     ToastShow(num, T("claude.sent", moved, tag), 0xECA5)
 }
 ; Strg+Alt+Klick auf den Griff: alle Claude-Chats des aktuellen Desktops auf die Desktops ihrer
@@ -7886,7 +8049,7 @@ ClaudeDistribute(*) {
         return ToastShow(cur, T("claude.distnone"), 0xE8A9)
     for d, tag in targets {
         chats := ClaudeDeskChats(d, &panes)
-        SpreadWins(chats, &mc, tag, panes)
+        SpreadWins(chats, &mc, tag, panes, d)
     }
     ToastShow(cur, T("claude.distributed", moved, targets.Count), 0xECA5)
 }
@@ -7914,7 +8077,7 @@ ClaudeGather(num, *) {
             VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
     chats := ClaudeDeskChats(num, &panes, &mains)
     ClaudeMainsFront(mains)
-    SpreadWins(chats, &mc, tag, panes)                          ; mit allen Chats des Desktops nach Nummer verteilen
+    SpreadWins(chats, &mc, tag, panes, num)                     ; mit allen Chats des Desktops nach Nummer verteilen
     if (num = GetCurrentDesktop()) {
         SetWinDelay(-1)
         for h in wins
@@ -7940,7 +8103,7 @@ ClaudeSpread(num, *) {
         ToastShow(num, T("claude.none", tag), 0xE8A9)
         return "error: no Claude windows with [" tag "] on desktop " (num + 1)
     }
-    order := SpreadWins(wins, &mc, tag, panes)
+    order := SpreadWins(wins, &mc, tag, panes, num)
     if (num = GetCurrentDesktop()) {
         SetWinDelay(-1)
         for h in order
@@ -7957,7 +8120,7 @@ ClaudeSpread(num, *) {
 TileMinW(stay := false) => stay ? 640 : 660
 ; Fenster nach ihrer Nummer sortiert auf die Bildschirme legen (siehe ClaudeSpread).
 ; Rueckgabe: die Fenster in Reihenfolge, &mc: Zahl der benutzten Bildschirme
-SpreadWins(wins, &mc := 0, tag := "", panes := 0) {
+SpreadWins(wins, &mc := 0, tag := "", panes := 0, num := -1) {
     items := []
     for h in wins {
         ti := ""
@@ -8042,6 +8205,16 @@ SpreadWins(wins, &mc := 0, tag := "", panes := 0) {
                     back.Push(p)
             }
             ClaudePanesBack(back)
+        }
+        ; Standard-Desktop: der Hauptbildschirm gehoert dem Claude-Hauptfenster, die Chats kommen
+        ; auf die Nebenbildschirme (Hennings Regel; gibt es keinen, bleibt alles wie sonst)
+        if (num >= 0 && num = HomeDeskNum() && mons.Length > 1) {
+            side := []
+            for mo in mons
+                if (!mo.prim)
+                    side.Push(mo)
+            if (side.Length)
+                mons := side
         }
         rem := items.Length - solo.Length
         for mo in mons                                          ; erste Reihe: Bildschirm fuer Bildschirm
@@ -8187,8 +8360,14 @@ ReplaceOtherInstance() {
     DetectHiddenWindows(dhw)
 }
 OnCopyData(wParam, lParam, msg, hwnd) {
+    if (NumGet(lParam, 0, "UPtr") = 0x4448484B) {                  ; Hook des Plugins: Stand einer Sitzung
+        SetTimer(ClaudeHookMsg.Bind(StrGet(NumGet(lParam, A_PtrSize * 2, "Ptr"), "UTF-16")), -1)
+        return 1
+    }
     if (NumGet(lParam, 0, "UPtr") = 0x44545354) {                  ; Hilfsprozess: Status der Claude-Sitzungen
-        SetTimer(ClaudeStatApply.Bind(StrGet(NumGet(lParam, A_PtrSize * 2, "Ptr"), "UTF-16")), -1)
+        global gHookActive
+        if (!gHookActive)                                          ; das Plugin hat Vorrang
+            SetTimer(ClaudeStatApply.Bind(StrGet(NumGet(lParam, A_PtrSize * 2, "Ptr"), "UTF-16")), -1)
         return 1
     }
     if (NumGet(lParam, 0, "UPtr") != 0x444B4344)

@@ -3,7 +3,9 @@
 
 ## 1.1.23
 - **Claude-Status im Tab:** Ein runder Punkt oben rechts im Tab zeigt, ob eine Claude-Sitzung auf Deine Entscheidung wartet (rot, dazu ein roter Rahmen), fertig ist (gelb, bis Du den Desktop besuchst) oder gerade läuft (grau, pulsierend). Sitzungen ohne eigenes Fenster zählen zum Standard-Desktop; nur mit eingeschalteten Claude-App-Funktionen.
-- **Taskleisten-Hinweis jetzt blau:** Blinkt ein Programm auf einem anderen Desktop, zeigt dessen Tab ein blaues Quadrat statt eines orangen Punkts, damit es sich klar von den Claude-Signalen abhebt.
+- **Status-Plugin für Claude Code:** Rechtsklick auf die Claude-Kachel › *Status-Plugin für Claude Code einrichten*. Mit dem Plugin melden die Claude-Sitzungen ihren Stand sofort selbst; endet eine Antwort mit einer Frage, wird der Tab rot.
+- **Standard-Desktop beim Verteilen:** Der Hauptbildschirm bleibt frei für das Claude-Hauptfenster, die Chats kommen auf die Nebenbildschirme.
+- **Taskleisten-Hinweis jetzt blau:** Blinkt ein Programm auf einem anderen Desktop, zeigt dessen Tab einen blauen Punkt statt eines orangen, damit es sich klar von den Claude-Signalen abhebt.
 - **Standard-Desktop:** Tab-Menü › *Als Standard-Desktop festlegen* (ohne Festlegung gilt ein Desktop namens „Standard“). Entfernst Du einen Desktop, wandern seine Fenster dorthin statt auf den Nachbarn, und beim Verteilen der Claude-Chats landen Chats ohne passenden Desktop dort.
 - **Geschlossene Desktops wieder öffnen:** Entfernst Du einen Desktop über sein Tab-Menü, merkt sich DeskTabs ihn. Unter ≡ › *Neuer Desktop* kannst Du ihn später per Knopf wieder öffnen, mit Name, Farbe, Symbol, Kürzel und Anordnungen, und er erscheint an seiner alten Stelle.
 - **Ruhiger Desktop-Wechsel:** Wen beim Wechsel mit Strg+Win+Pfeil das Schieben der Bildschirme stört, schaltet unter *Weitere Einstellungen* „Strg+Win+Pfeil ohne Animation wechseln“ ein. Dann springt DeskTabs direkt zum Nachbar-Desktop, die übrigen Windows-Animationen bleiben an.
