@@ -1633,7 +1633,13 @@ global LANG_DE := Map(
     "menu.claude.gather", "Chats dieses Projekts hierher holen",
     "menu.claude.close", "Alle Chatfenster schließen …",
     "menu.claude.plugin", "Status-Plugin für Claude Code einrichten …",
-    "plugin.done", "Das Plugin liegt jetzt in:`n{1}`n`nInstallieren in jeder Claude-Instanz, im Terminal:`n`nclaude plugin marketplace add `"{1}`"`nclaude plugin install desktabs-status@desktabs`n`nDanach die Claude-App neu starten. Ab dann melden die Sitzungen ihren Stand sofort, DeskTabs liest die Seitenleiste nicht mehr aus.",
+    "plugin.intro", "Das Plugin liegt jetzt in:`n{1}`n`nInstalliert wird es mit diesen zwei Befehlen (in jeder Claude-Instanz einmal):",
+    "plugin.after", "„Jetzt installieren“ führt sie in einem Konsolenfenster für die Standard-Instanz von Claude aus. Für eine weitere Instanz (eigener CLAUDE_CONFIG_DIR) die Befehle kopieren und dort ausführen. Danach die Claude-App neu starten: Ab dann melden die Sitzungen ihren Stand sofort.",
+    "plugin.install", "Jetzt installieren",
+    "plugin.copy", "Befehle kopieren",
+    "plugin.copied", "Befehle in der Zwischenablage",
+    "plugin.close", "Schließen",
+    "plugin.restart", "Fertig. Bitte die Claude-App neu starten.",
     "plugin.fail", "Das Plugin konnte nicht angelegt werden:`n{1}",
     "claude.closeask", "{1} ausgedockte Claude-Fenster auf allen Desktops schließen?`n`nNur die Hauptfenster bleiben offen.",
     "claude.closenone", "Keine ausgedockten Claude-Fenster offen",
@@ -1978,7 +1984,13 @@ global LANG_EN := Map(
     "menu.claude.gather", "Bring this project's chats here",
     "menu.claude.close", "Close all chat windows …",
     "menu.claude.plugin", "Set up the status plugin for Claude Code …",
-    "plugin.done", "The plugin is now in:`n{1}`n`nInstall it in every Claude instance, in a terminal:`n`nclaude plugin marketplace add `"{1}`"`nclaude plugin install desktabs-status@desktabs`n`nThen restart the Claude app. From then on the sessions report their state immediately and DeskTabs no longer reads the sidebar.",
+    "plugin.intro", "The plugin is now in:`n{1}`n`nIt is installed with these two commands (once in every Claude instance):",
+    "plugin.after", "“Install now” runs them in a console window for the default Claude instance. For another instance (its own CLAUDE_CONFIG_DIR), copy the commands and run them there. Then restart the Claude app: from then on the sessions report their state immediately.",
+    "plugin.install", "Install now",
+    "plugin.copy", "Copy commands",
+    "plugin.copied", "Commands copied",
+    "plugin.close", "Close",
+    "plugin.restart", "Done. Please restart the Claude app.",
     "plugin.fail", "The plugin could not be created:`n{1}",
     "claude.closeask", "Close {1} undocked Claude windows on all desktops?`n`nOnly the main windows stay open.",
     "claude.closenone", "No undocked Claude windows open",
@@ -7761,7 +7773,24 @@ ClaudePluginWrite(*) {
         FileOpen(pl "\hooks\hooks.json", "w", "UTF-8-RAW").Write('{`n  "hooks": {`n' ev '  }`n}`n')
     } catch as e
         return MsgBox(T("plugin.fail", e.Message), "DeskTabs", 0x30)
-    MsgBox(T("plugin.done", base), "DeskTabs", 0x40)
+    ClaudePluginDialog(base)
+}
+; Fenster nach dem Anlegen: Befehle zum Markieren und Kopieren, oder gleich installieren (in einer
+; sichtbaren Konsole, damit man sieht, was passiert; gilt fuer die Standard-Instanz von Claude)
+ClaudePluginDialog(base) {
+    cmds := 'claude plugin marketplace add "' base '"`r`nclaude plugin install desktabs-status@desktabs'
+    g := Gui("+AlwaysOnTop -MinimizeBox -MaximizeBox", "DeskTabs")
+    g.SetFont("s10", "Segoe UI")
+    g.AddText("w520", T("plugin.intro", base))
+    g.SetFont("s10", "Consolas")
+    g.AddEdit("w520 r3 ReadOnly -Wrap", cmds)
+    g.SetFont("s10", "Segoe UI")
+    g.AddText("w520 y+10", T("plugin.after"))
+    g.AddButton("w170 Default", T("plugin.install")).OnEvent("Click", (*) => (g.Destroy(), Run(A_ComSpec ' /k claude plugin marketplace add "' base '" && claude plugin install desktabs-status@desktabs && echo. && echo ' T("plugin.restart"))))
+    g.AddButton("x+10 w170", T("plugin.copy")).OnEvent("Click", (*) => (A_Clipboard := cmds, ToolTip(T("plugin.copied")), SetTimer(() => ToolTip(), -1500)))
+    g.AddButton("x+10 w160", T("plugin.close")).OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    g.Show()
 }
 ; Ein Signal oben rechts im Tab, nach Wichtigkeit: rot = eine Sitzung wartet auf Deine
 ; Entscheidung (dazu ein roter Rahmen um den Tab), gelb = hier lief etwas und ist fertig
