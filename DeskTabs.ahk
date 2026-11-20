@@ -1669,6 +1669,10 @@ global LANG_DE := Map(
     "menu.set.front", "„{1}“ nach vorne holen",
     "prompt.newdesk.title", "Neuer Desktop",
     "prompt.newdesk.text", "Name des neuen Desktops (leer lassen: Windows vergibt „Desktop N“):",
+    "newdesk.create", "Neu anlegen",
+    "newdesk.cancel", "Abbrechen",
+    "newdesk.reopen", "Oder einen geschlossenen Desktop wieder öffnen (Name, Farbe, Symbol und Platz wie vorher):",
+    "newdesk.closedon", "geschlossen am {1}",
     "menu.tab.rename", "Umbenennen…",
     "prompt.rename.title", "„{1}“ umbenennen",
     "prompt.rename.text", "Neuer Name. Farbe, Symbol, Kürzel und Kompakt-Einstellung ziehen mit:",
@@ -2005,6 +2009,10 @@ global LANG_EN := Map(
     "menu.set.front", "Bring “{1}” to front",
     "prompt.newdesk.title", "New desktop",
     "prompt.newdesk.text", "Name of the new desktop (leave empty and Windows calls it “Desktop N”):",
+    "newdesk.create", "Create",
+    "newdesk.cancel", "Cancel",
+    "newdesk.reopen", "Or reopen a closed desktop (name, colour, icon and position as before):",
+    "newdesk.closedon", "closed on {1}",
     "menu.tab.rename", "Rename…",
     "prompt.rename.title", "Rename “{1}”",
     "prompt.rename.text", "New name. Colour, icon, abbreviation and compact setting move along:",
@@ -4531,19 +4539,78 @@ SetDesktopNameUtf8(num, name) {
     StrPut(name, buf, "UTF-8")
     return VD("SetDesktopName", "Int", num, "Ptr", buf, "Int")
 }
-; Hamburger-Menue: neuen Desktop anlegen, gleich benennen und hinwechseln (wie Strg+Win+D)
+; Hamburger-Menue: neuen Desktop anlegen, gleich benennen und hinwechseln (wie Strg+Win+D).
+; Gibt es geschlossene Desktops ([ClosedDesks], siehe RemoveDesktopAsk), bietet das Fenster
+; sie zum Wiederoeffnen an: gleicher Name, damit Farbe, Symbol, Kuerzel und Anordnungen, und
+; wieder an der alten Stelle.
 NewDesktop(*) {
-    ib := InputBox(T("prompt.newdesk.text"), T("prompt.newdesk.title"), "w380 h130")
-    if (ib.Result != "OK")
-        return
-    name := Trim(ib.Value)
+    closed := ClosedDesks()
+    if (!closed.Length) {
+        ib := InputBox(T("prompt.newdesk.text"), T("prompt.newdesk.title"), "w380 h130")
+        if (ib.Result != "OK")
+            return
+        return NewDesktopCreate(Trim(ib.Value))
+    }
+    g := Gui("+AlwaysOnTop -MinimizeBox -MaximizeBox", T("prompt.newdesk.title"))
+    g.SetFont("s10", "Segoe UI")
+    g.AddText("w380", T("prompt.newdesk.text"))
+    ed := g.AddEdit("w380")
+    g.AddButton("w185 Default", T("newdesk.create")).OnEvent("Click", NewDeskFromGui.Bind(g, ed))
+    g.AddButton("x+10 w185", T("newdesk.cancel")).OnEvent("Click", (*) => g.Destroy())
+    g.AddText("xm y+18 w380", T("newdesk.reopen"))
+    for c in closed
+        g.AddButton("xm w380 Left", "  " StrReplace(c.name, "&", "&&") "     · " T("newdesk.closedon", c.date))
+            .OnEvent("Click", ReopenDesktop.Bind(g, c.name, c.pos))
+    g.OnEvent("Escape", (*) => g.Destroy())
+    g.Show()
+}
+NewDeskFromGui(g, ed, *) {
+    name := Trim(ed.Value)
+    g.Destroy()
+    NewDesktopCreate(name)
+}
+; neuen Desktop anlegen und benennen; Rueckgabe: seine Nummer (-1 = fehlgeschlagen)
+NewDesktopCreate(name, go := true) {
     idx := VD("CreateDesktop", "Int")
     if (idx < 0)
-        return
+        return -1
     if (name != "")
         SetDesktopNameUtf8(idx, name)
     SyncDesktopIds()
     RebuildAll()
+    if (go)
+        SwitchToDesktop(idx)
+    return idx
+}
+; Geschlossene Desktops, zuletzt geschlossene zuerst; ohne die, die es gerade wieder gibt
+ClosedDesks() {
+    open := Map(), out := []
+    Loop GetDesktopCount()
+        open[NormName(GetDesktopNameRaw(A_Index - 1))] := true
+    for name, v in ReadIniSection("ClosedDesks") {
+        if (open.Has(NormName(name)))
+            continue
+        p := StrSplit(v, "|")
+        d := (p.Length > 1) ? p[2] : ""
+        out.Push({name: name, pos: Integer(p[1]), when: d
+            , date: (StrLen(d) = 8) ? SubStr(d, 7, 2) "." SubStr(d, 5, 2) "." SubStr(d, 1, 4) : "?"})
+    }
+    SortBy(out, (a1, a2) => StrCompare(a2.when, a1.when))
+    return out
+}
+ReopenDesktop(g, name, pos, *) {
+    g.Destroy()
+    idx := NewDesktopCreate(name, false)
+    if (idx < 0)
+        return
+    pos := Max(0, Min(pos, GetDesktopCount() - 1))
+    if (pos != idx && CanMoveDesktop() && VD("MoveDesktop", "Int", idx, "Int", pos, "Int") = 1) {
+        RemapAfterMove(idx, pos)
+        idx := pos
+        SyncDesktopIds()
+        RebuildAll()
+    }
+    IniDelLoose("ClosedDesks", name)
     SwitchToDesktop(idx)
 }
 ; Tab-Menue: umbenennen, Einstellungen ziehen mit
@@ -4573,8 +4640,23 @@ RemoveDesktopAsk(num, *) {
     txt := wins ? T("ask.remove.windows", name, wins, fbName) : T("ask.remove.empty", name)
     if (MsgBox(txt, "DeskTabs", 0x34 | 0x100 | 0x40000) != "Yes")   ; Ja/Nein, "Nein" vorgewaehlt, im Vordergrund
         return
+    ; Buch fuehren: "Neuer Desktop" bietet ihn spaeter zum Wiederoeffnen an. Farbe und Symbol,
+    ; die nur aus der Reihenfolge kamen, werden festgeschrieben, damit sie zurueckkommen.
+    if (name != "" && !RegExMatch(name, "^Desktop \d+$")) {
+        if (IniLookup("Colors", name) = "")
+            IniSet("Colors", name, Format("{:06X}", DesktopColor(num)))
+        if (IniLookup("Icons", name) = "" && CONF["DefaultIcons"] = 1)
+            try IniSet("Icons", name, DefaultGlyph(num))
+        IniSet("ClosedDesks", name, num "|" A_YYYY A_MM A_DD)
+    }
+    ; Den Desktop, auf dem man gerade ist, erst verlassen: Entfernte Windows ihn unter uns, lief
+    ; der eigene Wechsel-Hinweis mitten in den Neuaufbau, und die Leiste blieb haengen.
+    if (num = GetCurrentDesktop()) {
+        SwitchToDesktop(fb)
+        Sleep(400)
+    }
     VD("RemoveDesktop", "Int", num, "Int", fb, "Int")
-    RebuildAll()
+    SetTimer(RebuildAll, -400)                      ; erst, wenn der Explorer fertig ist
 }
 
 ; Woraus ein Tab gebaut wurde; aendert sich das, muss die Leiste neu vermessen werden
