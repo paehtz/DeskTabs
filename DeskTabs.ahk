@@ -8055,8 +8055,9 @@ ClaudeSendTo(num, *) {
             VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
     if (!moved)
         return ToastShow(num, T("claude.none", tag), 0xE8A9)
-    chats := ClaudeDeskChats(num, &panes)
+    chats := ClaudeDeskChats(num, &panes, &mains)
     SpreadWins(chats, &mc, tag, panes, num)
+    ClaudeRecloak(num, chats, panes, mains)
     ToastShow(num, T("claude.sent", moved, tag), 0xECA5)
 }
 ; Strg+Alt+Klick auf den Griff: alle Claude-Chats des aktuellen Desktops auf die Desktops ihrer
@@ -8077,8 +8078,9 @@ ClaudeDistribute(*) {
     if (!moved)
         return ToastShow(cur, T("claude.distnone"), 0xE8A9)
     for d, tag in targets {
-        chats := ClaudeDeskChats(d, &panes)
+        chats := ClaudeDeskChats(d, &panes, &mains)
         SpreadWins(chats, &mc, tag, panes, d)
+        ClaudeRecloak(d, chats, panes, mains)
     }
     ToastShow(cur, T("claude.distributed", moved, targets.Count), 0xECA5)
 }
@@ -8107,6 +8109,7 @@ ClaudeGather(num, *) {
     chats := ClaudeDeskChats(num, &panes, &mains)
     ClaudeMainsFront(mains)
     SpreadWins(chats, &mc, tag, panes, num)                     ; mit allen Chats des Desktops nach Nummer verteilen
+    ClaudeRecloak(num, chats, panes, mains)
     if (num = GetCurrentDesktop()) {
         SetWinDelay(-1)
         for h in wins
@@ -8149,6 +8152,34 @@ ClaudeSpread(num, *) {
 TileMinW(stay := false) => stay ? 640 : 660
 ; Fenster nach ihrer Nummer sortiert auf die Bildschirme legen (siehe ClaudeSpread).
 ; Rueckgabe: die Fenster in Reihenfolge, &mc: Zahl der benutzten Bildschirme
+; Nach dem Verschieben auf einen ANDEREN Desktop: Windows fuehrt manche Fenster schon unter dem
+; Ziel-Desktop, blendet sie auf dem aktuellen aber nicht aus (gemessen 22.11.: zwei Chats auf dem
+; rechten Bildschirm, DWMWA_CLOAKED = 0; ein Klick sprang erst zum Ziel-Desktop). Einmal hierher und
+; wieder zurueck verschoben, blendet Windows sie aus. Zwei Durchgaenge, weil Windows verzoegert reagiert.
+ClaudeRecloak(d, lists*) {
+    cur := GetCurrentDesktop()
+    if (d < 0 || d = cur)
+        return
+    Loop 2 {
+    Sleep(A_Index = 1 ? 80 : 300)                               ; Windows setzt den Zustand verzoegert
+    for lst in lists {
+        if (!IsObject(lst))
+            continue
+        for h in lst {
+            if (!WinExist("ahk_id " h) || PinState(h))
+                continue
+            if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") != d)
+                continue
+            cl := 0
+            try DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cl, "UInt", 4)   ; DWMWA_CLOAKED
+            if (cl)
+                continue                                        ; ordentlich ausgeblendet
+            VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", cur)
+            VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", d)
+        }
+    }
+    }
+}
 SpreadWins(wins, &mc := 0, tag := "", panes := 0, num := -1) {
     items := []
     for h in wins {
