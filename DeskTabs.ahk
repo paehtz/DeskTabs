@@ -106,8 +106,9 @@ global CONF := Map(
     "QuietFlash",     1,       ; 1 = dessen Blinken beenden, damit es nicht in der Taskleiste dieses Desktops auftaucht
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "ClaudeCode",     0,       ; 1 = Claude-Code-Funktionen (Chat-Fenster am Projektkuerzel, gleich breit verteilen, /cmd)
+    "DockStart",      1,       ; 1 = Leiste dockt links vom Start-Knopf an (zentrierte Taskleiste), mit Trennstrich
     "CalmSwitch",     0,       ; 1 = Strg+Win+Pfeil wechselt ueber DeskTabs, ohne die Schiebe-Animation von Windows
-    "Snow",           1,       ; 1 = in der Weihnachtszeit (1. Advent bis 26.12.) Schnee beim Klick auf einen Tab
+    "Snow",           1,       ; Schnee beim Klick auf einen Tab: 1 = automatisch (1. Advent bis 26.12.), 2 = immer, 0 = nie
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
 )
 
@@ -1519,6 +1520,7 @@ global gHoverTipNum := -1    ; Tab, dessen voller Name gerade als Kurzinfo anste
 global gDragCb := 0, gDragHook := 0, gDragHwnd := 0, gDragPlace := 0, gDragPin := 0, gDragTipNum := -1   ; Fenster auf Tab ziehen
 global gLastDesk := -1, gDeskSince := A_TickCount   ; zuletzt genutzter Desktop (fuer "zurueck")
 global gCompact := "full"    ; aktuell dargestellte Stufe: "full" | "short" | "icon"
+global gDockR := 0           ; Andocken am Start-Knopf: rechte Kante der Leiste (physische px), 0 = aus
 global gTaskbarW := 0        ; Breite der Primaer-Taskleiste (fuer das Breiten-Budget im auto-Modus)
 
 ; ------------------------------ Sprache -------------------------------------
@@ -1626,8 +1628,12 @@ global LANG_DE := Map(
     "sc.k.altgrip", "{1} + Klick auf den Griff ≡",
     "sc.d.altgrip", "Claude-Chats auf jedem Bildschirm gleich breit verteilen",
     "menu.claudecode", "Claude-App-Funktionen",
+    "menu.dockstart", "Links vom Start-Knopf andocken",
     "menu.calmswitch", "Strg+Win+Pfeil ohne Animation wechseln",
-    "menu.snow", "❄ Schnee (Weihnachtszeit)",
+    "menu.snow", "❄ Schnee",
+    "menu.snow.auto", "Automatisch (1. Advent bis 26. Dezember)",
+    "menu.snow.on", "An",
+    "menu.snow.off", "Aus",
     "menu.set.even", "Gleich breit verteilen",
     "menu.claude.spread", "Auf Bildschirme verteilen",
     "menu.claude.gather", "Chats dieses Projekts hierher holen",
@@ -1977,8 +1983,12 @@ global LANG_EN := Map(
     "sc.k.altgrip", "{1} + click the grip ≡",
     "sc.d.altgrip", "distribute the Claude chats evenly on each screen",
     "menu.claudecode", "Claude app features",
+    "menu.dockstart", "Dock left of the Start button",
     "menu.calmswitch", "Ctrl+Win+Arrow switches without animation",
-    "menu.snow", "❄ Snow (Christmas season)",
+    "menu.snow", "❄ Snow",
+    "menu.snow.auto", "Automatic (first Sunday of Advent to 26 December)",
+    "menu.snow.on", "On",
+    "menu.snow.off", "Off",
     "menu.set.even", "Distribute evenly",
     "menu.claude.spread", "Spread across screens",
     "menu.claude.gather", "Bring this project's chats here",
@@ -2338,6 +2348,7 @@ Main() {
     ApplyHotkeys()                           ; Direktsprung-Tasten, falls eingeschaltet
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
     ApplyCalmSwitch()                        ; ggf. Strg+Win+Pfeil selbst uebernehmen (ohne Animation)
+    SetTimer(DockWatch, 2000)                ; Start-Knopf wandert mit der Zahl der Taskleisten-Symbole
     ClaudeHookLoad()                         ; Stand aus dem Plugin (falls eingerichtet)
     global gHookActive
     if (!gHookActive)
@@ -2378,9 +2389,9 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash", "CalmSwitch", "Snow"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash", "CalmSwitch", "Snow", "DockStart"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
-        if (v = "0" || v = "1")
+        if (v = "0" || v = "1" || (key = "Snow" && v = "2"))
             CONF[key] := Integer(v)
     }
     v := IniRead(CONF["IniPath"], "View", "CallHotkey", "-")
@@ -3910,14 +3921,20 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.claudecode"), ToggleView.Bind("ClaudeCode"))
     if (CONF["ClaudeCode"])
         xm.Check(T("menu.claudecode"))
+    xm.Add(T("menu.dockstart"), ToggleView.Bind("DockStart"))
+    if (CONF["DockStart"])
+        xm.Check(T("menu.dockstart"))
     xm.Add(T("menu.calmswitch"), ToggleView.Bind("CalmSwitch"))
     if (CONF["CalmSwitch"])
         xm.Check(T("menu.calmswitch"))
-    if (SnowSeason()) {                         ; nur in der Weihnachtszeit sichtbar
-        xm.Add(T("menu.snow"), ToggleView.Bind("Snow"))
-        if (CONF["Snow"])
-            xm.Check(T("menu.snow"))
+    snm := Menu()                               ; Schnee: automatisch in der Weihnachtszeit, immer oder nie
+    for i, v in [1, 2, 0] {
+        lbl := T(["menu.snow.auto", "menu.snow.on", "menu.snow.off"][i])
+        snm.Add(lbl, SetViewStr.Bind("Snow", v))
+        if (CONF["Snow"] = v)
+            snm.Check(lbl)
     }
+    xm.Add(T("menu.snow"), snm)
     lgm := Menu()
     lgm.Add(T("menu.report"), OpenTimeReport)
     MenuGlyph(lgm, T("menu.report"), "E9D2")
@@ -5090,6 +5107,67 @@ LargerLevel(lv) {
             return (i > 1) ? ch[i - 1] : ""
     return ""
 }
+; Breiten-Budget der Leiste: angedockt bis kurz vor den Start-Knopf, sonst ein Anteil der Taskleiste
+BarBudget() => gDockR ? gDockR - px(8) : gTaskbarW * CONF["MaxBarWidthPct"] / 100
+; Linke Kante des Start-Knopfs der Haupt-Taskleiste (UI Automation, AutomationId "StartButton"),
+; -1 wenn nicht gefunden. Das Element bleibt gemerkt, das Nachlesen der Lage kostet dann nichts.
+DockStartLeft() {
+    static uia := 0, cond := 0, el := 0, tray := 0
+    try {
+        hTray := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
+        if (!hTray)
+            return -1
+        if (el && hTray != tray)                    ; Explorer neu gestartet: neu suchen
+            ObjRelease(el), el := 0
+        if (!uia) {
+            uia := ComObject("{e22ad333-b25f-460c-83d0-0581107395c9}", "{30cbe57d-d9d0-452a-ab13-7ac5ac4825ee}")
+            v := Buffer(24, 0), NumPut("UShort", 8, v, 0)                              ; VT_BSTR
+            NumPut("Ptr", DllCall("OleAut32\SysAllocString", "Str", "StartButton", "Ptr"), v, 8)
+            ComCall(23, uia, "Int", 30011, "Ptr", v, "Ptr*", &cond)                     ; CreatePropertyCondition(AutomationId)
+        }
+        if (!el) {
+            root := 0
+            ComCall(6, uia, "Ptr", hTray, "Ptr*", &root)                                ; ElementFromHandle
+            ComCall(5, root, "Int", 4, "Ptr", cond, "Ptr*", &el)                        ; FindFirst(Descendants)
+            ObjRelease(root), tray := hTray
+            if (!el)
+                return -1
+        }
+        rc := Buffer(16, 0)
+        ComCall(43, el, "Ptr", rc)                                                      ; CurrentBoundingRectangle
+        l := NumGet(rc, 0, "Int"), r := NumGet(rc, 8, "Int")
+        if (r > l)
+            return l
+        ObjRelease(el), el := 0
+    } catch {
+        try ObjRelease(el)
+        el := 0
+    }
+    return -1
+}
+; Ziel der rechten Leistenkante beim Andocken, 0 = nicht andocken (aus, kein Start-Knopf, oder
+; Taskleiste links ausgerichtet: dann ist links vom Start-Knopf kein Platz)
+DockCalc() {
+    if (!CONF["DockStart"])
+        return 0
+    l := DockStartLeft()
+    if (l < px(240))
+        return 0
+    return l - px(10)
+}
+; Waechter: wandert der Start-Knopf (Symbole kommen dazu oder gehen), rueckt die Leiste mit
+DockWatch() {
+    global gDockR, gBuilding
+    if (!CONF["DockStart"] && !gDockR)
+        return
+    if (gBuilding)
+        return
+    nr := DockCalc()
+    if (Abs(nr - gDockR) > 1) {
+        BuildBar()
+        UpdateStripe()
+    }
+}
 ; Der Auto-Modus schaltet nur zwischen den Textstufen herunter
 AutoSmaller(lv) => (lv = "bigtext") ? "full" : (lv = "full") ? "short" : (lv = "short") ? "icon" : ""
 
@@ -5123,6 +5201,7 @@ BuildBar() {
     crit := A_IsCritical            ; Aufbau nicht unterbrechen lassen (siehe RenderBar)
     Critical
     global gNameCache := Map()       ; Desktop-Namen fuer die Dauer des Aufbaus merken
+    global gDockR := DockCalc()
     mode := CONF["CompactMode"]
     level := (mode = "auto") ? "bigtext" : mode   ; grosszuegig anfangen, dann bei Platzmangel herunter
     pads := []
@@ -5135,12 +5214,12 @@ BuildBar() {
         for i, pad in pads {
             gPadX := pad
             BuildBarAt()
-            if (!gTaskbarW || i = pads.Length || GUIW <= gTaskbarW * CONF["MaxBarWidthPct"] / 100)
+            if (!gTaskbarW || i = pads.Length || GUIW <= BarBudget())
                 break
         }
         if (mode != "auto" || !gTaskbarW)
             break
-        budget := gTaskbarW * CONF["MaxBarWidthPct"] / 100
+        budget := BarBudget()
         next := AutoSmaller(level)
         if (GUIW <= budget || next = "")
             break
@@ -5259,12 +5338,15 @@ BuildBarAt() {
         x += gap * 2, setX := x, setW := setN * btnH, x += setW
     }
     x += gap                                   ; etwas Luft am rechten Rand
+    dockX := 0
+    if (gDockR)                                ; angedockt: Trennstrich zum Start-Knopf
+        dockX := x + px(2), x += px(6)
 
     GUIW := x
     GUIH := tbH
     gLayout := Map("margin", margin, "btnH", btnH, "gripW", px(CONF["GripW"]), "gap", gap
         , "radius", px(CONF["CornerRadius"]), "accH", px(CONF["AccentBarH"])
-        , "iconSize", iconSize, "iconGap", iconGap, "setX", setX, "setW", setW, "setN", setN)
+        , "iconSize", iconSize, "iconGap", iconGap, "setX", setX, "setW", setW, "setN", setN, "dockX", dockX)
 
     ; Position: aus settings.ini, sonst Standard = unten links auf der Taskleiste.
     defX := tbX + px(CONF["OffsetX"])
@@ -5272,6 +5354,8 @@ BuildBarAt() {
     posX := IniGet("Position", "X", defX)
     posY := IniGet("Position", "Y", defY)
     posX := ClampX(posX), posY := ClampY(posY, GUIH)
+    if (gDockR)                                ; angedockt: rechte Kante links vom Start-Knopf, auf der Taskleiste
+        posX := Max(0, gDockR - GUIW), posY := tbY + (tbH - GUIH) // 2
     ; Startposition vertikal auf die Taskleiste einrasten (wie beim Ziehen)
     if (CONF["SnapToTaskbar"]) {
         snapY := tbY + (tbH - GUIH) // 2
@@ -5844,6 +5928,10 @@ RenderBar(force := false) {
         ; Umsortieren: der gegriffene Tab haengt obenauf an der Maus, mit Rahmen in der Akzentfarbe
         if (item["num"] = gReorderFrom)
             StrokeRoundRect(g, x, y, w, h, r, ARGB(CONF["ColActiveBg"]), Max(2, px(2)))
+    }
+    if (L["dockX"]) {                              ; angedockt: senkrechter Strich, hier beginnt die Taskleiste
+        dw := Max(2, px(2)), dh := L["btnH"] - 2 * px(6)
+        FillRoundRect(g, L["dockX"], L["margin"] + (L["btnH"] - dh) / 2, dw, dh, dw / 2, ARGB(CONF["ColActiveBg"]))
     }
     if (L["setW"]) {                               ; Fensteranordnungen: Kachel mit Kuerzel je Anordnung
         global gSetNames
@@ -7286,7 +7374,7 @@ DeskEven(*) {
     cl := NotMinimized(ClaudeDeskChats(num, &panes, &mains))  ; maximierte Chats werden mit eingeordnet
     if (!cl.Length)
         return ToastShow(num, T("desk.evennone"), 0xE8A9)
-    ClaudeMainsFront(mains)                          ; Hauptfenster weiterer Instanzen: maximiert, vorne (Chats kommen darueber)
+    ClaudeMainsFront(mains, num)                     ; Hauptfenster weiterer Instanzen: maximiert, vorne (Chats kommen darueber)
     ClaudePanesBack(panes)
     cnt := TileEven(cl, true, &mc)
     SetWinDelay(-1)
@@ -7313,7 +7401,7 @@ SetEven(name, *) {
     for h in ClaudeDeskChats(num, &panes, &mains)               ; dazu alle uebrigen Chats des Desktops
         if (!seen.Has(h))
             cl.Push(h), seen[h] := true
-    ClaudeMainsFront(mains)
+    ClaudeMainsFront(mains, num)
     ClaudePanesBack(panes)
     cnt := TileEven(NotMinimized(cl), true, &mc)          ; maximierte Chats werden mit eingeordnet
     SetRestore(name)
@@ -7972,19 +8060,46 @@ ClaudePanesBack(panes) {
 ; Hauptfenster einer weiteren Instanz: maximiert auf seinem Bildschirm und nach vorne geholt.
 ; Die Chats werden danach aktiviert und liegen so darueber; ohne Chats auf seinem Bildschirm
 ; bleibt es dort vorne.
-ClaudeMainsFront(mains) {
+; Auf dem Standard-Desktop (Hennings Regel 22.11.): die Hauptfenster ALLER Instanzen, auch das
+; angeheftete, maximiert auf den Hauptbildschirm; die Chats kommen auf die Nebenbildschirme.
+; Zwischen den Hauptfenstern schaltet man selbst um.
+ClaudeMainsFront(mains, num := -1) {
     SetWinDelay(-1)
     cur := GetCurrentDesktop()
+    home := (num >= 0 && num = cur && num = HomeDeskNum() && MonitorGetCount() > 1)
+    if (home) {
+        dhw := A_DetectHiddenWindows
+        DetectHiddenWindows(true)
+        try for h in WinGetList("ahk_exe claude.exe")           ; angeheftete Hauptfenster dazu
+            if ((WinGetStyle(h) & 0x10000000) && !DllCall("IsIconic", "Ptr", h) && ClaudeIsMain(h)
+                && PinState(h) && !DllCall("GetWindow", "Ptr", h, "UInt", 4, "Ptr"))
+                ClaudeMainToPrimary(h)
+        DetectHiddenWindows(dhw)
+    }
     for h in mains {
         if (DllCall("IsIconic", "Ptr", h) || VD("GetWindowDesktopNumber", "Ptr", h, "Int") != cur)
             continue                                    ; auf einem anderen Desktop: Aktivieren wuerde dorthin springen
-        if (!DllCall("IsZoomed", "Ptr", h))
+        if (home)
+            ClaudeMainToPrimary(h)
+        else if (!DllCall("IsZoomed", "Ptr", h))
             DllCall("ShowWindow", "Ptr", h, "Int", 3)                                   ; SW_MAXIMIZE
         try {
             WinActivate("ahk_id " h)
             WinWaitActive("ahk_id " h, , 0.2)
         }
     }
+}
+; Fenster auf den Hauptbildschirm holen und dort maximieren
+ClaudeMainToPrimary(h) {
+    MonitorGetWorkArea(MonitorGetPrimary(), &l, &t, &r, &b)
+    hm := DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr")
+    hp := DllCall("MonitorFromPoint", "Int64", ((t + b) // 2) << 32 | (((l + r) // 2) & 0xFFFFFFFF), "UInt", 2, "Ptr")
+    if (hm != hp) {
+        DllCall("ShowWindow", "Ptr", h, "Int", 4)                                       ; SW_SHOWNOACTIVATE: erst normal
+        try WinMove(l + 40, t + 40, (r - l) - 80, (b - t) - 80, "ahk_id " h)
+    }
+    if (!DllCall("IsZoomed", "Ptr", h))
+        DllCall("ShowWindow", "Ptr", h, "Int", 3)                                       ; SW_MAXIMIZE
 }
 ; Zu welcher Claude-Instanz gehoert das Fenster? "" = Standardprofil, sonst der Profilordner
 ; (--user-data-dir). Je Prozess einmal nachgesehen.
@@ -8075,6 +8190,8 @@ ClaudeDistribute(*) {
         VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", d), moved++
         targets[d] := tag
     }
+    if (cur = home)                                 ; Standard-Desktop: Hauptfenster auf den Hauptbildschirm,
+        ClaudeSpread(cur)                           ; verbliebene Chats auf die Nebenbildschirme
     if (!moved)
         return ToastShow(cur, T("claude.distnone"), 0xE8A9)
     for d, tag in targets {
@@ -8107,7 +8224,7 @@ ClaudeGather(num, *) {
         if (VD("GetWindowDesktopNumber", "Ptr", h, "Int") != num)
             VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", num), moved++
     chats := ClaudeDeskChats(num, &panes, &mains)
-    ClaudeMainsFront(mains)
+    ClaudeMainsFront(mains, num)
     SpreadWins(chats, &mc, tag, panes, num)                     ; mit allen Chats des Desktops nach Nummer verteilen
     ClaudeRecloak(num, chats, panes, mains)
     if (num = GetCurrentDesktop()) {
@@ -8129,7 +8246,7 @@ ClaudeGather(num, *) {
 ClaudeSpread(num, *) {
     desk := GetDesktopNameRaw(num), tag := ClaudeTag(desk, num)
     wins := ClaudeDeskChats(num, &panes, &mains)                ; alle Chats des Desktops, Projekt zuerst
-    ClaudeMainsFront(mains)
+    ClaudeMainsFront(mains, num)
     if (!wins.Length) {
         ClaudePanesBack(panes)
         ToastShow(num, T("claude.none", tag), 0xE8A9)
@@ -8622,9 +8739,13 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
     wx := 0, wy := 0, ww := 0, wh := 0
     MyGui.GetPos(&wx, &wy, &ww, &wh)
     offX := sx - wx, offY := sy - wy
+    dl := DockStartLeft()                       ; Start-Knopf: dort rastet die Leiste ein, darueber hinaus nicht
+    dR := (dl >= px(240)) ? dl - px(10) : 0
+    snapped := false
     while GetKeyState("LButton", "P") {
         MouseGetPos(&mx, &my)
         nx := mx - offX, ny := my - offY
+        onBar := false
         hTray := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
         if (hTray && CONF["SnapToTaskbar"]) {
             rc := Buffer(16, 0)
@@ -8634,8 +8755,12 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
             overlaps := (ny < tbBottom) && (ny + GUIH > tbY)
             near := Abs(ny - targetY) <= px(CONF["SnapDistance"])
             if (overlaps || near)
-                ny := targetY
+                ny := targetY, onBar := true
         }
+        ; auf der Taskleiste links vom Start-Knopf: nah heran = einrasten, nie ueber die Symbole
+        snapped := false
+        if (dR && onBar && nx < dl && nx + GUIW >= dR - px(30))
+            nx := dR - GUIW, snapped := true
         if (nx < 0)
             nx := 0
         if (nx + GUIW > A_ScreenWidth)
@@ -8644,6 +8769,12 @@ OnLButtonDown(wParam, lParam, msg, hwnd) {
         Sleep(10)
     }
     SavePosDeferred()
+    MyGui.GetPos(&ex, &ey)
+    moved := Abs(ex - wx) > px(6) || Abs(ey - wy) > px(6)
+    if (moved && snapped != !!CONF["DockStart"]) {   ; an den Start-Knopf gezogen = andocken, weggezogen = frei
+        SetView("DockStart", snapped ? 1 : 0)
+        return 0
+    }
     RenderBar(true)                  ; auf die Taskleiste gezogen oder davon weg: Register an/aus
     UpdateStripe()
     return 0
@@ -9245,8 +9376,8 @@ StripeBelowBar() {
 
 ; ------------------------------ Weihnachtsschnee ------------------------------
 ; Kleines Geschenk ohne Changelog: vom 1. Advent bis zum 26.12. rieseln beim Klick auf einen Tab
-; ein paar Flocken auf ihn herab, und auf dem aktiven Tab liegt eine Schneekante. Abschaltbar
-; (Weitere Einstellungen, nur in dieser Zeit sichtbar); aus bleibt aus, auch in den Folgejahren.
+; ein paar Flocken auf ihn herab, und auf dem aktiven Tab liegt eine Schneekante. Weitere
+; Einstellungen > Schnee: automatisch (Vorgabe), an (das ganze Jahr) oder aus; aus bleibt aus.
 ; Zum Ausprobieren ausserhalb der Saison: [View] SnowForce=1 in der settings.ini.
 SnowSeason() {
     static day := "", res := false
@@ -9259,7 +9390,7 @@ SnowSeason() {
     adv := DateAdd(A_YYYY "1225", -((wd = 1 ? 7 : wd - 1) + 21), "Days")   ; 4. Advent minus drei Wochen
     return res := (day >= SubStr(adv, 1, 8) && day <= A_YYYY "1226")
 }
-SnowOn() => CONF["Snow"] && SnowSeason()
+SnowOn() => CONF["Snow"] = 2 || (CONF["Snow"] = 1 && SnowSeason())
 ; Flocken ueber dem angeklickten Tab: eigenes, durchklickbares Schichtfenster, rund eine Sekunde.
 ; Sind die Windows-Animationen aus, fallen sie nicht, sondern erscheinen kurz und blenden aus.
 SnowBurst(item) {

@@ -1,6 +1,11 @@
 # DeskTabs: what's new
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
+## 1.1.24
+- **Bar at the Start button:** drag the bar along the taskbar to the right up to the Windows icon and it snaps in to the left of it, with a divider. It follows when programs come and go on the taskbar and never slides over the icons; when space gets tight, the tabs get more compact. Drag it away to free it again. Also under *More settings* › *Dock left of the Start button*.
+- **Claude main windows on the default desktop:** when arranging and spreading there, the main windows of all Claude instances go maximized to the main screen and the chats side by side to the screens next to it. Ctrl + Alt + click on the ≡ grip arranges the default desktop that way right after sending the chats off.
+- **Moved chats disappear reliably:** if a chat sent to its desktop still showed here, DeskTabs now clears it away itself.
+
 ## 1.1.23
 - **Claude status on the tab:** a round dot at the top right of a tab shows whether a Claude session is waiting for your decision (red, plus a red frame), has finished (yellow, until you visit the desktop) or is running (grey, pulsing). Sessions without a window of their own count for the default desktop; only with the Claude app features turned on.
 - **Status plugin for Claude Code:** right-click the Claude tile › *Set up the status plugin for Claude Code*. With the plugin, Claude sessions report their state instantly themselves; if a reply ends with a question, the tab turns red.
