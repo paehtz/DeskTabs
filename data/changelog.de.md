@@ -4,6 +4,8 @@
 ## 1.1.24
 - **Leiste am Start-Knopf:** Zieh die Leiste auf der Taskleiste nach rechts an das Windows-Symbol, dann rastet sie links davon ein, mit einem Trennstrich. Sie rückt mit, wenn Programme in der Taskleiste dazukommen oder gehen, und schiebt sich nie über die Symbole; wird es eng, werden die Tabs kompakter. Wegziehen löst sie wieder. Auch unter *Weitere Einstellungen* › *Links vom Start-Knopf andocken*.
 - **Claude-Hauptfenster auf dem Standard-Desktop:** Beim Ordnen und Verteilen kommen dort die Hauptfenster aller Claude-Instanzen maximiert auf den Hauptbildschirm, die Chats nebeneinander auf die Bildschirme daneben. Strg + Alt + Klick auf den Griff ≡ ordnet den Standard-Desktop danach gleich so an.
+- **Kein Stillstand mehr durch hängende Programme:** Reagierte ein Programm nicht mehr (zuletzt WhatsApp), konnte DeskTabs beim Desktop-Wechsel mit hängen bleiben, samt Tastenkürzeln. Hängende Fenster lässt DeskTabs jetzt aus.
+- **Kein Fehlerfenster vom Status-Plugin:** Bei sehr langen Claude-Antworten zeigte das Status-Plugin für Claude Code ein Fehlerfenster. Behoben.
 - **Verschobene Chats verschwinden zuverlässig:** Blieb ein Chat nach dem Verschicken auf seinen Desktop hier noch sichtbar, räumt DeskTabs ihn jetzt selbst weg.
 
 ## 1.1.23

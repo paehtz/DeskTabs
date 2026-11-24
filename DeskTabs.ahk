@@ -6650,6 +6650,8 @@ ZCandidate(hwnd) {
         return false
     if ((gCard && hwnd = gCard["gui"].Hwnd) || (gSP && hwnd = gSP["gui"].Hwnd))
         return false
+    if (DllCall("IsHungAppWindow", "Ptr", hwnd))     ; haengendes Programm nie anfassen: Umsortieren wartet sonst
+        return false                                  ; auf seine Antwort und DeskTabs steht mit (WhatsApp, 24.11.)
     try {
         if !(WinGetStyle("ahk_id " hwnd) & 0x10000000) || WinGetMinMax("ahk_id " hwnd) = -1
             return false
@@ -6730,7 +6732,8 @@ ArriveDeskRun(t0, id := "") {
     ; Fenster "immer im Vordergrund" nie einsortieren: wer hinter ein solches gelegt wird, wird
     ; laut Windows selbst "immer im Vordergrund" (so wurden am 27.10.2026 alle Fenster topmost)
     for hwnd in gZSnap[id]
-        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd) && !ZCloaked(hwnd) && !ZTopmost(hwnd))
+        if (DllCall("IsWindow", "Ptr", hwnd) && !DllCall("IsIconic", "Ptr", hwnd) && !ZCloaked(hwnd) && !ZTopmost(hwnd)
+            && !DllCall("IsHungAppWindow", "Ptr", hwnd))
             want.Push(hwnd), pos[hwnd] := want.Length
     if (!want.Length)
         return FocusTopWindow()
@@ -6784,7 +6787,7 @@ FocusTopWindow() {
             return                        ; Fokus liegt schon auf einem Fenster dieses Desktops
     }
     for hwnd in WinGetList() {            ; Z-Reihenfolge, oberstes zuerst
-        if ((MyGui && hwnd = MyGui.Hwnd) || (gStripe && hwnd = gStripe.Hwnd))
+        if ((MyGui && hwnd = MyGui.Hwnd) || (gStripe && hwnd = gStripe.Hwnd) || DllCall("IsHungAppWindow", "Ptr", hwnd))
             continue
         try {
             if !(WinGetStyle("ahk_id " hwnd) & 0x10000000) || WinGetMinMax("ahk_id " hwnd) = -1
@@ -7725,6 +7728,7 @@ ClaudeStatApply(msg) {
 ; Sitzung (= Fenstertitel) und damit den Desktop. Laeuft das Plugin, schweigt der Hilfsprozess.
 ClaudeHookDir() => EnvGet("LOCALAPPDATA") "\DeskTabs\claude-status"
 ClaudeHookMain() {
+    OnError((*) => (ExitApp(), 1))                     ; ein Hook zeigt nie ein Fehlerfenster
     js := ""
     try js := FileOpen("*", "r", "UTF-8").Read()
     sid := JsonField(js, "session_id"), ev := JsonField(js, "hook_event_name"), tool := JsonField(js, "tool_name")
@@ -7756,7 +7760,9 @@ ClaudeHookMain() {
     }
     ExitApp
 }
-JsonField(js, key) => RegExMatch(js, '"' key '"\s*:\s*"((?:\\.|[^"\\])*)"', &m) ? JsonUnescape(m[1]) : ""
+; besitzergreifende Quantoren: sonst laeuft PCRE bei langen Texten (letzte Antwort) in sein
+; Rekursionslimit (Fehler -21, gemeldet 23.11.)
+JsonField(js, key) => RegExMatch(js, '"' key '"\s*:\s*"((?:[^"\\]++|\\.)*+)"', &m) ? JsonUnescape(m[1]) : ""
 JsonUnescape(s) {
     while RegExMatch(s, "\\u([0-9a-fA-F]{4})", &m)
         s := StrReplace(s, m[0], Chr(Integer("0x" m[1])), , , 1)

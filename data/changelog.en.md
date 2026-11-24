@@ -4,6 +4,8 @@
 ## 1.1.24
 - **Bar at the Start button:** drag the bar along the taskbar to the right up to the Windows icon and it snaps in to the left of it, with a divider. It follows when programs come and go on the taskbar and never slides over the icons; when space gets tight, the tabs get more compact. Drag it away to free it again. Also under *More settings* › *Dock left of the Start button*.
 - **Claude main windows on the default desktop:** when arranging and spreading there, the main windows of all Claude instances go maximized to the main screen and the chats side by side to the screens next to it. Ctrl + Alt + click on the ≡ grip arranges the default desktop that way right after sending the chats off.
+- **No more standstill from hanging programs:** if a program stopped responding (most recently WhatsApp), DeskTabs could hang with it when switching desktops, shortcuts included. DeskTabs now leaves hanging windows alone.
+- **No error window from the status plugin:** with very long Claude replies, the status plugin for Claude Code showed an error window. Fixed.
 - **Moved chats disappear reliably:** if a chat sent to its desktop still showed here, DeskTabs now clears it away itself.
 
 ## 1.1.23
