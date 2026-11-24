@@ -7806,6 +7806,17 @@ ClaudeHookRecalc() {
     if (!CONF["ClaudeCode"])
         return ClaudeStatApply("")
     msg := "", now := A_Now
+    ; Die Dateien sind massgeblich, die Meldungen nur der schnelle Weg: Ging eine verloren (Leiste
+    ; beschaeftigt oder haengend, 1 s Zeitlimit), stand ein Punkt sonst bis zu 90 Minuten falsch
+    ; (grau auf visuplus, 24.11.). Nur Dateien der letzten 12 Stunden, das sind wenige.
+    try Loop Files ClaudeHookDir() "\*.txt" {
+        if (DateDiff(now, A_LoopFileTimeModified, "Hours") > 12)
+            continue
+        sid := SubStr(A_LoopFileName, 1, -4), p := ""
+        try p := StrSplit(FileRead(A_LoopFileFullPath, "UTF-8"), "|")
+        if (IsObject(p) && p.Length > 1 && (!gHookSess.Has(sid) || StrCompare(p[2], gHookSess[sid].t) > 0))
+            gHookSess[sid] := {st: p[1], t: p[2]}
+    }
     for sid, v in gHookSess {
         if (v.st != "r" && v.st != "w")
             continue
@@ -7834,7 +7845,7 @@ ClaudeSessionTitle(sid) {
                 fo := FileOpen(A_LoopFileFullPath, "r", "UTF-8")
                 head := fo.Read(4000), fo.Close()
             }
-            if (RegExMatch(head, '"cliSessionId"\s*:\s*"([^"]+)"', &a) && RegExMatch(head, '"title"\s*:\s*"((?:\\.|[^"\\])*)"', &b))
+            if (RegExMatch(head, '"cliSessionId"\s*:\s*"([^"]+)"', &a) && RegExMatch(head, '"title"\s*:\s*"((?:[^"\\]++|\\.)*+)"', &b))
                 cache[a[1]] := JsonUnescape(b[1])
         }
     return cache.Has(sid) ? cache[sid] : ""

@@ -1,6 +1,9 @@
 # DeskTabs: Neu in dieser Version
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
+## 1.1.25
+- **Claude-Status bleibt nicht mehr hängen:** Zeigte ein Tab weiter „läuft“, obwohl alle Chats dort fertig waren, korrigiert sich das jetzt spätestens nach 15 Sekunden.
+
 ## 1.1.24
 - **Leiste am Start-Knopf:** Zieh die Leiste auf der Taskleiste nach rechts an das Windows-Symbol, dann rastet sie links davon ein, mit einem Trennstrich. Sie rückt mit, wenn Programme in der Taskleiste dazukommen oder gehen, und schiebt sich nie über die Symbole; wird es eng, werden die Tabs kompakter. Wegziehen löst sie wieder. Auch unter *Weitere Einstellungen* › *Links vom Start-Knopf andocken*.
 - **Claude-Hauptfenster auf dem Standard-Desktop:** Beim Ordnen und Verteilen kommen dort die Hauptfenster aller Claude-Instanzen maximiert auf den Hauptbildschirm, die Chats nebeneinander auf die Bildschirme daneben. Strg + Alt + Klick auf den Griff ≡ ordnet den Standard-Desktop danach gleich so an.
