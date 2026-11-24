@@ -1633,15 +1633,29 @@ global LANG_DE := Map(
     "sc.d.altgrip", "Claude-Chats auf jedem Bildschirm gleich breit verteilen",
     "menu.claudecode", "Claude-App-Funktionen",
     "menu.dockstart", "Links vom Start-Knopf andocken",
-    "menu.snap", "Fensterbereiche (Strg+Alt+Ziffernblock) …",
+    "claude.tip.w", "● wartet auf Dich: {1}",
+    "claude.tip.r", "◌ läuft: {1}",
+    "menu.zones", "Fensterbereiche (Strg+Alt+Ziffernblock) …",
     "snap.title", "Fensterbereiche",
-    "snap.intro", "Strg+Alt+Ziffernblock legt das aktive Fenster in einen Bereich seines Bildschirms. Drückst Du dieselbe Taste noch einmal, kommt die nächste Stufe.`nJe Taste die Stufen durch Semikolon getrennt, jede Stufe als Breite in Prozent von links nach rechts, etwa „0-25“ für das linke Viertel. Für einen Teil der Höhe „@“ und den Bereich von oben nach unten anfügen: „0-50@0-50“ ist das Viertel oben links. Ohne „@“ volle Höhe.",
+    "snap.intro", "Strg+Alt+Ziffernblock legt das aktive Fenster in einen Bereich seines Bildschirms. Drückst Du dieselbe Taste noch einmal, kommt die nächste Stufe.`nJede Stufe ist eine Breite in Prozent von links nach rechts, etwa „0-25“ für das linke Viertel. Für einen Teil der Höhe „@“ und den Bereich von oben nach unten anfügen: „0-50@0-50“ ist das Viertel oben links. Ohne „@“ volle Höhe.",
+    "snap.measure", "Messen: Zieh dieses Fenster an den Kanten auf die gewünschte Größe (auch oben in der Titelleiste), oder ordne andere Fenster an und klick sie nacheinander an:",
+    "snap.meas.self", "Dieses Fenster (Strg = ganze %):",
+    "snap.meas.other", "Zuletzt aktives Fenster:",
+    "snap.copy", "Kopieren",
+    "snap.saveclose", "Speichern und schließen",
+    "snap.full", "Taste {1} hat schon acht Stufen.",
+    "snap.moved", "„{1}“ liegt jetzt bei Taste {2}. Speichern nicht vergessen.",
+    "snap.saved", "Gespeichert. Die Tasten arbeiten jetzt mit diesen Stufen.",
+    "snap.copied", "{1} in der Zwischenablage",
+    "snap.add", "+ neue Stufe",
+    "snap.nowin", "Klick ein Fenster an, dann steht hier seine Lage.",
+    "snap.hint", "Stufe anklicken = bearbeiten, auf eine andere Taste ziehen = verschieben. Enter übernimmt, leer lassen und Enter löscht sie. In „+ neue Stufe“ eingeben oder einfügen und Enter. Esc bricht das Bearbeiten ab. Gespeichert wird erst mit „Speichern“.",
     "snap.keys", "Tasten Strg+Alt+Ziffernblock benutzen (dazu Strg+Alt+Bild↓ minimieren, Strg+Alt+Bild↑ wiederherstellen)",
     "snap.drag", "Drag'n'Go: Fenster mit gedrückter Strg+Alt ziehen zeigt den Bereich und legt es dort ab",
     "snap.key", "Taste {1}",
     "snap.save", "Speichern",
     "snap.reset", "Vorgaben",
-    "snap.cancel", "Abbrechen",
+    "snap.cancel", "Schließen",
     "snap.bad", "Taste {1}: „{2}“ ist keine gültige Stufe. Beispiel: 0-25; 0-30; 75-100@0-50",
     "menu.calmswitch", "Strg+Win+Pfeil ohne Animation wechseln",
     "menu.snow", "❄ Schnee",
@@ -1998,15 +2012,29 @@ global LANG_EN := Map(
     "sc.d.altgrip", "distribute the Claude chats evenly on each screen",
     "menu.claudecode", "Claude app features",
     "menu.dockstart", "Dock left of the Start button",
-    "menu.snap", "Window zones (Ctrl+Alt+Numpad) …",
+    "claude.tip.w", "● waiting for you: {1}",
+    "claude.tip.r", "◌ running: {1}",
+    "menu.zones", "Window zones (Ctrl+Alt+Numpad) …",
     "snap.title", "Window zones",
-    "snap.intro", "Ctrl+Alt+Numpad puts the active window into a zone of its screen. Press the same key again for the next step.`nPer key, steps separated by semicolons, each step as a width in percent from left to right, such as “0-25” for the left quarter. For part of the height add “@” and the range from top to bottom: “0-50@0-50” is the top left quarter. Without “@” full height.",
+    "snap.intro", "Ctrl+Alt+Numpad puts the active window into a zone of its screen. Press the same key again for the next step.`nEach step is a width in percent from left to right, such as “0-25” for the left quarter. For part of the height add “@” and the range from top to bottom: “0-50@0-50” is the top left quarter. Without “@” full height.",
+    "snap.measure", "Measure: drag this window's edges to the size you want (also shown in the title bar), or arrange other windows and click them one after another:",
+    "snap.meas.self", "This window (Ctrl = whole %):",
+    "snap.meas.other", "Last active window:",
+    "snap.copy", "Copy",
+    "snap.saveclose", "Save and close",
+    "snap.full", "Key {1} already has eight steps.",
+    "snap.moved", "“{1}” is now on key {2}. Remember to save.",
+    "snap.saved", "Saved. The keys now use these steps.",
+    "snap.copied", "{1} copied",
+    "snap.add", "+ new step",
+    "snap.nowin", "Click a window and its position shows here.",
+    "snap.hint", "Click a step to edit it, drag it to another key to move it. Enter applies, leave it empty and press Enter to delete it. Type or paste into “+ new step” and press Enter. Esc cancels editing. Nothing is stored until you press Save.",
     "snap.keys", "Use Ctrl+Alt+Numpad keys (plus Ctrl+Alt+PgDn to minimize, Ctrl+Alt+PgUp to restore)",
     "snap.drag", "Drag'n'Go: dragging a window with Ctrl+Alt held shows the zone and drops it there",
     "snap.key", "Key {1}",
     "snap.save", "Save",
     "snap.reset", "Defaults",
-    "snap.cancel", "Cancel",
+    "snap.cancel", "Close",
     "snap.bad", "Key {1}: “{2}” is not a valid step. Example: 0-25; 0-30; 75-100@0-50",
     "menu.calmswitch", "Ctrl+Win+Arrow switches without animation",
     "menu.snow", "❄ Snow",
@@ -3948,7 +3976,6 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.claudecode"), ToggleView.Bind("ClaudeCode"))
     if (CONF["ClaudeCode"])
         xm.Check(T("menu.claudecode"))
-    xm.Add(T("menu.snap"), SnapSettings)
     xm.Add(T("menu.dockstart"), ToggleView.Bind("DockStart"))
     if (CONF["DockStart"])
         xm.Check(T("menu.dockstart"))
@@ -3978,6 +4005,8 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.timelog"), lgm)
     MenuGlyph(xm, T("menu.timelog"), "E823")
     xm.Add()
+    xm.Add(T("menu.zones"), SnapSettings)                 ; oeffnet ein Fenster: zu den Aktionen, nicht zu den Haken
+    MenuGlyph(xm, T("menu.zones"), "E8A1")
     xm.Add(T("tray.rebuild"), (*) => RebuildAll())
     MenuGlyph(xm, T("tray.rebuild"), "E72C")
     xm.Add(T("tray.resetpos"), ResetPos)
@@ -7715,8 +7744,8 @@ ClaudeStatHelper(parent) {
 ; Standard-Desktop. Je Desktop zaehlt w (wartet auf Eingabe) und r (laeuft). Laeuft auf einem
 ; Desktop nichts mehr, nachdem dort etwas lief, merkt sich gClaudeDone das, bis man ihn besucht.
 ClaudeStatApply(msg) {
-    global gClaudeStat, gClaudeDone, gCurrent
-    stat := Map()
+    global gClaudeStat, gClaudeDone, gCurrent, gClaudeWho
+    stat := Map(), who := Map()
     if (CONF["ClaudeCode"]) {
         winDesk := Map(), dhw := A_DetectHiddenWindows, home := HomeDeskNum()
         DetectHiddenWindows(true)
@@ -7734,8 +7763,9 @@ ClaudeStatApply(msg) {
             if (d < 0)
                 continue
             if (!stat.Has(d))
-                stat[d] := {w: 0, r: 0}
+                stat[d] := {w: 0, r: 0}, who[d] := []
             (f[2] = "r") ? stat[d].r += 1 : stat[d].w += 1
+            who[d].Push({title: f[1], st: f[2] = "r" ? "r" : "w"})
         }
     }
     for d, old in gClaudeStat                           ; war dort etwas am Laufen und ist jetzt alles still?
@@ -7744,7 +7774,7 @@ ClaudeStatApply(msg) {
     for d, st in stat
         if (st.r > 0 && gClaudeDone.Has(d))
             gClaudeDone.Delete(d)                       ; laeuft wieder
-    gClaudeStat := stat
+    gClaudeStat := stat, gClaudeWho := who
     ClaudePulseUpdate()
     RenderBar(true)
 }
@@ -8531,6 +8561,8 @@ SnapText(k) {
 ; "0-25; 20-80@0-50" -> [[0,25,0,100], [20,80,0,50]]; bad := erste ungueltige Stufe
 SnapParse(txt, &bad := "") {
     out := [], bad := ""
+    if (Trim(txt) = "-")                                    ; Taste bewusst ohne Stufe
+        return out
     num := "(\d+(?:[.,]\d+)?)"
     for part in StrSplit(txt, ";") {
         part := Trim(part)
@@ -8690,45 +8722,367 @@ SnapOverlay(r) {
     g.Show(Format("x{1} y{2} w{3} h{4} NoActivate", r[1], r[2], r[3] - r[1], r[4] - r[2]))
     WinSetTransparent(70, g)
 }
-; Verwaltung: je Taste die Stufen, in der Anordnung des Ziffernblocks
+; Verwaltung: je Taste die Stufen als einzelne Felder (anklicken = bearbeiten, Enter = uebernehmen,
+; leer + Enter = loeschen, Feld "+" = neue Stufe), dazu ein Messwerkzeug: die Lage des zuletzt aktiven
+; Fensters als fertige Stufe zum Kopieren. Das Fenster wird bei jeder Aenderung neu aufgebaut.
 SnapSettings(*) {
-    g := Gui("+AlwaysOnTop -MinimizeBox -MaximizeBox", T("snap.title"))
+    global gSnapUI
+    if (IsSet(gSnapUI) && IsObject(gSnapUI) && gSnapUI.g) {
+        try WinActivate("ahk_id " gSnapUI.g.Hwnd)
+        return
+    }
+    st := {steps: Map(), keys: CONF["SnapKeys"], drag: CONF["SnapDrag"], g: 0, meas: 0, meas2: 0, msg: 0
+        , measStep: "", measStep2: "", target: 0, ctl: Map(), rows: Map()}
+    Loop 9
+        st.steps[A_Index] := SnapList(SnapText(A_Index))
+    gSnapUI := st
+    SnapUIBuild()
+    SetTimer(SnapUIMeasure, 300)
+}
+SnapList(txt) {
+    out := []
+    if (Trim(txt) = "-")
+        return out
+    for part in StrSplit(txt, ";")
+        if (Trim(part) != "")
+            out.Push(Trim(part))
+    return out
+}
+; Das Fenster wird einmal aufgebaut und dann nur noch umgeschaltet (kein Schliessen und Neuoeffnen):
+; je Taste feste Plaetze mit Knopf (Anzeige) und Eingabefeld (Bearbeiten) uebereinander.
+SnapUIBuild() {
+    global gSnapUI
+    static MAXS := 8, CW := 112, GAP := 6
+    st := gSnapUI
+    g := Gui("+AlwaysOnTop +Resize -MinimizeBox -MaximizeBox +MinSize240x120", T("snap.title"))   ; Kanten ziehen = messen
+    st.g := g, st.ctl := Map(), st.rows := Map()
     g.SetFont("s10", "Segoe UI")
-    g.AddText("w640", T("snap.intro"))
-    cbK := g.AddCheckbox("w640 y+10 Checked" CONF["SnapKeys"], T("snap.keys"))
-    cbD := g.AddCheckbox("w640 Checked" CONF["SnapDrag"], T("snap.drag"))
-    eds := Map()
+    g.AddText("w" (80 + (MAXS + 1) * (CW + GAP)), T("snap.intro"))
+    cbK := g.AddCheckbox("xm y+10 Checked" st.keys, T("snap.keys"))
+    cbK.OnEvent("Click", (c, *) => st.keys := c.Value)
+    cbD := g.AddCheckbox("xm Checked" st.drag, T("snap.drag"))
+    cbD.OnEvent("Click", (c, *) => st.drag := c.Value)
+    g.AddText("xm y+16", T("snap.measure"))
+    g.AddText("xm w180 y+8", T("snap.meas.self"))
+    st.meas := g.AddEdit("x+6 yp-3 w" (80 + MAXS * (CW + GAP) - 346) " ReadOnly", "")
+    g.AddButton("x+10 yp-1 w150", T("snap.copy")).OnEvent("Click", (*) => SnapUICopy(st.measStep))
+    g.AddText("xm w180 y+10", T("snap.meas.other"))
+    st.meas2 := g.AddEdit("x+6 yp-3 w" (80 + MAXS * (CW + GAP) - 346) " ReadOnly", "")
+    g.AddButton("x+10 yp-1 w150", T("snap.copy")).OnEvent("Click", (*) => SnapUICopy(st.measStep2))
+    st.chip := Map()
     for k in [7, 8, 9, 4, 5, 6, 1, 2, 3] {
-        g.AddText("xm w80 y+" (k = 7 ? 14 : 8) " Right", T("snap.key", k))
-        g.SetFont("s10", "Consolas")
-        eds[k] := g.AddEdit("x+10 yp-3 w550", SnapText(k))
-        g.SetFont("s10", "Segoe UI")
-    }
-    msg := g.AddText("xm w640 y+10 cC42B1C", "")
-    g.AddButton("xm w140 Default", T("snap.save")).OnEvent("Click", Save)
-    g.AddButton("x+10 w140", T("snap.reset")).OnEvent("Click", (*) => ResetAll())
-    g.AddButton("x+10 w140", T("snap.cancel")).OnEvent("Click", (*) => g.Destroy())
-    g.OnEvent("Escape", (*) => g.Destroy())
-    g.Show()
-    ResetAll() {
-        for k, e in eds
-            e.Value := SnapDefault(k)
-    }
-    Save(*) {
-        for k, e in eds {
-            SnapParse(e.Value, &bad)
-            if (bad != "") {
-                msg.Value := T("snap.bad", k, bad)
-                return
-            }
+        if (k = 4 || k = 1)                                 ; Trennlinie zwischen den Reihen des Ziffernblocks
+            g.AddText("xm y+12 h2 w" (80 + MAXS * (CW + GAP)) " 0x10")
+        g.AddText("xm w70 Right y+" (k = 7 ? 18 : k = 4 || k = 1 ? 12 : 10) " Section", T("snap.key", k))
+        row := {btn: [], ed: [], add: 0, xs: []}
+        Loop MAXS {
+            x := "xs+" (80 + (A_Index - 1) * (CW + GAP))
+            b := g.AddButton(x " ys-4 w" CW " h26 Hidden", "")
+            st.chip[b.Hwnd] := {k: k, i: A_Index}
+            e := g.AddEdit(x " ys-4 w" CW " h26 Hidden", "")
+            st.ctl[e.Hwnd] := {k: k, i: A_Index}
+            row.btn.Push(b), row.ed.Push(e)
         }
-        for k, e in eds
-            IniSet("Snap", k, Trim(e.Value))
-        SetView("SnapDrag", cbD.Value)
-        SetView("SnapKeys", cbK.Value)
-        g.Destroy()
+        row.add := g.AddEdit("xs+80 ys-4 w" CW " h26", "")
+        DllCall("SendMessage", "Ptr", row.add.Hwnd, "UInt", 0x1501, "Ptr", 1, "Str", T("snap.add"))   ; EM_SETCUEBANNER
+        st.ctl[row.add.Hwnd] := {k: k, i: 0}
+        st.rows[k] := row
+    }
+    g.SetFont("s9", "Segoe UI")
+    g.AddText("xm y+14 w" (80 + MAXS * (CW + GAP)) " c707070", T("snap.hint"))
+    g.SetFont("s10", "Segoe UI")
+    st.msg := g.AddText("xm w" (80 + MAXS * (CW + GAP)) " c2E7D32", "")
+    g.AddButton("xm w130", T("snap.save")).OnEvent("Click", (*) => SnapUISave(false))
+    g.AddButton("x+10 w190", T("snap.saveclose")).OnEvent("Click", (*) => SnapUISave(true))
+    g.AddButton("x+10 w130", T("snap.reset")).OnEvent("Click", SnapUIReset)
+    g.AddButton("x+10 w130", T("snap.cancel")).OnEvent("Click", SnapUIClose)
+    g.AddButton("x+10 w1 h1 Default", "").OnEvent("Click", SnapUIEnter)   ; Enter in einem Feld
+    g.OnEvent("Close", SnapUIClose)
+    g.OnEvent("Escape", SnapUIEscape)
+    for k in [7, 8, 9, 4, 5, 6, 1, 2, 3]
+        SnapUIRow(k)
+    OnMessage(0x0201, SnapUIMouseDown)                      ; Stufe anklicken oder auf eine andere Taste ziehen
+    OnMessage(0x0214, SnapUISizing)                         ; WM_SIZING: mit Strg auf ganze Prozent
+    OnMessage(0x0216, SnapUISizing)                         ; WM_MOVING: ebenso beim Verschieben
+    g.Show("AutoSize")
+    SnapUIMeasure()
+}
+; Zeile einer Taste nach st.steps zeigen; das Feld "+ neue Stufe" rueckt hinter die letzte Stufe
+SnapUIRow(k) {
+    global gSnapUI
+    static CW := 112, GAP := 6
+    st := gSnapUI, row := st.rows[k], arr := st.steps[k]
+    for i, b in row.btn {
+        row.ed[i].Visible := false
+        if (i <= arr.Length) {
+            b.Text := arr[i]
+            b.Visible := true
+        } else
+            b.Visible := false
+    }
+    n := arr.Length
+    if (n < row.btn.Length) {
+        row.btn[1].GetPos(&x0, &y0)
+        row.add.Move(x0 + n * (CW + GAP), y0)
+        row.add.Visible := true
+    } else
+        row.add.Visible := false
+}
+; Maustaste auf einer Stufe: ohne Bewegung = bearbeiten, mit Bewegung = an die Stelle unter dem
+; Mauszeiger verschieben (andere Taste oder andere Position in derselben Zeile)
+SnapUIMouseDown(wParam, lParam, msg, hwnd) {
+    global gSnapUI
+    if (!IsSet(gSnapUI) || !IsObject(gSnapUI) || !gSnapUI.g || !gSnapUI.chip.Has(hwnd))
+        return
+    st := gSnapUI, src := st.chip[hwnd]
+    CoordMode("Mouse", "Screen")
+    MouseGetPos(&sx, &sy)
+    moved := false
+    while GetKeyState("LButton", "P") {
+        MouseGetPos(&mx, &my)
+        if (!moved && (Abs(mx - sx) > 5 || Abs(my - sy) > 5))
+            moved := true
+        if (moved)
+            ToolTip(st.steps[src.k][src.i], mx + 14, my + 10, 6)
+        Sleep(15)
+    }
+    ToolTip(, , , 6)
+    if (!moved) {
+        SnapUIChip(src.k, src.i)
+        return 0
+    }
+    ; Ziel: die Zeile, in deren Hoehe losgelassen wurde, und die Lage zwischen ihren Stufen
+    WinGetClientPos(&gx, &gy, , , "ahk_id " st.g.Hwnd)
+    cx := mx - gx, cy := my - gy, tk := 0
+    for k, row in st.rows {
+        row.btn[1].GetPos(&bx, &by, &bw, &bh)
+        if (cy >= by - 8 && cy < by + bh + 8)
+            tk := k
+    }
+    if (!tk)
+        return 0
+    row := st.rows[tk], dst := st.steps[tk], pos := dst.Length + 1
+    for i, b in row.btn {
+        if (i > dst.Length)
+            break
+        b.GetPos(&bx, , &bw)
+        if (cx < bx + bw / 2) {
+            pos := i
+            break
+        }
+    }
+    if (tk != src.k && dst.Length >= row.btn.Length)
+        return (SnapUIMsg(T("snap.full", tk), true), 0)
+    v := st.steps[src.k].RemoveAt(src.i)
+    if (tk = src.k && pos > src.i)
+        pos -= 1
+    dst.InsertAt(Min(pos, dst.Length + 1), v)
+    SnapUIRow(src.k)
+    if (tk != src.k)
+        SnapUIRow(tk)
+    SnapUIMsg(T("snap.moved", v, tk))
+    return 0
+}
+; Ziehen an den Kanten bzw. Verschieben mit gedrueckter Strg: die sichtbaren Kanten rasten auf ganze
+; Prozent des Arbeitsbereichs ein (gerechnet wie die Messanzeige, ohne den unsichtbaren Rand)
+SnapUISizing(wParam, lParam, msg, hwnd) {
+    global gSnapUI
+    if (!IsSet(gSnapUI) || !IsObject(gSnapUI) || !gSnapUI.g || hwnd != gSnapUI.g.Hwnd || !GetKeyState("Ctrl"))
+        return
+    l := NumGet(lParam, 0, "Int"), t := NumGet(lParam, 4, "Int"), r := NumGet(lParam, 8, "Int"), b := NumGet(lParam, 12, "Int")
+    wr := Buffer(16, 0)
+    DllCall("GetWindowRect", "Ptr", hwnd, "Ptr", wr)
+    fr := SetFrame(hwnd)
+    dl := fr[1] - NumGet(wr, 0, "Int"), dt := fr[2] - NumGet(wr, 4, "Int")
+    dr := NumGet(wr, 8, "Int") - fr[3], db := NumGet(wr, 12, "Int") - fr[4]
+    wa := SnapWork(DllCall("MonitorFromWindow", "Ptr", hwnd, "UInt", 2, "Ptr"))
+    aw := wa[3] - wa[1], ah := wa[4] - wa[2]
+    if (aw <= 0 || ah <= 0)
+        return
+    rx := (v) => wa[1] + Round(Round((v - wa[1]) * 100 / aw) * aw / 100)
+    ry := (v) => wa[2] + Round(Round((v - wa[2]) * 100 / ah) * ah / 100)
+    if (msg = 0x0214) {
+        e := wParam
+        if (e = 1 || e = 4 || e = 7)
+            l := rx(l + dl) - dl
+        if (e = 2 || e = 5 || e = 8)
+            r := rx(r - dr) + dr
+        if (e = 3 || e = 4 || e = 5)
+            t := ry(t + dt) - dt
+        if (e = 6 || e = 7 || e = 8)
+            b := ry(b - db) + db
+    } else {
+        bw := r - l, bh := b - t
+        l := rx(l + dl) - dl, t := ry(t + dt) - dt
+        r := l + bw, b := t + bh
+    }
+    NumPut("Int", l, lParam, 0), NumPut("Int", t, lParam, 4), NumPut("Int", r, lParam, 8), NumPut("Int", b, lParam, 12)
+    return true
+}
+SnapUIMsg(txt, bad := false) {
+    global gSnapUI
+    gSnapUI.msg.SetFont(bad ? "cC42B1C" : "c2E7D32")
+    gSnapUI.msg.Value := txt
+}
+SnapUIChip(k, i, *) {
+    global gSnapUI
+    st := gSnapUI
+    for kk, row in st.rows                                  ; ein anderes offenes Feld schliessen
+        for j, e in row.ed
+            if (e.Visible && !(kk = k && j = i))
+                e.Visible := false, row.btn[j].Visible := true
+    row := st.rows[k], e := row.ed[i]
+    e.Value := st.steps[k][i]
+    row.btn[i].Visible := false
+    e.Visible := true
+    e.Focus()
+    SendMessage(0xB1, 0, -1, e)                               ; EM_SETSEL: alles markieren
+    SnapUIMsg("")
+}
+; Wert eines Feldes uebernehmen; false bei ungueltiger Stufe (Fehler steht im Fenster)
+SnapUIApply(c, info) {
+    global gSnapUI
+    st := gSnapUI, parts := SnapList(c.Value)
+    for v in parts {
+        SnapParse(v, &bad)
+        if (bad != "") {
+            SnapUIMsg(T("snap.bad", info.k, bad), true)
+            return false
+        }
+    }
+    arr := st.steps[info.k]
+    if (info.i = 0) {
+        for v in parts
+            if (arr.Length < st.rows[info.k].btn.Length)
+                arr.Push(v)
+    } else {
+        arr.RemoveAt(info.i)
+        for j, v in parts
+            arr.InsertAt(info.i + j - 1, v)
+        while (arr.Length > st.rows[info.k].btn.Length)
+            arr.Pop()
+    }
+    return true
+}
+SnapUIEnter(*) {
+    global gSnapUI
+    st := gSnapUI, c := st.g.FocusedCtrl
+    if (!c || !st.ctl.Has(c.Hwnd))
+        return
+    info := st.ctl[c.Hwnd]
+    if (!SnapUIApply(c, info))
+        return
+    SnapUIMsg("")
+    SnapUIRow(info.k)
+    if (info.i = 0) {                                       ; weiter neue Stufen eingeben
+        row := st.rows[info.k]
+        row.add.Value := ""
+        if (row.add.Visible)
+            row.add.Focus()
     }
 }
+SnapUIEscape(*) {
+    global gSnapUI
+    st := gSnapUI, c := st.g.FocusedCtrl
+    if (c && st.ctl.Has(c.Hwnd)) {
+        info := st.ctl[c.Hwnd]
+        if (info.i = 0)
+            c.Value := ""
+        SnapUIRow(info.k)                                     ; Bearbeiten abbrechen, Anzeige wie vorher
+        SnapUIMsg("")
+        return
+    }
+    SnapUIClose()
+}
+SnapUIReset(*) {
+    global gSnapUI
+    Loop 9
+        gSnapUI.steps[A_Index] := SnapList(SnapDefault(A_Index))
+    for k in [7, 8, 9, 4, 5, 6, 1, 2, 3]
+        SnapUIRow(k)
+    SnapUIMsg("")
+}
+SnapUISave(close := false, *) {
+    global gSnapUI
+    st := gSnapUI
+    for k, row in st.rows {                                 ; was noch in einem offenen Feld steht, zaehlt mit
+        for i, e in row.ed
+            if (e.Visible && !SnapUIApply(e, {k: k, i: i}))
+                return
+        if (Trim(row.add.Value) != "" && !SnapUIApply(row.add, {k: k, i: 0}))
+            return
+        row.add.Value := ""
+        SnapUIRow(k)
+    }
+    Loop 9 {
+        txt := ""
+        for v in st.steps[A_Index]
+            txt .= (txt = "" ? "" : "; ") v
+        IniSet("Snap", A_Index, txt = "" ? "-" : txt)
+    }
+    keys := st.keys, drag := st.drag
+    if (close)
+        SnapUIClose()
+    else
+        SnapUIMsg(T("snap.saved"))
+    if (drag != CONF["SnapDrag"])
+        SetView("SnapDrag", drag)
+    if (keys != CONF["SnapKeys"])
+        SetView("SnapKeys", keys)
+}
+SnapUIClose(*) {
+    global gSnapUI
+    SetTimer(SnapUIMeasure, 0)
+    OnMessage(0x0201, SnapUIMouseDown, 0)
+    OnMessage(0x0214, SnapUISizing, 0)
+    OnMessage(0x0216, SnapUISizing, 0)
+    if (IsSet(gSnapUI) && IsObject(gSnapUI) && gSnapUI.g) {
+        g := gSnapUI.g, gSnapUI.g := 0
+        g.Destroy()
+    }
+    gSnapUI := 0
+}
+SnapUICopy(v, *) {
+    if (v = "")
+        return
+    A_Clipboard := v
+    ToolTip(T("snap.copied", v))
+    SetTimer(() => ToolTip(), -1500)
+}
+; Messen: Lage des zuletzt aktiven fremden Fensters in Prozent des Arbeitsbereichs seines Bildschirms
+SnapUIMeasure() {
+    global gSnapUI
+    if (!IsSet(gSnapUI) || !IsObject(gSnapUI) || !gSnapUI.g)
+        return SetTimer(SnapUIMeasure, 0)
+    st := gSnapUI
+    fg := WorkWindow()
+    if (fg && fg != st.g.Hwnd && !DllCall("GetWindow", "Ptr", fg, "UInt", 4, "Ptr"))
+        st.target := fg
+    st.measStep := SnapUIStep(st.g.Hwnd)
+    if (st.meas.Value != st.measStep) {
+        st.meas.Value := st.measStep
+        st.g.Title := T("snap.title") "   " st.measStep        ; auch bei kleinem Fenster sichtbar
+    }
+    h := st.target
+    if (h && DllCall("IsWindow", "Ptr", h)) {
+        st.measStep2 := SnapUIStep(h), ti := WinTitleSafe(h)
+        txt := st.measStep2 "      " (StrLen(ti) > 50 ? SubStr(ti, 1, 49) "…" : ti)
+    } else
+        st.measStep2 := "", txt := T("snap.nowin")
+    if (st.meas2.Value != txt)
+        st.meas2.Value := txt
+}
+; Lage eines Fensters als Stufe, in Prozent des Arbeitsbereichs seines Bildschirms
+SnapUIStep(h) {
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")
+    fr := SetFrame(h), wa := SnapWork(DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr"))
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    pc := (v, a, b) => RegExReplace(Format("{:.2f}", Max(0, Min(100, (v - a) * 100 / (b - a)))), "\.?0+$")
+    x0 := pc(fr[1], wa[1], wa[3]), x1 := pc(fr[3], wa[1], wa[3])
+    y0 := pc(fr[2], wa[2], wa[4]), y1 := pc(fr[4], wa[2], wa[4])
+    return x0 "-" x1 ((Number(y0) > 0.5 || Number(y1) < 99.5) ? "@" y0 "-" y1 : "")
+}
+
 PlaceFrame(h, x0, y0, x1, y1) {
     fr := SetFrame(h), wrc := Buffer(16, 0)
     DllCall("GetWindowRect", "Ptr", h, "Ptr", wrc)
@@ -9413,6 +9767,18 @@ HoverNameTip(num) {
     if (num >= 0)
         SetTimer(show, -450)
 }
+; Kurzinfo-Zeilen zum Claude-Status eines Desktops: zuerst, wer auf eine Entscheidung wartet
+ClaudeWhoText(num) {
+    global gClaudeWho
+    if (!IsSet(gClaudeWho) || !IsObject(gClaudeWho) || !gClaudeWho.Has(num))
+        return ""
+    out := ""
+    for st in ["w", "r"]
+        for e in gClaudeWho[num]
+            if (e.st = st)
+                out .= (out = "" ? "" : "`n") T(st = "w" ? "claude.tip.w" : "claude.tip.r", e.title)
+    return out
+}
 ShowHoverName() {
     global gHoverTipNum, BTNS, MyGui, gDragHwnd, gHidden
     if (gHoverTipNum < 0 || gDragHwnd || gHidden || !MyGui)
@@ -9421,14 +9787,18 @@ ShowHoverName() {
         if (item["num"] != gHoverTipNum)
             continue
         raw := GetDesktopNameRaw(item["num"])
-        if (raw = "" || InStr(item["label"], raw))  ; Name steht schon voll im Tab
+        who := ClaudeWhoText(item["num"])          ; welche Claude-Chats hier warten oder laufen
+        if ((raw = "" || InStr(item["label"], raw)) && who = "")  ; Name steht schon voll im Tab
             return
         if ((sb := SubActive(item["num"])) != "")
             raw .= " · " sb
+        if (who != "")
+            raw .= "`n" who
+        lines := StrSplit(raw, "`n").Length
         bx := 0, by := 0
         MyGui.GetPos(&bx, &by)
         CoordMode("ToolTip", "Screen")
-        ToolTip(raw, bx + item["x"], by - px(34), 4)
+        ToolTip(raw, bx + item["x"], by - px(14) - lines * px(20), 4)
         return
     }
 }

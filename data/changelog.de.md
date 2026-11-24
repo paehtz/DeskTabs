@@ -2,7 +2,8 @@
 <!-- Pro Version ein Abschnitt "## x.y.z", darunter kurze Punkte "- ...". Jeder Punkt sagt, was der Nutzer jetzt Neues tun kann oder was besser läuft, und wie er es findet; das Schlagwort am Anfang **fett**. DeskTabs zeigt die Abschnitte nach einem Update an (neueste zuerst, alle übersprungenen Versionen). -->
 
 ## 1.1.25
-- **Fensterbereiche per Tastatur und Ziehen:** Strg + Alt + Ziffernblock legt das aktive Fenster in einen Bereich seines Bildschirms, ein zweiter Druck auf dieselbe Taste schaltet zur nächsten Breite. Ziehst Du ein Fenster mit gedrückter Strg + Alt, zeigt DeskTabs den Zielbereich und legt es dort ab. Strg + Alt + Bild↓ minimiert, Strg + Alt + Bild↑ holt zurück. Die Bereiche je Taste stellst Du unter *Weitere Einstellungen* › *Fensterbereiche* ein.
+- **Fensterbereiche per Tastatur und Ziehen:** Strg + Alt + Ziffernblock legt das aktive Fenster in einen Bereich seines Bildschirms, ein zweiter Druck auf dieselbe Taste schaltet zur nächsten Breite. Ziehst Du ein Fenster mit gedrückter Strg + Alt, zeigt DeskTabs den Zielbereich und legt es dort ab. Strg + Alt + Bild↓ minimiert, Strg + Alt + Bild↑ holt zurück. Die Bereiche je Taste stellst Du unter *Weitere Einstellungen* › *Fensterbereiche* ein: Stufen anklicken und ändern, zwischen Tasten verschieben, und die passenden Werte misst das Fenster selbst, wenn Du es oder ein anderes Fenster zurechtziehst (mit Strg in ganzen Prozent).
+- **Welcher Chat wartet?** Fährst Du mit der Maus über einen Tab mit Claude-Punkt, nennt die Kurzinfo die Chats, die dort auf Dich warten oder gerade laufen.
 - **Claude-Status bleibt nicht mehr hängen:** Zeigte ein Tab weiter „läuft“, obwohl alle Chats dort fertig waren, korrigiert sich das jetzt spätestens nach 15 Sekunden.
 
 ## 1.1.24
