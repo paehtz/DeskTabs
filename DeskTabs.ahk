@@ -107,6 +107,8 @@ global CONF := Map(
     "SwitchAlert",    1,       ; 1 = Desktop-Wechsel durch andere Programme melden (Tab blinkt, Rahmen bleibt)
     "ClaudeCode",     0,       ; 1 = Claude-Code-Funktionen (Chat-Fenster am Projektkuerzel, gleich breit verteilen, /cmd)
     "DockStart",      1,       ; 1 = Leiste dockt links vom Start-Knopf an (zentrierte Taskleiste), mit Trennstrich
+    "SnapKeys",       1,       ; 1 = Strg+Alt+Ziffernblock legt das aktive Fenster in einen Bereich (Stufen: [Snap] in settings.ini)
+    "SnapDrag",       1,       ; 1 = Fenster mit Strg+Alt ziehen zeigt den Zielbereich und legt es dort ab (Drag'n'Go)
     "CalmSwitch",     0,       ; 1 = Strg+Win+Pfeil wechselt ueber DeskTabs, ohne die Schiebe-Animation von Windows
     "Snow",           1,       ; Schnee beim Klick auf einen Tab: 1 = automatisch (1. Advent bis 26.12.), 2 = immer, 0 = nie
     "HotkeyMod",      "^#"     ; Modifikator: "^#" Strg+Win | "^!" Strg+Alt | "#!" Win+Alt | "^+" Strg+Umschalt
@@ -358,6 +360,8 @@ DragEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
     global gDragHwnd, gDragPlace, gDragPin, MyGui
     if (!IsSet(CONF) || !IsSet(gOd))                            ; beim Beenden sind die globalen Variablen schon frei
         return
+    if (idObject = 0 && CONF["SnapKeys"] && CONF["SnapDrag"])
+        SnapDragEvent(event, hwnd)                              ; Drag'n'Go: mit Strg+Alt ziehen
     if (idObject != 0 || !CONF["DragToTab"])
         return
     if (event = 0x000A) {
@@ -1629,6 +1633,16 @@ global LANG_DE := Map(
     "sc.d.altgrip", "Claude-Chats auf jedem Bildschirm gleich breit verteilen",
     "menu.claudecode", "Claude-App-Funktionen",
     "menu.dockstart", "Links vom Start-Knopf andocken",
+    "menu.snap", "Fensterbereiche (Strg+Alt+Ziffernblock) …",
+    "snap.title", "Fensterbereiche",
+    "snap.intro", "Strg+Alt+Ziffernblock legt das aktive Fenster in einen Bereich seines Bildschirms. Drückst Du dieselbe Taste noch einmal, kommt die nächste Stufe.`nJe Taste die Stufen durch Semikolon getrennt, jede Stufe als Breite in Prozent von links nach rechts, etwa „0-25“ für das linke Viertel. Für einen Teil der Höhe „@“ und den Bereich von oben nach unten anfügen: „0-50@0-50“ ist das Viertel oben links. Ohne „@“ volle Höhe.",
+    "snap.keys", "Tasten Strg+Alt+Ziffernblock benutzen (dazu Strg+Alt+Bild↓ minimieren, Strg+Alt+Bild↑ wiederherstellen)",
+    "snap.drag", "Drag'n'Go: Fenster mit gedrückter Strg+Alt ziehen zeigt den Bereich und legt es dort ab",
+    "snap.key", "Taste {1}",
+    "snap.save", "Speichern",
+    "snap.reset", "Vorgaben",
+    "snap.cancel", "Abbrechen",
+    "snap.bad", "Taste {1}: „{2}“ ist keine gültige Stufe. Beispiel: 0-25; 0-30; 75-100@0-50",
     "menu.calmswitch", "Strg+Win+Pfeil ohne Animation wechseln",
     "menu.snow", "❄ Schnee",
     "menu.snow.auto", "Automatisch (1. Advent bis 26. Dezember)",
@@ -1984,6 +1998,16 @@ global LANG_EN := Map(
     "sc.d.altgrip", "distribute the Claude chats evenly on each screen",
     "menu.claudecode", "Claude app features",
     "menu.dockstart", "Dock left of the Start button",
+    "menu.snap", "Window zones (Ctrl+Alt+Numpad) …",
+    "snap.title", "Window zones",
+    "snap.intro", "Ctrl+Alt+Numpad puts the active window into a zone of its screen. Press the same key again for the next step.`nPer key, steps separated by semicolons, each step as a width in percent from left to right, such as “0-25” for the left quarter. For part of the height add “@” and the range from top to bottom: “0-50@0-50” is the top left quarter. Without “@” full height.",
+    "snap.keys", "Use Ctrl+Alt+Numpad keys (plus Ctrl+Alt+PgDn to minimize, Ctrl+Alt+PgUp to restore)",
+    "snap.drag", "Drag'n'Go: dragging a window with Ctrl+Alt held shows the zone and drops it there",
+    "snap.key", "Key {1}",
+    "snap.save", "Save",
+    "snap.reset", "Defaults",
+    "snap.cancel", "Cancel",
+    "snap.bad", "Key {1}: “{2}” is not a valid step. Example: 0-25; 0-30; 75-100@0-50",
     "menu.calmswitch", "Ctrl+Win+Arrow switches without animation",
     "menu.snow", "❄ Snow",
     "menu.snow.auto", "Automatic (first Sunday of Advent to 26 December)",
@@ -2349,6 +2373,7 @@ Main() {
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
     ApplyCalmSwitch()                        ; ggf. Strg+Win+Pfeil selbst uebernehmen (ohne Animation)
     SetTimer(DockWatch, 2000)                ; Start-Knopf wandert mit der Zahl der Taskleisten-Symbole
+    ApplySnapKeys()                          ; Strg+Alt+Ziffernblock: Fensterbereiche (Ersatz fuer WinSplit)
     ClaudeHookLoad()                         ; Stand aus dem Plugin (falls eingerichtet)
     global gHookActive
     if (!gHookActive)
@@ -2389,7 +2414,7 @@ ApplyIniOverrides() {
     v := IniRead(CONF["IniPath"], "View", "HotkeyMod", "")
     if (v != "" && RegExMatch(v, "^[\^+!#]{1,4}$"))
         CONF["HotkeyMod"] := v
-    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash", "CalmSwitch", "Snow", "DockStart"] {
+    for key in ["ShowIndex", "ColorCoding", "SnapToTaskbar", "TimeLog", "UpdateCheck", "ShowDividers", "ShowIcons", "Hotkeys", "ActiveBold", "ActiveShadow", "SwitchAlert", "AttentionDot", "DragToTab", "RestoreZOrder", "ClaudeCode", "QuietFlash", "CalmSwitch", "Snow", "DockStart", "SnapKeys", "SnapDrag"] {
         v := IniRead(CONF["IniPath"], "View", key, "")
         if (v = "0" || v = "1" || (key = "Snow" && v = "2"))
             CONF[key] := Integer(v)
@@ -2418,6 +2443,8 @@ SetView(key, val) {
         ApplyHotkeys()
     if (key = "CalmSwitch")
         ApplyCalmSwitch()
+    if (key = "SnapKeys")
+        ApplySnapKeys()
     if (key = "ClaudeCode") {
         global gClaudeStat := Map()                 ; aus: Punkte weg, der Hilfsprozess beendet sich selbst
         if (val && !gHookActive)
@@ -3921,6 +3948,7 @@ FillSettingsMenu(m) {
     xm.Add(T("menu.claudecode"), ToggleView.Bind("ClaudeCode"))
     if (CONF["ClaudeCode"])
         xm.Check(T("menu.claudecode"))
+    xm.Add(T("menu.snap"), SnapSettings)
     xm.Add(T("menu.dockstart"), ToggleView.Bind("DockStart"))
     if (CONF["DockStart"])
         xm.Check(T("menu.dockstart"))
@@ -8484,6 +8512,223 @@ SortBy(arr, cmp) {
     }
 }
 ; Fenster so setzen, dass sein sichtbarer Rahmen genau x0,y0 - x1,y1 einnimmt
+; ------------- Fensterbereiche: Strg+Alt+Ziffernblock und Drag'n'Go (Ersatz fuer WinSplit) -------------
+; Je Ziffernblock-Taste eine Folge von Stufen; ein wiederholter Druck auf dieselbe Taste schaltet weiter.
+; Stufe "a-b" = Breite von a bis b Prozent des Arbeitsbereichs (volle Hoehe), "a-b@c-d" mit Hoehe c bis d.
+; Gespeichert in settings.ini, Abschnitt [Snap], Schluessel 1 bis 9. Ein Hook in fremde Fenster ist nicht
+; noetig: verschoben wird nur auf Tastendruck bzw. am Ende eines Ziehens.
+SnapDefault(k) {
+    static d := Map(1, "0-50@50-100", 2, "0-100@50-100", 3, "50-100@50-100"
+        , 4, "0-50; 0-33.33; 0-66.67", 5, "25-75; 12.5-87.5; 33.33-66.67", 6, "50-100; 66.67-100; 33.33-100"
+        , 7, "0-50@0-50", 8, "0-100@0-50", 9, "50-100@0-50")
+    return d[k]
+}
+SnapText(k) {
+    v := ""
+    try v := IniRead(CONF["IniPath"], "Snap", k, "")
+    return Trim(v) != "" ? v : SnapDefault(k)
+}
+; "0-25; 20-80@0-50" -> [[0,25,0,100], [20,80,0,50]]; bad := erste ungueltige Stufe
+SnapParse(txt, &bad := "") {
+    out := [], bad := ""
+    num := "(\d+(?:[.,]\d+)?)"
+    for part in StrSplit(txt, ";") {
+        part := Trim(part)
+        if (part = "")
+            continue
+        if (!RegExMatch(part, "^" num "\s*-\s*" num "(?:\s*@\s*" num "\s*-\s*" num ")?$", &m)) {
+            bad := part
+            return []
+        }
+        f := (i) => Number(StrReplace(m[i], ",", "."))
+        x0 := f(1), x1 := f(2), y0 := m[3] = "" ? 0 : f(3), y1 := m[4] = "" ? 100 : f(4)
+        if (x1 <= x0 || y1 <= y0 || x1 > 100 || y1 > 100) {
+            bad := part
+            return []
+        }
+        out.Push([x0, x1, y0, y1])
+    }
+    return out
+}
+ApplySnapKeys() {
+    names := Map(1, "End", 2, "Down", 3, "PgDn", 4, "Left", 5, "Clear", 6, "Right", 7, "Home", 8, "Up", 9, "PgUp")
+    st := CONF["SnapKeys"] ? "On" : "Off"
+    for k, alt in names {
+        try Hotkey("^!Numpad" k, SnapKey.Bind(k), st)
+        try Hotkey("^!Numpad" alt, SnapKey.Bind(k), st)          ; Num-Taste aus
+    }
+    try Hotkey("^!PgDn", SnapMinimize, st)
+    try Hotkey("^!PgUp", SnapRestore, st)
+}
+; Arbeitsbereich (ohne Taskleiste) des Bildschirms, auf dem das Fenster bzw. der Punkt liegt
+SnapWork(hmon) {
+    mi := Buffer(40, 0), NumPut("UInt", 40, mi)
+    DllCall("GetMonitorInfo", "Ptr", hmon, "Ptr", mi)
+    return [NumGet(mi, 20, "Int"), NumGet(mi, 24, "Int"), NumGet(mi, 28, "Int"), NumGet(mi, 32, "Int")]
+}
+SnapRect(wa, st) {
+    w := wa[3] - wa[1], h := wa[4] - wa[2]
+    return [wa[1] + Round(w * st[1] / 100), wa[2] + Round(h * st[3] / 100), wa[1] + Round(w * st[2] / 100), wa[2] + Round(h * st[4] / 100)]
+}
+SnapPut(h, r) {
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")   ; PER_MONITOR_AWARE_V2
+    try {
+        if (DllCall("IsZoomed", "Ptr", h) || DllCall("IsIconic", "Ptr", h))
+            DllCall("ShowWindow", "Ptr", h, "Int", 9)                     ; SW_RESTORE
+        PlaceFrame(h, r[1], r[2], r[3], r[4])
+    }
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+}
+SnapNow(h) {
+    rc := Buffer(16, 0)
+    DllCall("GetWindowRect", "Ptr", h, "Ptr", rc)
+    return NumGet(rc, 0, "Int") "," NumGet(rc, 4, "Int") "," NumGet(rc, 8, "Int") "," NumGet(rc, 12, "Int")
+}
+SnapKey(k, *) {
+    global gSnapLast
+    h := WorkWindow()
+    if (!h || DllCall("IsHungAppWindow", "Ptr", h))
+        return
+    steps := SnapParse(SnapText(k))
+    if (!steps.Length)
+        return
+    i := 1                                                  ; dieselbe Taste am selben, unveraenderten Fenster: weiter
+    if (IsSet(gSnapLast) && IsObject(gSnapLast) && gSnapLast.k = k && gSnapLast.h = h && gSnapLast.r = SnapNow(h))
+        i := Mod(gSnapLast.i, steps.Length) + 1
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")
+    wa := SnapWork(DllCall("MonitorFromWindow", "Ptr", h, "UInt", 2, "Ptr"))
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    SnapPut(h, SnapRect(wa, steps[i]))
+    gSnapLast := {k: k, h: h, i: i, r: SnapNow(h)}
+}
+SnapMinimize(*) {
+    global gSnapMin
+    h := WorkWindow()
+    if (!h)
+        return
+    if (!IsSet(gSnapMin) || !IsObject(gSnapMin))
+        gSnapMin := []
+    gSnapMin.Push(h)
+    try WinMinimize("ahk_id " h)
+}
+SnapRestore(*) {
+    global gSnapMin
+    if (!IsSet(gSnapMin) || !IsObject(gSnapMin))
+        return
+    while gSnapMin.Length {
+        h := gSnapMin.Pop()
+        if (DllCall("IsWindow", "Ptr", h) && DllCall("IsIconic", "Ptr", h)) {
+            try WinRestore("ahk_id " h)
+            try WinActivate("ahk_id " h)
+            return
+        }
+    }
+}
+; Drag'n'Go: waehrend ein Fenster gezogen wird und Strg+Alt gedrueckt sind, zeigt ein durchscheinendes
+; Feld den Bereich unter dem Mauszeiger (der kleinste erste Bereich einer Taste, der ihn enthaelt);
+; beim Loslassen kommt das Fenster dorthin. Ueber der Leiste gilt weiter das Ablegen auf einen Tab.
+SnapDragEvent(event, hwnd) {
+    global gSnapDrag, gSnapZone
+    if (event = 0x000A) {
+        gSnapDrag := hwnd, gSnapZone := 0
+        SetTimer(SnapDragTick, 30)
+        return
+    }
+    SetTimer(SnapDragTick, 0)
+    SnapOverlay(0)
+    z := IsSet(gSnapZone) ? gSnapZone : 0
+    gSnapZone := 0
+    if (!z || !IsSet(gSnapDrag) || hwnd != gSnapDrag || DragBarX() >= 0)
+        return
+    SetTimer(SnapDropDone.Bind(hwnd, z), -40)              ; erst wenn Windows das Ziehen abgeschlossen hat
+}
+SnapDropDone(hwnd, z) {
+    global gSnapLast
+    SnapPut(hwnd, z.r)
+    gSnapLast := {k: z.k, h: hwnd, i: 1, r: SnapNow(hwnd)}
+}
+SnapDragTick() {
+    global gSnapZone
+    if (!GetKeyState("LButton", "P"))
+        return SetTimer(SnapDragTick, 0)
+    if (!GetKeyState("Ctrl") || !GetKeyState("Alt") || DragBarX() >= 0) {
+        gSnapZone := 0
+        return SnapOverlay(0)
+    }
+    old := DllCall("SetThreadDpiAwarenessContext", "Ptr", -4, "Ptr")
+    pt := Buffer(8, 0)
+    DllCall("GetCursorPos", "Ptr", pt)
+    mx := NumGet(pt, 0, "Int"), my := NumGet(pt, 4, "Int")
+    wa := SnapWork(DllCall("MonitorFromPoint", "Int64", NumGet(pt, 0, "Int64"), "UInt", 2, "Ptr"))
+    DllCall("SetThreadDpiAwarenessContext", "Ptr", old, "Ptr")
+    best := 0, area := 0
+    Loop 9 {
+        st := SnapParse(SnapText(A_Index))
+        if (!st.Length)
+            continue
+        r := SnapRect(wa, st[1])
+        if (mx < r[1] || mx >= r[3] || my < r[2] || my >= r[4])
+            continue
+        a := (r[3] - r[1]) * (r[4] - r[2])
+        if (!best || a < area)
+            best := {k: A_Index, r: r}, area := a
+    }
+    gSnapZone := best
+    SnapOverlay(best ? best.r : 0)
+}
+SnapOverlay(r) {
+    static g := 0
+    if (!r) {
+        if (g)
+            g.Hide()
+        return
+    }
+    if (!g) {
+        g := Gui("+AlwaysOnTop -Caption +ToolWindow +E0x08000020 -DPIScale")   ; nicht aktivierbar, klick-durchlaessig
+        g.BackColor := Format("{:06X}", CONF["ColActiveBg"])
+    }
+    g.Show(Format("x{1} y{2} w{3} h{4} NoActivate", r[1], r[2], r[3] - r[1], r[4] - r[2]))
+    WinSetTransparent(70, g)
+}
+; Verwaltung: je Taste die Stufen, in der Anordnung des Ziffernblocks
+SnapSettings(*) {
+    g := Gui("+AlwaysOnTop -MinimizeBox -MaximizeBox", T("snap.title"))
+    g.SetFont("s10", "Segoe UI")
+    g.AddText("w640", T("snap.intro"))
+    cbK := g.AddCheckbox("w640 y+10 Checked" CONF["SnapKeys"], T("snap.keys"))
+    cbD := g.AddCheckbox("w640 Checked" CONF["SnapDrag"], T("snap.drag"))
+    eds := Map()
+    for k in [7, 8, 9, 4, 5, 6, 1, 2, 3] {
+        g.AddText("xm w80 y+" (k = 7 ? 14 : 8) " Right", T("snap.key", k))
+        g.SetFont("s10", "Consolas")
+        eds[k] := g.AddEdit("x+10 yp-3 w550", SnapText(k))
+        g.SetFont("s10", "Segoe UI")
+    }
+    msg := g.AddText("xm w640 y+10 cC42B1C", "")
+    g.AddButton("xm w140 Default", T("snap.save")).OnEvent("Click", Save)
+    g.AddButton("x+10 w140", T("snap.reset")).OnEvent("Click", (*) => ResetAll())
+    g.AddButton("x+10 w140", T("snap.cancel")).OnEvent("Click", (*) => g.Destroy())
+    g.OnEvent("Escape", (*) => g.Destroy())
+    g.Show()
+    ResetAll() {
+        for k, e in eds
+            e.Value := SnapDefault(k)
+    }
+    Save(*) {
+        for k, e in eds {
+            SnapParse(e.Value, &bad)
+            if (bad != "") {
+                msg.Value := T("snap.bad", k, bad)
+                return
+            }
+        }
+        for k, e in eds
+            IniSet("Snap", k, Trim(e.Value))
+        SetView("SnapDrag", cbD.Value)
+        SetView("SnapKeys", cbK.Value)
+        g.Destroy()
+    }
+}
 PlaceFrame(h, x0, y0, x1, y1) {
     fr := SetFrame(h), wrc := Buffer(16, 0)
     DllCall("GetWindowRect", "Ptr", h, "Ptr", wrc)

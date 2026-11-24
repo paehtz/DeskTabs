@@ -2,6 +2,7 @@
 <!-- One section "## x.y.z" per version with short points "- ...". Each point says what users can now do or what works better, and where to find it; the key phrase at the start in **bold**. DeskTabs shows the sections after an update (newest first, all skipped versions). -->
 
 ## 1.1.25
+- **Window zones by keyboard and dragging:** Ctrl + Alt + Numpad puts the active window into a zone of its screen, pressing the same key again steps to the next width. Drag a window with Ctrl + Alt held and DeskTabs shows the target zone and drops it there. Ctrl + Alt + PgDn minimizes, Ctrl + Alt + PgUp brings it back. Set the zones per key under *More settings* › *Window zones*.
 - **Claude status no longer gets stuck:** if a tab kept showing “running” although all chats there had finished, it now corrects itself within 15 seconds.
 
 ## 1.1.24
