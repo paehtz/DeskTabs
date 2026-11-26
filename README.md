@@ -137,7 +137,7 @@ Windows decides which window gets the focus on arrival, before DeskTabs can act:
 ## Requirements
 
 - **Windows 11:** developed and tested on **25H2 (build 26200)**. Works from 24H2 (26100).
-- **AutoHotkey v2** (tested with 2.0.29), default path `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
+- **AutoHotkey v2** (tested with 2.0.32), default path `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
 - **VirtualDesktopAccessor.dll** (bundled in this repo), built from the source of [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor) at commit `ceb6488` (October 2026, unmodified), which includes the `MoveDesktop` export DeskTabs contributed for reordering ([#119](https://github.com/Ciantic/VirtualDesktopAccessor/pull/119)). Built by the workflow [`build-dll.yml`](.github/workflows/build-dll.yml) until an official release ships it.
 
 ---

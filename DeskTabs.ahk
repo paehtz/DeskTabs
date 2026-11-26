@@ -1634,6 +1634,7 @@ global LANG_DE := Map(
     "menu.claudecode", "Claude-App-Funktionen",
     "menu.dockstart", "Links vom Start-Knopf andocken",
     "claude.tip.w", "● wartet auf Dich: {1}",
+    "claude.tip.q", "◐ Frage offen: {1}",
     "claude.tip.r", "◌ läuft: {1}",
     "menu.zones", "Fensterbereiche (Strg+Alt+Ziffernblock) …",
     "snap.title", "Fensterbereiche",
@@ -2013,6 +2014,7 @@ global LANG_EN := Map(
     "menu.claudecode", "Claude app features",
     "menu.dockstart", "Dock left of the Start button",
     "claude.tip.w", "● waiting for you: {1}",
+    "claude.tip.q", "◐ open question: {1}",
     "claude.tip.r", "◌ running: {1}",
     "menu.zones", "Window zones (Ctrl+Alt+Numpad) …",
     "snap.title", "Window zones",
@@ -7763,9 +7765,15 @@ ClaudeStatApply(msg) {
             if (d < 0)
                 continue
             if (!stat.Has(d))
-                stat[d] := {w: 0, r: 0}, who[d] := []
-            (f[2] = "r") ? stat[d].r += 1 : stat[d].w += 1
-            who[d].Push({title: f[1], st: f[2] = "r" ? "r" : "w"})
+                stat[d] := {w: 0, q: 0, r: 0}, who[d] := []
+            k := (f[2] = "r" || f[2] = "q") ? f[2] : "w"
+            if (k = "r")
+                stat[d].r += 1
+            else if (k = "q")
+                stat[d].q += 1
+            else
+                stat[d].w += 1
+            who[d].Push({title: f[1], st: k})
         }
     }
     for d, old in gClaudeStat                           ; war dort etwas am Laufen und ist jetzt alles still?
@@ -7797,10 +7805,10 @@ ClaudeHookMain() {
         : (ev = "Stop" || ev = "StopFailure") ? "d" : (ev = "SessionEnd") ? "x" : ""
     if (st = "")
         ExitApp
-    ; Fertig, aber die letzte Antwort endet mit einer Frage ("Soll ich ... umstellen?"): Die
-    ; Claude-App macht daraus Antwortknoepfe, die Sitzung wartet also auf eine Entscheidung
+    ; Fertig, aber die letzte Antwort endet mit einer Frage ("Soll ich ... umstellen?"): eine offene
+    ; Frage ohne Dialog (Henning 24.11.: orange, rot bleibt echten Dialogen vorbehalten)
     if (st = "d" && RegExMatch(Trim(StrReplace(JsonField(js, "last_assistant_message"), "*", ""), " `t`r`n"), "\?\s*$"))
-        st := "w"
+        st := "q"
     stamp := A_Now Format("{:03}", A_MSec), dir := ClaudeHookDir(), f := dir "\" sid ".txt"
     try DirCreate(dir)
     old := ""
@@ -7876,12 +7884,12 @@ ClaudeHookRecalc() {
             gHookSess[sid] := {st: p[1], t: p[2]}
     }
     for sid, v in gHookSess {
-        if (v.st != "r" && v.st != "w")
+        if (v.st != "r" && v.st != "w" && v.st != "q")
             continue
         age := DateDiff(now, SubStr(v.t, 1, 14), "Minutes")
-        if ((v.st = "r" && age > 90) || (v.st = "w" && age > 720))
+        if ((v.st = "r" && age > 90) || ((v.st = "w" || v.st = "q") && age > 720))
             continue                                    ; haengengeblieben (App geschlossen, Absturz)
-        if ((title := ClaudeSessionTitle(sid)) != "")
+        if ((title := ClaudeSessionTitle(sid)) != "" && !ClaudeSessionHidden(sid))
             msg .= title "`t" v.st "`n"
     }
     ClaudeStatApply(msg)
@@ -7904,9 +7912,31 @@ ClaudeSessionTitle(sid) {
                 head := fo.Read(4000), fo.Close()
             }
             if (RegExMatch(head, '"cliSessionId"\s*:\s*"([^"]+)"', &a) && RegExMatch(head, '"title"\s*:\s*"((?:[^"\\]++|\\.)*+)"', &b))
-                cache[a[1]] := JsonUnescape(b[1])
+                cache[a[1]] := JsonUnescape(b[1]), ClaudeSessionPath(a[1], A_LoopFileFullPath)
         }
     return cache.Has(sid) ? cache[sid] : ""
+}
+; Pfad der Sitzungsdatei merken bzw. abfragen (fuer ClaudeSessionHidden)
+ClaudeSessionPath(sid, path := "") {
+    static paths := Map()
+    if (path != "")
+        return paths[sid] := path
+    return paths.Has(sid) ? paths[sid] : ""
+}
+; Steht die Sitzung nicht als offener Chat in der Seitenleiste? Laeufe geplanter Aufgaben (nur unter
+; "Scheduled") und archivierte Chats zeigen keinen Punkt (Henning 24.11.: Punkte nur fuer Chats, die er
+; vor sich hat). Je Sitzung hoechstens alle 5 Minuten gelesen, Archivieren kann sich aendern.
+ClaudeSessionHidden(sid) {
+    static seen := Map()
+    if (seen.Has(sid) && A_TickCount - seen[sid].t < 300000)
+        return seen[sid].v
+    p := ClaudeSessionPath(sid), txt := ""
+    if (p = "")
+        return false
+    try txt := FileRead(p, "UTF-8")
+    v := RegExMatch(txt, '"scheduledTaskId"\s*:\s*"[^"]+"') > 0 || RegExMatch(txt, '"isArchived"\s*:\s*true') > 0
+    seen[sid] := {v: v, t: A_TickCount}
+    return v
 }
 ClaudeSessionDirs() {
     out := [EnvGet("APPDATA") "\Claude\claude-code-sessions"], seen := Map(), dhw := A_DetectHiddenWindows
@@ -7961,12 +7991,12 @@ ClaudePluginDialog(base) {
 ClaudeSignal(num) {
     global gClaudeStat, gClaudeDone
     st := gClaudeStat.Has(num) ? gClaudeStat[num] : 0
-    return (st && st.w > 0) ? "w" : gClaudeDone.Has(num) ? "d" : (st && st.r > 0) ? "r" : ""
+    return (st && st.w > 0) ? "w" : (st && st.HasOwnProp("q") && st.q > 0) ? "q" : gClaudeDone.Has(num) ? "d" : (st && st.r > 0) ? "r" : ""
 }
 DrawClaudeSignal(g, sig, right, top, under) {
     global gClaudePulse
     d := Max(6, px(9)), rg := Max(1, px(1.5)), a := 255
-    col := (sig = "w") ? 0xE5242B : (sig = "d") ? 0xF2B600 : 0x8A857C
+    col := (sig = "w") ? 0xE5242B : (sig = "q") ? 0xF06A1E : (sig = "d") ? 0xF2B600 : 0x8A857C
     if (sig = "r")                                      ; laeuft: grauer Punkt, der wie in der Claude-App pulsiert
         d := Max(5, px(7)), a := gClaudePulse ? 255 : 90
     FillRoundRect(g, right - d - rg, top - rg, d + 2 * rg, d + 2 * rg, d / 2 + rg, ARGB(under))   ; Freistellung
@@ -9773,10 +9803,10 @@ ClaudeWhoText(num) {
     if (!IsSet(gClaudeWho) || !IsObject(gClaudeWho) || !gClaudeWho.Has(num))
         return ""
     out := ""
-    for st in ["w", "r"]
+    for st in ["w", "q", "r"]
         for e in gClaudeWho[num]
             if (e.st = st)
-                out .= (out = "" ? "" : "`n") T(st = "w" ? "claude.tip.w" : "claude.tip.r", e.title)
+                out .= (out = "" ? "" : "`n") T("claude.tip." st, e.title)
     return out
 }
 ShowHoverName() {

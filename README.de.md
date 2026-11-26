@@ -137,7 +137,7 @@ Welches Fenster beim Ankommen den Fokus bekommt, entscheidet Windows, bevor Desk
 ## Voraussetzungen
 
 - **Windows 11:** entwickelt und getestet auf **25H2 (Build 26200)**. Funktioniert ab 24H2 (26100).
-- **AutoHotkey v2** (getestet mit 2.0.29), Standardpfad `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
+- **AutoHotkey v2** (getestet mit 2.0.32), Standardpfad `C:\Program Files\AutoHotkey\v2\AutoHotkey64.exe`.
 - **VirtualDesktopAccessor.dll** (liegt im Repo bei), gebaut aus dem Quellcode von [Ciantic/VirtualDesktopAccessor](https://github.com/Ciantic/VirtualDesktopAccessor), Stand Commit `ceb6488` (Oktober 2026, unverändert). Er enthält den Export `MoveDesktop`, den DeskTabs für das Umsortieren beigesteuert hat ([#119](https://github.com/Ciantic/VirtualDesktopAccessor/pull/119)). Gebaut vom Workflow [`build-dll.yml`](.github/workflows/build-dll.yml), bis ein offizielles Release ihn enthält.
 
 ---
