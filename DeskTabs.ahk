@@ -345,6 +345,112 @@ AttentionSig() {
     return s
 }
 
+; ------------- Explorer-Neustart ----------------------------------------------
+; Startet der Explorer neu (Absturz, Task-Manager), entsteht die Taskleiste neu. Waehrenddessen
+; koennen Abfragen an sie (UI Automation beim Andocken) lange blockieren; am 27.11. reagierte
+; die Leiste danach nicht mehr. Deshalb: bei "TaskbarCreated" ein paar Sekunden keine Abfragen
+; an die Taskleiste, dann Shell-Hook neu anmelden und die Leiste neu aufbauen.
+InitExplorerWatch() {
+    msg := DllCall("RegisterWindowMessage", "Str", "TaskbarCreated", "UInt")
+    OnMessage(msg, OnTaskbarCreated)
+}
+OnTaskbarCreated(*) {
+    global gExplorerTick := A_TickCount
+    SetTimer(ExplorerBack, -5000)
+    return 0
+}
+ExplorerQuiet() {
+    global gExplorerTick
+    return IsSet(gExplorerTick) && A_TickCount - gExplorerTick < 9000
+}
+ExplorerBack() {
+    try DllCall("RegisterShellHookWindow", "Ptr", A_ScriptHwnd)              ; geht beim Neustart verloren
+    RebuildAll()
+    UpdateStripe()
+}
+; Hook-Prozesse ("/hook"), deren Claude-Sitzung verschwunden ist, bleiben manchmal eingefroren
+; zurueck (Thread "Suspended", kein Code von DeskTabs laeuft). Aelter als 2 Minuten = beenden.
+CleanStaleHooks() {
+    try {
+        for pr in ComObjGet("winmgmts:").ExecQuery("SELECT ProcessId, CommandLine, CreationDate FROM Win32_Process WHERE Name='AutoHotkey64.exe' OR Name='DeskTabs.exe'") {
+            cl := ""
+            try cl := String(pr.CommandLine)
+            if (!InStr(cl, " /hook") || pr.ProcessId = DllCall("GetCurrentProcessId", "UInt"))
+                continue
+            born := SubStr(pr.CreationDate, 1, 14)                              ; Ortszeit
+            if (DateDiff(A_Now, born, "Minutes") >= 2)
+                ProcessClose(pr.ProcessId)
+        }
+    }
+}
+; ------------- Neue Fenster auf dem richtigen Desktop -------------------------
+; Programme, die ihre Fenster selbst auf Desktops verteilen (Chrome beim Wiederherstellen, die
+; Claude-App), schieben ein Fenster gleich nach dem Oeffnen auf seinen Desktop. Windows fuehrt es
+; dann dort, blendet es aber auf dem aktuellen oft nicht aus: Alle Fenster stehen auf einem Desktop,
+; ein Klick auf das Taskleisten-Symbol springt erst hin (Henning 26.11., Chrome). Deshalb wird jedes
+; neu erscheinende Hauptfenster kurz danach geprueft und notfalls einmal hierher und zurueck
+; geschoben; dann blendet Windows es aus. Nur Ereignisse, kein Dauerabfragen.
+InitShowWatch() {
+    global gShowCb, gShowHook
+    gShowCb := CallbackCreate(ShowEventProc)
+    gShowHook := DllCall("SetWinEventHook", "UInt", 0x8002, "UInt", 0x8002     ; EVENT_OBJECT_SHOW
+        , "Ptr", 0, "Ptr", gShowCb, "UInt", 0, "UInt", 0, "UInt", 0x0002, "Ptr")   ; ohne eigene Fenster
+}
+ShowEventProc(hHook, event, hwnd, idObject, idChild, thread, time) {
+    global gShowQueue
+    if (idObject != 0 || idChild != 0 || !hwnd || !IsSet(CONF))              ; beim Beenden schon frei
+        return
+    if (DllCall("GetAncestor", "Ptr", hwnd, "UInt", 2, "Ptr") != hwnd)              ; nur Hauptfenster
+        return
+    if (ExplorerQuiet())                                    ; Explorer faehrt hoch: nichts anfassen (27.11.)
+        return
+    if (!IsSet(gShowQueue) || !IsObject(gShowQueue))
+        gShowQueue := Map()
+    gShowQueue[hwnd] := A_TickCount
+    SetTimer(ShowWatchCheck, -600)
+}
+ShowWatchCheck() {
+    global gShowQueue
+    if (!IsSet(gShowQueue) || !IsObject(gShowQueue) || !gShowQueue.Count)
+        return
+    if (ExplorerQuiet())
+        return (gShowQueue := Map())
+    cur := GetCurrentDesktop(), again := false
+    if (cur < 0)
+        return
+    for h, t in gShowQueue.Clone() {
+        if (A_TickCount - t > 4000 || !DllCall("IsWindow", "Ptr", h)) {         ; nach 4 s nicht mehr verfolgen
+            gShowQueue.Delete(h)
+            continue
+        }
+        again := true
+        if (!DllCall("IsWindowVisible", "Ptr", h) || (WinGetExStyleSafe(h) & 0x80) || DllCall("IsHungAppWindow", "Ptr", h))
+            continue
+        exe := ""
+        try exe := WinGetProcessName("ahk_id " h)
+        if (exe = "" || exe = "explorer.exe") {                ; Fenster der Shell nie verschieben: der Aufruf
+            gShowQueue.Delete(h)                                ; wartet auf den Explorer, beim Neustart haengt
+            continue                                            ; DeskTabs sonst fest (27.11.)
+        }
+        cl := 0
+        DllCall("dwmapi\DwmGetWindowAttribute", "Ptr", h, "UInt", 14, "UInt*", &cl, "UInt", 4)
+        if (cl)
+            continue                                                            ; ordentlich ausgeblendet
+        d := -1
+        try d := VD("GetWindowDesktopNumber", "Ptr", h, "Int")
+        if (d < 0 || d = cur || PinState(h))
+            continue
+        VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", cur)                   ; einmal hierher und zurueck
+        VD("MoveWindowToDesktopNumber", "Ptr", h, "Int", d)
+        gShowQueue.Delete(h)
+    }
+    if (again && gShowQueue.Count)
+        SetTimer(ShowWatchCheck, -700)                                          ; Programme verschieben oft erst spaeter
+}
+WinGetExStyleSafe(h) {
+    try return WinGetExStyle("ahk_id " h)
+    return 0
+}
 ; ------------- Fenster per Titelleiste auf einen Tab ziehen -------------------
 ; Windows meldet Beginn und Ende jedes Fenster-Ziehens (EVENT_SYSTEM_MOVESIZESTART/END).
 ; Laesst man das Fenster ueber einem Tab los, wandert es auf diesen Desktop - an seine
@@ -2403,6 +2509,9 @@ Main() {
     InitSwitchWatch()                        ; Windows-Tastenkuerzel fuer Wechsel mitbekommen
     ApplyCalmSwitch()                        ; ggf. Strg+Win+Pfeil selbst uebernehmen (ohne Animation)
     SetTimer(DockWatch, 2000)                ; Start-Knopf wandert mit der Zahl der Taskleisten-Symbole
+    InitShowWatch()                          ; neue Fenster, die Windows nicht richtig ausblendet, einsortieren
+    InitExplorerWatch()                      ; Explorer neu gestartet: kurz stillhalten, dann neu anmelden und aufbauen
+    SetTimer(CleanStaleHooks, 600000)        ; liegengebliebene Hook-Prozesse wegraeumen
     ApplySnapKeys()                          ; Strg+Alt+Ziffernblock: Fensterbereiche (Ersatz fuer WinSplit)
     ClaudeHookLoad()                         ; Stand aus dem Plugin (falls eingerichtet)
     global gHookActive
@@ -4487,7 +4596,11 @@ ApplyWindowHooks() {
     ; nur anheften, wenn noetig: erneutes Anheften liess Windows die Leiste kurz neu darstellen
     if (DllCall("VirtualDesktopAccessor\IsPinnedWindow", "Ptr", MyGui.Hwnd, "Int") != 1)
         DllCall("VirtualDesktopAccessor\PinWindow", "Ptr", MyGui.Hwnd)
-    DllCall("VirtualDesktopAccessor\RegisterPostMessageHook", "Ptr", MyGui.Hwnd, "Int", MSG_VD_CHANGED)
+    static hooked := 0
+    if (hooked != MyGui.Hwnd) {                             ; einmal je Fenster anmelden, nie abmelden
+        DllCall("VirtualDesktopAccessor\RegisterPostMessageHook", "Ptr", MyGui.Hwnd, "Int", MSG_VD_CHANGED)
+        hooked := MyGui.Hwnd
+    }
 }
 
 ; --------------------------- Theme-Erkennung --------------------------------
@@ -5172,6 +5285,12 @@ BarBudget() => gDockR ? gDockR - px(8) : gTaskbarW * CONF["MaxBarWidthPct"] / 10
 ; -1 wenn nicht gefunden. Das Element bleibt gemerkt, das Nachlesen der Lage kostet dann nichts.
 DockStartLeft() {
     static uia := 0, cond := 0, el := 0, tray := 0
+    if (ExplorerQuiet()) {                                  ; Taskleiste entsteht gerade neu
+        if (el)
+            try ObjRelease(el)
+        el := 0
+        return -1
+    }
     try {
         hTray := DllCall("FindWindow", "Str", "Shell_TrayWnd", "Ptr", 0, "Ptr")
         if (!hTray)
@@ -5218,6 +5337,8 @@ DockCalc() {
 DockWatch() {
     global gDockR, gBuilding
     if (!CONF["DockStart"] && !gDockR)
+        return
+    if (ExplorerQuiet())
         return
     if (gBuilding)
         return
@@ -5304,8 +5425,10 @@ BuildBarAt() {
     ; zeichnen. Frueher wurde es zerstoert und neu angelegt - die Leiste verschwand dabei
     ; jedes Mal kurz (Unterprojekt wechseln, Kompakt, Ansicht, Umbenennen).
     gBarReused := MyGui ? true : false
-    if (gBarReused)
-        try DllCall("VirtualDesktopAccessor\UnregisterPostMessageHook", "Ptr", MyGui.Hwnd)
+    ; Kein Ab- und Wiederanmelden der Desktop-Benachrichtigung mehr: Abmelden wartet in der DLL auf
+    ; deren Benachrichtigungs-Thread, und der haengt nach einem Explorer-Neustart beim Wiederverbinden
+    ; fest - DeskTabs stand dann fuer immer (27.11., per Wartekette nachgewiesen). Das Fenster bleibt
+    ; dasselbe, die Anmeldung also gueltig.
     BTNS := []
 
     if (!gBarReused) {

@@ -3,6 +3,8 @@
 
 ## 1.1.25
 - **Fensterbereiche per Tastatur und Ziehen:** Strg + Alt + Ziffernblock legt das aktive Fenster in einen Bereich seines Bildschirms, ein zweiter Druck auf dieselbe Taste schaltet zur nächsten Breite. Ziehst Du ein Fenster mit gedrückter Strg + Alt, zeigt DeskTabs den Zielbereich und legt es dort ab. Strg + Alt + Bild↓ minimiert, Strg + Alt + Bild↑ holt zurück. Die Bereiche je Taste stellst Du unter *Weitere Einstellungen* › *Fensterbereiche* ein: Stufen anklicken und ändern, zwischen Tasten verschieben, und die passenden Werte misst das Fenster selbst, wenn Du es oder ein anderes Fenster zurechtziehst (mit Strg in ganzen Prozent).
+- **Übersteht Explorer-Neustarts:** Startete der Windows-Explorer neu (Absturz, Task-Manager, manche Updates), blieb DeskTabs stehen und reagierte nicht mehr, samt Tastenkürzeln. Jetzt läuft die Leiste einfach weiter.
+- **Fenster landen sauber auf ihrem Desktop:** Verteilt ein Programm beim Start seine Fenster selbst auf die Desktops (etwa Chrome beim Wiederherstellen), blieben einzelne auf dem aktuellen Desktop sichtbar. DeskTabs sortiert solche Fenster jetzt gleich richtig ein.
 - **Offene Fragen in Orange:** Endet eine Claude-Antwort nur mit einer Frage, ohne Dialog zum Anklicken, zeigt der Tab einen orangen statt eines roten Punkts. Rot bleibt für echte Dialoge wie Freigaben und Auswahlfenster. Läufe geplanter Aufgaben und archivierte Chats zeigen keinen Punkt mehr.
 - **Welcher Chat wartet?** Fährst Du mit der Maus über einen Tab mit Claude-Punkt, nennt die Kurzinfo die Chats, die dort auf Dich warten oder gerade laufen.
 - **Claude-Status bleibt nicht mehr hängen:** Zeigte ein Tab weiter „läuft“, obwohl alle Chats dort fertig waren, korrigiert sich das jetzt spätestens nach 15 Sekunden.
